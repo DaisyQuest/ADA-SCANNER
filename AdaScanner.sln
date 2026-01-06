@@ -8,6 +8,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Scanner.Cli", "src/Scanner.
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Scanner.Runner", "src/Scanner.Runner/Scanner.Runner.csproj", "{386CB0EF-ECA2-46AA-A0AC-C007F22E8AC2}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Scanner.Runtime.AspNetCore", "src/Scanner.Runtime.AspNetCore/Scanner.Runtime.AspNetCore.csproj", "{694061C4-3506-4B40-8632-4A3DF84A717D}"
+EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Scanner.Tests", "tests/Scanner.Tests/Scanner.Tests.csproj", "{6383A337-A60A-464D-AE98-CFD82BB6A887}"
 EndProject
 Global
@@ -28,6 +30,10 @@ Global
     {386CB0EF-ECA2-46AA-A0AC-C007F22E8AC2}.Debug|Any CPU.Build.0 = Debug|Any CPU
     {386CB0EF-ECA2-46AA-A0AC-C007F22E8AC2}.Release|Any CPU.ActiveCfg = Release|Any CPU
     {386CB0EF-ECA2-46AA-A0AC-C007F22E8AC2}.Release|Any CPU.Build.0 = Release|Any CPU
+    {694061C4-3506-4B40-8632-4A3DF84A717D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+    {694061C4-3506-4B40-8632-4A3DF84A717D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+    {694061C4-3506-4B40-8632-4A3DF84A717D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+    {694061C4-3506-4B40-8632-4A3DF84A717D}.Release|Any CPU.Build.0 = Release|Any CPU
     {6383A337-A60A-464D-AE98-CFD82BB6A887}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
     {6383A337-A60A-464D-AE98-CFD82BB6A887}.Debug|Any CPU.Build.0 = Debug|Any CPU
     {6383A337-A60A-464D-AE98-CFD82BB6A887}.Release|Any CPU.ActiveCfg = Release|Any CPU

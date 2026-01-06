@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using Scanner.Core.Runtime;
 
 namespace Scanner.Core;
 
@@ -62,6 +63,12 @@ public sealed class ReportResult
     /// </summary>
     [JsonPropertyName("scan")]
     public ScanResult Scan { get; init; } = new();
+
+    /// <summary>
+    /// Gets the runtime scan payload to include in the report.
+    /// </summary>
+    [JsonPropertyName("runtimeScan")]
+    public RuntimeScanResult? RuntimeScan { get; init; }
 
     /// <summary>
     /// Gets the timestamp when the report was generated.
