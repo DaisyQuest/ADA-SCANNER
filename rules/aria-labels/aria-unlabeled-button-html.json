@@ -1,0 +1,8 @@
+{
+  "id": "aria-unlabeled-button-html",
+  "description": "Ensure HTML buttons expose an accessible label for screen readers.",
+  "severity": "medium",
+  "checkId": "unlabeled-button",
+  "appliesTo": "html, htm",
+  "recommendation": "Provide visible text, aria-label, or aria-labelledby for <button> and input buttons."
+}

@@ -315,4 +315,19 @@ public sealed class RulesTests
             .Count(file => new[] { ".json", ".yml", ".yaml" }.Contains(Path.GetExtension(file), StringComparer.OrdinalIgnoreCase));
         Assert.Equal(contrastRuleFiles, contrastTeam.Rules.Count);
     }
+
+    [Fact]
+    public void RepositoryAriaLabelRules_AreValid()
+    {
+        var root = TestUtilities.FindRepositoryRoot();
+
+        var loader = new RuleLoader();
+        var result = loader.ValidateRules(Path.Combine(root, "rules"));
+
+        Assert.True(result.IsValid);
+        var ariaTeam = result.Teams.Single(team => team.TeamName == "aria-labels");
+        var ariaRuleFiles = Directory.EnumerateFiles(Path.Combine(root, "rules", "aria-labels"))
+            .Count(file => new[] { ".json", ".yml", ".yaml" }.Contains(Path.GetExtension(file), StringComparer.OrdinalIgnoreCase));
+        Assert.Equal(ariaRuleFiles, ariaTeam.Rules.Count);
+    }
 }

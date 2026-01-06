@@ -1,0 +1,8 @@
+{
+  "id": "aria-missing-label-html",
+  "description": "Ensure HTML form controls have accessible labels or associated descriptors.",
+  "severity": "high",
+  "checkId": "missing-label",
+  "appliesTo": "html, htm",
+  "recommendation": "Add an explicit <label> association or aria-label/aria-labelledby for form controls."
+}
