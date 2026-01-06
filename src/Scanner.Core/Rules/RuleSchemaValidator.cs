@@ -23,6 +23,15 @@ public sealed class RuleSchemaValidator
         "xaml-missing-name"
     };
 
+    private static readonly HashSet<string> AllowedAppliesTo = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "xaml",
+        "cshtml",
+        "razor",
+        "html",
+        "htm"
+    };
+
     /// <summary>
     /// Validates a rule definition and returns any schema errors.
     /// </summary>
@@ -49,6 +58,19 @@ public sealed class RuleSchemaValidator
         if (string.IsNullOrWhiteSpace(rule.CheckId) || !AllowedChecks.Contains(rule.CheckId))
         {
             errors.Add("Rule check id is invalid or missing.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(rule.AppliesTo))
+        {
+            var invalidKinds = rule.AppliesTo
+                .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Select(kind => kind.Trim())
+                .Where(kind => !AllowedAppliesTo.Contains(kind))
+                .ToArray();
+            if (invalidKinds.Length > 0)
+            {
+                errors.Add($"Rule appliesTo contains invalid values: {string.Join(", ", invalidKinds)}.");
+            }
         }
 
         return errors;

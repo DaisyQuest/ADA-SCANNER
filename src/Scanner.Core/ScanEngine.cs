@@ -61,7 +61,14 @@ public sealed class ScanEngine
         }
 
         var discoveryResult = _discovery.Discover(options.Path);
-        var rules = _ruleLoader.LoadRules(options.RulesRoot)
+        var ruleValidation = _ruleLoader.ValidateRules(options.RulesRoot);
+        if (!ruleValidation.IsValid)
+        {
+            var details = string.Join(" ", ruleValidation.Errors.Select(error => $"{error.Team}/{error.RuleId}: {error.Message}"));
+            throw new InvalidDataException($"Rule validation failed. {details}");
+        }
+
+        var rules = ruleValidation.Teams
             .SelectMany(team => team.Rules)
             .ToList();
 

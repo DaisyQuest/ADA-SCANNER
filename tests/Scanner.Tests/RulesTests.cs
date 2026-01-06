@@ -103,6 +103,40 @@ public sealed class RulesTests
     }
 
     [Fact]
+    public void ValidateRules_ReportsMissingRequiredFields()
+    {
+        var root = TestUtilities.CreateTempDirectory();
+        TestUtilities.WriteFile(root, "rules/forms/missing.json", "{\"id\":\"rule-1\",\"severity\":\"low\"}");
+
+        var loader = new RuleLoader();
+        var result = loader.ValidateRules(Path.Combine(root, "rules"));
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, error => error.Message.Contains("Missing required property 'description'"));
+        Assert.Contains(result.Errors, error => error.Message.Contains("Missing required property 'checkId'"));
+        Assert.Contains(result.Errors, error => error.Message.Contains("Rule description is required."));
+        Assert.Contains(result.Errors, error => error.Message.Contains("Rule check id is invalid or missing."));
+    }
+
+    [Fact]
+    public void ValidateRules_ReportsInvalidFieldTypes()
+    {
+        var root = TestUtilities.CreateTempDirectory();
+        TestUtilities.WriteFile(root, "rules/forms/types.json", "{\"id\":\"rule-2\",\"description\":\"Invalid types\",\"severity\":5,\"checkId\":false}");
+
+        var loader = new RuleLoader();
+        var result = loader.ValidateRules(Path.Combine(root, "rules"));
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, error => error.Message.Contains("Property 'severity' must be a string."));
+        Assert.Contains(result.Errors, error => error.Message.Contains("Property 'checkId' must be a string."));
+    }
+
+    [Fact]
+    public void ValidateRules_ReportsUnknownProperties()
+    {
+        var root = TestUtilities.CreateTempDirectory();
+        TestUtilities.WriteFile(root, "rules/forms/unknown.json", "{\"id\":\"rule-3\",\"description\":\"Unknown prop\",\"severity\":\"low\",\"checkId\":\"missing-alt-text\",\"extra\":\"nope\"}");
     public void LoadRule_ThrowsOnUnsupportedExtension()
     {
         var root = TestUtilities.CreateTempDirectory();
@@ -143,6 +177,27 @@ public sealed class RulesTests
         var result = loader.ValidateRules(Path.Combine(root, "rules"));
 
         Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, error => error.Message.Contains("Unknown property 'extra'"));
+    }
+
+    [Fact]
+    public void ValidateRules_ReportsInvalidAppliesToValues()
+    {
+        var root = TestUtilities.CreateTempDirectory();
+        TestUtilities.WriteFile(root, "rules/forms/applies.json", "{\"id\":\"rule-4\",\"description\":\"Bad appliesTo\",\"severity\":\"low\",\"checkId\":\"missing-alt-text\",\"appliesTo\":\"banana\"}");
+
+        var loader = new RuleLoader();
+        var result = loader.ValidateRules(Path.Combine(root, "rules"));
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, error => error.Message.Contains("Rule appliesTo contains invalid values"));
+    }
+
+    [Fact]
+    public void ValidateRules_ReportsUnknownYamlProperties()
+    {
+        var root = TestUtilities.CreateTempDirectory();
+        TestUtilities.WriteFile(root, "rules/forms/unknown.yaml", "id: rule-5\ndescription: Unknown yaml\nseverity: low\ncheckId: missing-alt-text\nextra: nope");
         Assert.Equal(2, result.Errors.Count);
         Assert.Contains(result.Errors, error => error.Team == "contrast" && error.RuleId == "");
         Assert.Contains(result.Errors, error => error.Team == "aria" && error.RuleId == "aria-1");
@@ -228,6 +283,8 @@ public sealed class RulesTests
         var loader = new RuleLoader();
         var result = loader.ValidateRules(Path.Combine(root, "rules"));
 
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, error => error.Message.Contains("Unknown property 'extra'"));
         Assert.True(result.IsValid);
         var contrastTeam = result.Teams.Single(team => team.TeamName == "contrast");
         Assert.Equal(12, contrastTeam.Rules.Count);
