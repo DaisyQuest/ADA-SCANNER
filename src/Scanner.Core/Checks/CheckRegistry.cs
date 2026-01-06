@@ -34,6 +34,8 @@ public sealed class CheckRegistry
     public static CheckRegistry Default() => new(new ICheck[]
     {
         new MissingLabelCheck(),
+        new UnlabeledButtonCheck(),
+        new MissingTableHeaderCheck(),
         new MissingAltTextCheck(),
         new InvalidAriaRoleCheck(),
         new HiddenNavigationCheck(),

@@ -15,6 +15,8 @@ public sealed class RuleSchemaValidator
     private static readonly HashSet<string> AllowedChecks = new(StringComparer.OrdinalIgnoreCase)
     {
         "missing-label",
+        "unlabeled-button",
+        "missing-table-headers",
         "missing-alt-text",
         "invalid-aria-role",
         "hidden-navigation",
