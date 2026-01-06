@@ -14,6 +14,7 @@
   <ItemGroup>
     <ProjectReference Include="../../src/Scanner.Core/Scanner.Core.csproj" />
     <ProjectReference Include="../../src/Scanner.Cli/Scanner.Cli.csproj" />
+    <ProjectReference Include="../../src/Scanner.Runner/Scanner.Runner.csproj" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Resources/Layouts/*">
