@@ -12,6 +12,7 @@ public sealed class RuntimeScanEngine
     private readonly IRuntimeDocumentSource _documentSource;
     private readonly RuleLoader _ruleLoader;
     private readonly CheckRegistry _checkRegistry;
+    private readonly RuntimeFormExtractor _formExtractor = new();
 
     /// <summary>
     /// Initializes a new instance of the <see cref="RuntimeScanEngine"/> class.
@@ -70,6 +71,7 @@ public sealed class RuntimeScanEngine
             }
 
             documents.Add(document);
+            RegisterFormDefinitions(options, document);
             var context = new CheckContext(document.Url, document.Body, "html");
 
             foreach (var rule in rules)
@@ -106,12 +108,46 @@ public sealed class RuntimeScanEngine
             SeedUrls = options.SeedUrls.Select(url => url.ToString()).ToList(),
             Documents = documents,
             Issues = issues,
-            Timestamp = DateTimeOffset.UtcNow
+            Timestamp = DateTimeOffset.UtcNow,
+            Forms = options.FormConfigurationStore?.Forms ?? Array.Empty<RuntimeFormConfiguration>(),
+            FormConfigurationPath = options.FormConfigPath
         };
     }
 
     private static string BuildIssueKey(Issue issue)
     {
         return string.Join("::", issue.RuleId, issue.CheckId, issue.FilePath, issue.Line, issue.Message);
+    }
+
+    private void RegisterFormDefinitions(RuntimeScanOptions options, RuntimeHtmlDocument document)
+    {
+        if (options.FormConfigurationStore == null)
+        {
+            return;
+        }
+
+        if (!Uri.TryCreate(document.Url, UriKind.Absolute, out var uri))
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(document.ContentType)
+            || !document.ContentType.Contains("html", StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        var forms = _formExtractor.Extract(document.Body, uri);
+        if (forms.Count == 0)
+        {
+            return;
+        }
+
+        options.FormConfigurationStore.RegisterDiscoveredForms(forms);
+
+        if (!string.IsNullOrWhiteSpace(options.FormConfigPath) && options.FormConfigurationStore.IsDirty)
+        {
+            options.FormConfigurationStore.Save(options.FormConfigPath);
+        }
     }
 }

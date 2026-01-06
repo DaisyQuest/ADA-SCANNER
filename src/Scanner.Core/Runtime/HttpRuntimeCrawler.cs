@@ -15,6 +15,7 @@ public sealed class HttpRuntimeCrawler : IRuntimeDocumentSource
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     private readonly HttpClient _client;
+    private readonly RuntimeFormExtractor _formExtractor = new();
 
     /// <summary>
     /// Initializes a new instance of the <see cref="HttpRuntimeCrawler"/> class.
@@ -39,11 +40,21 @@ public sealed class HttpRuntimeCrawler : IRuntimeDocumentSource
         var excludePatterns = CompilePatterns(options.ExcludeUrlPatterns);
 
         var queue = new Queue<QueueEntry>();
-        var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var visitedRequests = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var seed in options.SeedUrls)
         {
-            TryEnqueue(seed, 0, options.MaxDepth, includePatterns, excludePatterns, visited, queue);
+            TryEnqueueRequest(
+                seed,
+                0,
+                options.MaxDepth,
+                includePatterns,
+                excludePatterns,
+                visitedRequests,
+                queue,
+                HttpMethod.Get,
+                null,
+                BuildRequestKey(HttpMethod.Get, seed, null));
         }
 
         var processed = 0;
@@ -54,7 +65,11 @@ public sealed class HttpRuntimeCrawler : IRuntimeDocumentSource
             var current = entry.Url;
             processed++;
 
-            using var request = new HttpRequestMessage(HttpMethod.Get, current);
+            using var request = new HttpRequestMessage(entry.Method, current);
+            if (entry.FormValues != null)
+            {
+                request.Content = new FormUrlEncodedContent(entry.FormValues);
+            }
             ApplyHeaders(request.Headers, options.AuthHeaders);
 
             HttpResponseMessage response;
@@ -93,8 +108,20 @@ public sealed class HttpRuntimeCrawler : IRuntimeDocumentSource
                     {
                         foreach (var link in ExtractLinks(body, current))
                         {
-                            TryEnqueue(link, entry.Depth + 1, options.MaxDepth, includePatterns, excludePatterns, visited, queue);
+                            TryEnqueueRequest(
+                                link,
+                                entry.Depth + 1,
+                                options.MaxDepth,
+                                includePatterns,
+                                excludePatterns,
+                                visitedRequests,
+                                queue,
+                                HttpMethod.Get,
+                                null,
+                                BuildRequestKey(HttpMethod.Get, link, null));
                         }
+
+                        EnqueueConfiguredForms(options, body, current, entry.Depth + 1, includePatterns, excludePatterns, visitedRequests, queue);
                     }
                 }
             }
@@ -120,14 +147,17 @@ public sealed class HttpRuntimeCrawler : IRuntimeDocumentSource
         return patterns.Select(pattern => new Regex(pattern, RegexOptions.IgnoreCase | RegexOptions.Compiled)).ToList();
     }
 
-    private static bool TryEnqueue(
+    private static bool TryEnqueueRequest(
         Uri url,
         int depth,
         int maxDepth,
         IReadOnlyList<Regex> includePatterns,
         IReadOnlyList<Regex> excludePatterns,
-        ISet<string> visited,
-        Queue<QueueEntry> queue)
+        ISet<string> visitedRequests,
+        Queue<QueueEntry> queue,
+        HttpMethod method,
+        IReadOnlyDictionary<string, string>? formValues,
+        string requestKey)
     {
         if (depth > maxDepth)
         {
@@ -145,12 +175,12 @@ public sealed class HttpRuntimeCrawler : IRuntimeDocumentSource
             return false;
         }
 
-        if (!visited.Add(absolute))
+        if (!visitedRequests.Add(requestKey))
         {
             return false;
         }
 
-        queue.Enqueue(new QueueEntry(url, depth));
+        queue.Enqueue(new QueueEntry(url, depth, method, formValues));
         return true;
     }
 
@@ -284,5 +314,128 @@ public sealed class HttpRuntimeCrawler : IRuntimeDocumentSource
         return Encoding.UTF8.GetString(memory.ToArray());
     }
 
-    private sealed record QueueEntry(Uri Url, int Depth);
+    private static string BuildRequestKey(HttpMethod method, Uri url, IReadOnlyDictionary<string, string>? formValues)
+    {
+        if (formValues == null || formValues.Count == 0)
+        {
+            return $"{method.Method}::{url.AbsoluteUri}";
+        }
+
+        var sorted = formValues.OrderBy(pair => pair.Key, StringComparer.OrdinalIgnoreCase)
+            .Select(pair => $"{pair.Key}={pair.Value}");
+        return $"{method.Method}::{url.AbsoluteUri}::{string.Join("&", sorted)}";
+    }
+
+    private void EnqueueConfiguredForms(
+        RuntimeScanOptions options,
+        string html,
+        Uri baseUrl,
+        int depth,
+        IReadOnlyList<Regex> includePatterns,
+        IReadOnlyList<Regex> excludePatterns,
+        ISet<string> visitedRequests,
+        Queue<QueueEntry> queue)
+    {
+        if (options.FormConfigurationStore == null)
+        {
+            return;
+        }
+
+        var forms = _formExtractor.Extract(html, baseUrl);
+        if (forms.Count == 0)
+        {
+            return;
+        }
+
+        options.FormConfigurationStore.RegisterDiscoveredForms(forms);
+
+        foreach (var form in forms)
+        {
+            var configuration = options.FormConfigurationStore.Find(form.Key);
+            if (configuration == null || !configuration.Enabled)
+            {
+                continue;
+            }
+
+            if (!Uri.TryCreate(form.Action, UriKind.Absolute, out var actionUri))
+            {
+                continue;
+            }
+
+            var values = BuildSubmissionValues(configuration);
+            var method = new HttpMethod(form.Method.ToUpperInvariant());
+            var request = BuildFormRequest(actionUri, method, values);
+            var requestKey = BuildRequestKey(request.Method, request.Url, request.FormValues);
+
+            TryEnqueueRequest(
+                request.Url,
+                depth,
+                options.MaxDepth,
+                includePatterns,
+                excludePatterns,
+                visitedRequests,
+                queue,
+                request.Method,
+                request.FormValues,
+                requestKey);
+        }
+    }
+
+    private static IReadOnlyDictionary<string, string> BuildSubmissionValues(RuntimeFormConfiguration configuration)
+    {
+        var values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var input in configuration.Inputs)
+        {
+            var value = !string.IsNullOrWhiteSpace(input.Value) ? input.Value : input.DefaultValue;
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                continue;
+            }
+
+            values[input.Name] = value;
+        }
+
+        return values;
+    }
+
+    private static FormRequest BuildFormRequest(Uri action, HttpMethod method, IReadOnlyDictionary<string, string> values)
+    {
+        if (method == HttpMethod.Get)
+        {
+            var url = AppendQuery(action, values);
+            return new FormRequest(url, HttpMethod.Get, null);
+        }
+
+        return new FormRequest(action, method, values);
+    }
+
+    private static Uri AppendQuery(Uri action, IReadOnlyDictionary<string, string> values)
+    {
+        if (values.Count == 0)
+        {
+            return action;
+        }
+
+        var builder = new UriBuilder(action);
+        var query = string.Join("&", values.Select(pair =>
+            $"{Uri.EscapeDataString(pair.Key)}={Uri.EscapeDataString(pair.Value)}"));
+        if (string.IsNullOrWhiteSpace(builder.Query))
+        {
+            builder.Query = query;
+        }
+        else
+        {
+            builder.Query = builder.Query.TrimStart('?') + "&" + query;
+        }
+
+        return builder.Uri;
+    }
+
+    private sealed record QueueEntry(
+        Uri Url,
+        int Depth,
+        HttpMethod Method,
+        IReadOnlyDictionary<string, string>? FormValues);
+
+    private sealed record FormRequest(Uri Url, HttpMethod Method, IReadOnlyDictionary<string, string>? FormValues);
 }

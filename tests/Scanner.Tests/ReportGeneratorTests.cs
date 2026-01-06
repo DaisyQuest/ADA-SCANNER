@@ -40,7 +40,20 @@ public sealed class ReportGeneratorTests
         {
             SeedUrls = new[] { "http://example.test" },
             Documents = Array.Empty<RuntimeHtmlDocument>(),
-            Issues = new[] { new Issue("rule", "check", "http://example.test", 1, "message", null) }
+            Issues = new[] { new Issue("rule", "check", "http://example.test", 1, "message", null) },
+            FormConfigurationPath = Path.Combine(root, "runtime-forms.json"),
+            Forms = new[]
+            {
+                new RuntimeFormConfiguration
+                {
+                    Action = "http://example.test/login",
+                    Method = "POST",
+                    Inputs = new[]
+                    {
+                        new RuntimeFormInputConfiguration { Name = "user", Type = "text" }
+                    }
+                }
+            }
         };
 
         var generator = new ReportGenerator();
@@ -51,6 +64,8 @@ public sealed class ReportGeneratorTests
 
         var markdown = File.ReadAllText(artifacts.MarkdownPath);
         Assert.Contains("Runtime Scan", markdown, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Form config", markdown, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Discovered Forms", markdown, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

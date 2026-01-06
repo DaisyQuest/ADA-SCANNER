@@ -7,3 +7,4 @@
 2026-01-06 - Selected team: backend; added run-ada-scan runner with defaults plus exhaustive runner tests for scan/report output and error paths (SPEC-001, SPEC-007, SPEC-013, SPEC-014)
 2026-01-06 - Selected team: backend; added runtime scanning pipeline, crawler/middleware capture, reporting updates, runner flags, and comprehensive tests. (SPEC-013)
 2026-01-06 - Expanded runtime scan configuration options, documentation, and tests. (SPEC-002, SPEC-007, SPEC-013)
+2026-01-06 - Selected team: BACKEND; added runtime form configuration extraction/submission, editor tool, and report updates with tests. (SPEC-013, SPEC-014)

@@ -68,6 +68,32 @@ public sealed class RuntimeScanEngineTests
         }, cts.Token));
     }
 
+    [Fact]
+    public async Task RuntimeScanEngine_PersistsFormConfiguration()
+    {
+        var root = TestUtilities.CreateTempDirectory();
+        TestUtilities.WriteFile(root, "rules/team/rule.json", "{\"id\":\"alt-1\",\"description\":\"Missing alt\",\"severity\":\"low\",\"checkId\":\"missing-alt-text\"}");
+        var configPath = Path.Combine(root, "runtime-forms.json");
+        var store = new RuntimeFormConfigurationStore();
+
+        var documentSource = new StubDocumentSource(new[]
+        {
+            new RuntimeHtmlDocument("http://example.test/page", 200, "text/html", "<form action=\"/login\"><input name=\"user\"></form>", DateTimeOffset.UtcNow)
+        });
+
+        var engine = new RuntimeScanEngine(documentSource, new RuleLoader(), CheckRegistry.Default());
+        var result = await engine.ScanAsync(new RuntimeScanOptions
+        {
+            RulesRoot = Path.Combine(root, "rules"),
+            SeedUrls = new[] { new Uri("http://example.test/page") },
+            FormConfigPath = configPath,
+            FormConfigurationStore = store
+        });
+
+        Assert.True(File.Exists(configPath));
+        Assert.Single(result.Forms);
+    }
+
     private sealed class StubDocumentSource : IRuntimeDocumentSource
     {
         private readonly IReadOnlyList<RuntimeHtmlDocument> _documents;

@@ -71,11 +71,17 @@ public sealed class ReportGenerator
             : string.Join("", report.RuntimeScan.Issues.Select(issue =>
                 $"<tr><td>{issue.RuleId}</td><td>{issue.CheckId}</td><td>{issue.FilePath}</td><td>{issue.Line}</td><td>{issue.Message}</td></tr>"));
 
+        var formRows = report.RuntimeScan?.Forms == null
+            ? string.Empty
+            : string.Join("", report.RuntimeScan.Forms.Select(form =>
+                $"<tr><td>{form.Method}</td><td>{form.Action}</td><td>{form.Inputs.Count}</td><td>{(form.Enabled ? "Enabled" : "Disabled")}</td></tr>"));
+
         var runtimeSection = report.RuntimeScan == null
             ? string.Empty
             : $"""
   <h2>Runtime Scan</h2>
   <p>Seed URLs: {string.Join(", ", report.RuntimeScan.SeedUrls)}</p>
+  {(string.IsNullOrWhiteSpace(report.RuntimeScan.FormConfigurationPath) ? string.Empty : $"<p>Form config: {report.RuntimeScan.FormConfigurationPath}</p>")}
   <table border="1" cellspacing="0" cellpadding="6">
     <thead>
       <tr>
@@ -90,6 +96,22 @@ public sealed class ReportGenerator
       {runtimeRows}
     </tbody>
   </table>
+  {(string.IsNullOrWhiteSpace(formRows) ? string.Empty : $"""
+  <h3>Discovered Forms</h3>
+  <table border="1" cellspacing="0" cellpadding="6">
+    <thead>
+      <tr>
+        <th>Method</th>
+        <th>Action</th>
+        <th>Inputs</th>
+        <th>Auto-submit</th>
+      </tr>
+    </thead>
+    <tbody>
+      {formRows}
+    </tbody>
+  </table>
+  """)}
 """;
 
         return $"""
@@ -143,11 +165,26 @@ public sealed class ReportGenerator
             lines.Add("");
             lines.Add("## Runtime Scan");
             lines.Add($"Seed URLs: {string.Join(", ", report.RuntimeScan.SeedUrls)}");
+            if (!string.IsNullOrWhiteSpace(report.RuntimeScan.FormConfigurationPath))
+            {
+                lines.Add($"Form config: `{report.RuntimeScan.FormConfigurationPath}`");
+            }
             lines.Add("");
             lines.Add("| Rule | Check | URL | Line | Message |");
             lines.Add("| --- | --- | --- | --- | --- |");
             lines.AddRange(report.RuntimeScan.Issues.Select(issue =>
                 $"| {issue.RuleId} | {issue.CheckId} | {issue.FilePath} | {issue.Line} | {issue.Message} |"));
+
+            if (report.RuntimeScan.Forms.Count > 0)
+            {
+                lines.Add("");
+                lines.Add("### Discovered Forms");
+                lines.Add("");
+                lines.Add("| Method | Action | Inputs | Auto-submit |");
+                lines.Add("| --- | --- | --- | --- |");
+                lines.AddRange(report.RuntimeScan.Forms.Select(form =>
+                    $"| {form.Method} | {form.Action} | {form.Inputs.Count} | {(form.Enabled ? "Enabled" : "Disabled")} |"));
+            }
         }
 
         return string.Join(Environment.NewLine, lines);
