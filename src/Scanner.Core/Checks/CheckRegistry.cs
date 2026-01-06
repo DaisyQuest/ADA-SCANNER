@@ -33,8 +33,11 @@ public sealed class CheckRegistry
     /// <returns>A registry containing the default checks.</returns>
     public static CheckRegistry Default() => new(new ICheck[]
     {
+        new AbsolutePositioningCheck(),
+        new FixedWidthLayoutCheck(),
         new MissingLabelCheck(),
         new MissingAltTextCheck(),
+        new NonWrappingContainerCheck(),
         new InvalidAriaRoleCheck(),
         new HiddenNavigationCheck(),
         new InsufficientContrastCheck(),

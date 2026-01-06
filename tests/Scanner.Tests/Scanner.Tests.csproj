@@ -14,4 +14,9 @@
     <ProjectReference Include="../../src/Scanner.Core/Scanner.Core.csproj" />
     <ProjectReference Include="../../src/Scanner.Cli/Scanner.Cli.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <Content Include="Resources/Layouts/*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
 </Project>
