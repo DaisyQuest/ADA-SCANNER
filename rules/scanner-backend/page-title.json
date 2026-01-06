@@ -1,0 +1,8 @@
+{
+  "id": "doc-title-001",
+  "description": "Ensure HTML documents provide a descriptive page title.",
+  "severity": "high",
+  "checkId": "missing-page-title",
+  "appliesTo": "html, htm",
+  "recommendation": "Provide a non-empty <title> element in the document head."
+}

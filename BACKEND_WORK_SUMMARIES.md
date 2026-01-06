@@ -9,3 +9,4 @@
 2026-01-06 - Expanded runtime scan configuration options, documentation, and tests. (SPEC-002, SPEC-007, SPEC-013)
 2026-01-06 - Selected team: BACKEND; added runtime form configuration extraction/submission, editor tool, and report updates with tests. (SPEC-013, SPEC-014)
 2026-01-06 - Enhanced report resiliency and added coverage for reporting output (SPEC-010, SPEC-013)
+2026-01-06 - Added runtime checks and rules for document language/title plus tests (SPEC-008, SPEC-013)

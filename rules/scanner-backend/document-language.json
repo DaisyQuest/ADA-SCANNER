@@ -1,0 +1,8 @@
+{
+  "id": "doc-lang-001",
+  "description": "Ensure HTML documents declare a primary language.",
+  "severity": "high",
+  "checkId": "missing-document-language",
+  "appliesTo": "html, htm",
+  "recommendation": "Add a valid lang (or xml:lang) attribute to the <html> element."
+}

@@ -119,6 +119,89 @@ public sealed class ChecksTests
     }
 
     [Fact]
+    public void MissingDocumentLanguageCheck_FlagsMissingLang()
+    {
+        var check = new MissingDocumentLanguageCheck();
+        var content = "<html><head></head><body>Content</body></html>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Single(issues);
+        Assert.Equal("Document language is missing or empty.", issues[0].Message);
+    }
+
+    [Fact]
+    public void MissingDocumentLanguageCheck_AllowsLang()
+    {
+        var check = new MissingDocumentLanguageCheck();
+        var content = "<html lang=\"en\"><head></head><body>Content</body></html>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Empty(issues);
+    }
+
+    [Fact]
+    public void MissingDocumentLanguageCheck_AllowsXmlLang()
+    {
+        var check = new MissingDocumentLanguageCheck();
+        var content = "<html xml:lang=\"en\"><head></head><body>Content</body></html>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Empty(issues);
+    }
+
+    [Fact]
+    public void MissingDocumentLanguageCheck_SkipsWhenNoHtmlTag()
+    {
+        var check = new MissingDocumentLanguageCheck();
+        var content = "<section><p>Partial</p></section>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Empty(issues);
+    }
+
+    [Fact]
+    public void MissingPageTitleCheck_FlagsMissingTitle()
+    {
+        var check = new MissingPageTitleCheck();
+        var content = "<html><head></head><body>Content</body></html>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Single(issues);
+        Assert.Equal("Document title is missing.", issues[0].Message);
+    }
+
+    [Fact]
+    public void MissingPageTitleCheck_FlagsWhitespaceTitle()
+    {
+        var check = new MissingPageTitleCheck();
+        var content = "<html><head><title>   </title></head><body>Content</body></html>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Single(issues);
+        Assert.Equal("Document title is missing or empty.", issues[0].Message);
+    }
+
+    [Fact]
+    public void MissingPageTitleCheck_AllowsNonEmptyTitle()
+    {
+        var check = new MissingPageTitleCheck();
+        var content = "<html><head><title>Home</title></head><body>Content</body></html>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Empty(issues);
+    }
+
+    [Fact]
+    public void MissingPageTitleCheck_AllowsMultipleTitlesWhenOneHasContent()
+    {
+        var check = new MissingPageTitleCheck();
+        var content = "<html><head><title> </title><title>Dashboard</title></head><body>Content</body></html>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Empty(issues);
+    }
+
+    [Fact]
     public void InvalidAriaRoleCheck_FlagsUnknownRole()
     {
         var check = new InvalidAriaRoleCheck();

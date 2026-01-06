@@ -28,6 +28,8 @@ The rules directory must include the following team folders:
 | ERROR-TOP-001 | Error summaries not placed at the top of the page/region | `rules/error-message-at-top/` |
 | RESP-SIZE-001 | Fixed sizing that blocks responsive reflow at common breakpoints | `rules/responsive-size/` |
 | REFLOW-001 | Layout containers that prevent reflow under zoom | `rules/reflow/` |
+| DOC-LANG-001 | Missing primary language declaration on HTML documents | `rules/scanner-backend/` |
+| DOC-TITLE-001 | Missing or empty document title element | `rules/scanner-backend/` |
 
 ## Rule details
 
@@ -102,6 +104,30 @@ The rules directory must include the following team folders:
   - `file`: source file path
   - `line`: line number where the reflow-blocking container is defined
   - `message`: "Layout prevents content reflow under zoom or narrow viewports."
+
+### DOC-LANG-001 — Missing document language
+- **Expected input artifacts**: HTML.
+- **Detection heuristics**:
+  - Identify the root `<html>` element and verify it declares a `lang` or `xml:lang` attribute.
+  - Flag documents where the language attribute is missing or empty.
+  - Ignore partial fragments that omit the `<html>` tag.
+- **Expected findings shape**:
+  - `ruleId`: `DOC-LANG-001`
+  - `file`: source file path or runtime URL
+  - `line`: line number where the `<html>` tag appears
+  - `message`: "Document language is missing or empty."
+
+### DOC-TITLE-001 — Missing document title
+- **Expected input artifacts**: HTML.
+- **Detection heuristics**:
+  - Verify the document includes a `<title>` element within the `<head>` section.
+  - Flag documents that omit the `<title>` element or provide only whitespace.
+  - Treat the first empty title as the primary failure when multiple titles exist.
+- **Expected findings shape**:
+  - `ruleId`: `DOC-TITLE-001`
+  - `file`: source file path or runtime URL
+  - `line`: line number where the title should appear
+  - `message`: "Document title is missing or empty."
 
 ## Ownership overlap notes
 
