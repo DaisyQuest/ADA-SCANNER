@@ -1,0 +1,8 @@
+{
+  "id": "reflow-absolute-positioning",
+  "description": "Avoid absolute positioning that can prevent content reflow.",
+  "severity": "medium",
+  "checkId": "absolute-positioning",
+  "appliesTo": "html,htm,cshtml,razor,xaml",
+  "recommendation": "Use flow layout containers or relative positioning so content can reflow when zoomed."
+}

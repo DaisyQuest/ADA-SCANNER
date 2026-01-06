@@ -17,4 +17,38 @@ public static class TestUtilities
         File.WriteAllText(path, content);
         return path;
     }
+
+    public static string FindRepositoryRoot()
+    {
+        var current = new DirectoryInfo(AppContext.BaseDirectory);
+        while (current != null && !File.Exists(Path.Combine(current.FullName, "PROJECT_SPEC.md")))
+        {
+            current = current.Parent;
+        }
+
+        if (current == null)
+        {
+            throw new DirectoryNotFoundException("Repository root could not be located.");
+        }
+
+        return current.FullName;
+    }
+
+    public static string GetLayoutFixturePath(string fileName)
+    {
+        var baseDir = AppContext.BaseDirectory;
+        return Path.Combine(baseDir, "Resources", "Layouts", fileName);
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory != null)
+        {
+            if (File.Exists(Path.Combine(directory.FullName, "AdaScanner.sln")))
+            {
+                return directory.FullName;
+            }
+
+            directory = directory.Parent;
+        }
+
+        throw new DirectoryNotFoundException("Repository root not found starting from test directory.");
+    }
 }

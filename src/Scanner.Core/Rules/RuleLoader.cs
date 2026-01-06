@@ -8,6 +8,23 @@ namespace Scanner.Core.Rules;
 public sealed class RuleLoader
 {
     private readonly RuleSchemaValidator _validator = new();
+    private static readonly HashSet<string> AllowedProperties = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "id",
+        "description",
+        "severity",
+        "checkId",
+        "appliesTo",
+        "recommendation"
+    };
+
+    private static readonly string[] RequiredProperties =
+    {
+        "id",
+        "description",
+        "severity",
+        "checkId"
+    };
 
     /// <summary>
     /// Loads all rule definitions from the provided rules root.
@@ -43,8 +60,8 @@ public sealed class RuleLoader
                     continue;
                 }
 
-                var rule = LoadRule(file);
-                rules.Add(rule);
+                var result = LoadRuleFile(file, captureErrors: false);
+                rules.Add(result.Rule);
             }
 
             teamRules.Add(new TeamRules(teamName, rules));
@@ -60,18 +77,47 @@ public sealed class RuleLoader
     /// <returns>The validation result including any errors.</returns>
     public RuleValidationResult ValidateRules(string rulesRoot)
     {
-        var teamRules = LoadRules(rulesRoot);
-        var errors = new List<RuleValidationError>();
-        foreach (var team in teamRules)
+        if (string.IsNullOrWhiteSpace(rulesRoot))
         {
-            foreach (var rule in team.Rules)
+            throw new ArgumentException("Rules root is required.", nameof(rulesRoot));
+        }
+
+        if (!Directory.Exists(rulesRoot))
+        {
+            throw new DirectoryNotFoundException($"Rules directory not found: {rulesRoot}");
+        }
+
+        var teamRules = new List<TeamRules>();
+        var errors = new List<RuleValidationError>();
+        foreach (var teamDirectory in Directory.EnumerateDirectories(rulesRoot))
+        {
+            var teamName = Path.GetFileName(teamDirectory);
+            var rules = new List<RuleDefinition>();
+            foreach (var file in Directory.EnumerateFiles(teamDirectory))
             {
-                var ruleErrors = _validator.Validate(rule);
+                var extension = Path.GetExtension(file);
+                if (!extension.Equals(".json", StringComparison.OrdinalIgnoreCase)
+                    && !extension.Equals(".yml", StringComparison.OrdinalIgnoreCase)
+                    && !extension.Equals(".yaml", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                var result = LoadRuleFile(file, captureErrors: true);
+                rules.Add(result.Rule);
+                foreach (var error in result.Errors)
+                {
+                    errors.Add(new RuleValidationError(teamName, result.RuleIdForError, error));
+                }
+
+                var ruleErrors = _validator.Validate(result.Rule);
                 foreach (var error in ruleErrors)
                 {
-                    errors.Add(new RuleValidationError(team.TeamName, rule.Id, error));
+                    errors.Add(new RuleValidationError(teamName, result.RuleIdForError, error));
                 }
             }
+
+            teamRules.Add(new TeamRules(teamName, rules));
         }
 
         return new RuleValidationResult(teamRules, errors);
@@ -85,33 +131,131 @@ public sealed class RuleLoader
     /// <exception cref="InvalidDataException">Thrown when the rule file cannot be parsed.</exception>
     public RuleDefinition LoadRule(string path)
     {
-        var extension = Path.GetExtension(path);
-        if (extension.Equals(".json", StringComparison.OrdinalIgnoreCase))
-        {
-            var json = File.ReadAllText(path);
-            var rule = JsonSerializer.Deserialize<RuleDefinition>(json, new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            });
-            if (rule == null)
-            {
-                throw new InvalidDataException($"Rule file {path} is empty or invalid.");
-            }
-
-            return rule;
-        }
-
-        if (extension.Equals(".yml", StringComparison.OrdinalIgnoreCase) || extension.Equals(".yaml", StringComparison.OrdinalIgnoreCase))
-        {
-            return ParseSimpleYamlRule(File.ReadAllLines(path));
-        }
-
-        throw new InvalidDataException($"Unsupported rule file format: {path}");
+        return LoadRuleFile(path, captureErrors: false).Rule;
     }
 
-    private static RuleDefinition ParseSimpleYamlRule(IEnumerable<string> lines)
+    private RuleFileLoadResult LoadRuleFile(string path, bool captureErrors)
+    {
+        try
+        {
+            var extension = Path.GetExtension(path);
+            if (extension.Equals(".json", StringComparison.OrdinalIgnoreCase))
+            {
+                var result = ParseJsonRule(File.ReadAllText(path), path);
+                if (!captureErrors && result.HasParseError)
+                {
+                    throw new InvalidDataException(string.Join(" ", result.Errors));
+                }
+
+                return result;
+            }
+
+            if (extension.Equals(".yml", StringComparison.OrdinalIgnoreCase) || extension.Equals(".yaml", StringComparison.OrdinalIgnoreCase))
+            {
+                var result = ParseSimpleYamlRule(File.ReadAllLines(path), path);
+                if (!captureErrors && result.HasParseError)
+                {
+                    throw new InvalidDataException(string.Join(" ", result.Errors));
+                }
+
+                return result;
+            }
+
+            throw new InvalidDataException($"Unsupported rule file format: {path}");
+        }
+        catch (Exception ex) when (captureErrors)
+        {
+            return new RuleFileLoadResult(
+                new RuleDefinition(string.Empty, string.Empty, string.Empty, string.Empty),
+                new[] { ex.Message },
+                Path.GetFileNameWithoutExtension(path),
+                HasParseError: true);
+        }
+    }
+
+    private static RuleFileLoadResult ParseJsonRule(string json, string path)
+    {
+        var errors = new List<string>();
+        JsonDocument document;
+        try
+        {
+            document = JsonDocument.Parse(json);
+        }
+        catch (JsonException)
+        {
+            errors.Add($"Rule file {path} contains invalid JSON.");
+            return new RuleFileLoadResult(
+                new RuleDefinition(string.Empty, string.Empty, string.Empty, string.Empty),
+                errors,
+                Path.GetFileNameWithoutExtension(path),
+                HasParseError: true);
+        }
+
+        using (document)
+        {
+            if (document.RootElement.ValueKind != JsonValueKind.Object)
+            {
+                errors.Add("Rule definition must be a JSON object.");
+                return new RuleFileLoadResult(
+                    new RuleDefinition(string.Empty, string.Empty, string.Empty, string.Empty),
+                    errors,
+                    Path.GetFileNameWithoutExtension(path),
+                    HasParseError: true);
+            }
+
+            var values = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+            foreach (var property in document.RootElement.EnumerateObject())
+            {
+                if (!AllowedProperties.Contains(property.Name))
+                {
+                    errors.Add($"Unknown property '{property.Name}'.");
+                    continue;
+                }
+
+                if (property.Value.ValueKind == JsonValueKind.String)
+                {
+                    values[property.Name] = property.Value.GetString();
+                }
+                else
+                {
+                    errors.Add($"Property '{property.Name}' must be a string.");
+                    values[property.Name] = null;
+                }
+            }
+
+            foreach (var required in RequiredProperties)
+            {
+                if (!values.ContainsKey(required))
+                {
+                    errors.Add($"Missing required property '{required}'.");
+                }
+            }
+
+            values.TryGetValue("id", out var id);
+            values.TryGetValue("description", out var description);
+            values.TryGetValue("severity", out var severity);
+            values.TryGetValue("checkId", out var checkId);
+            values.TryGetValue("appliesTo", out var appliesTo);
+            values.TryGetValue("recommendation", out var recommendation);
+
+            var rule = new RuleDefinition(
+                id ?? string.Empty,
+                description ?? string.Empty,
+                severity ?? string.Empty,
+                checkId ?? string.Empty,
+                string.IsNullOrWhiteSpace(appliesTo) ? null : appliesTo,
+                string.IsNullOrWhiteSpace(recommendation) ? null : recommendation);
+
+            var ruleId = string.IsNullOrWhiteSpace(id) ? Path.GetFileNameWithoutExtension(path) : id;
+
+            return new RuleFileLoadResult(rule, errors, ruleId, HasParseError: false);
+        }
+    }
+
+    private static RuleFileLoadResult ParseSimpleYamlRule(IEnumerable<string> lines, string path)
     {
         var values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var errors = new List<string>();
         foreach (var line in lines)
         {
             var trimmed = line.Trim();
@@ -128,7 +272,21 @@ public sealed class RuleLoader
 
             var key = trimmed[..index].Trim();
             var value = trimmed[(index + 1)..].Trim().Trim('"');
+            if (!AllowedProperties.Contains(key))
+            {
+                errors.Add($"Unknown property '{key}'.");
+                continue;
+            }
+
             values[key] = value;
+        }
+
+        foreach (var required in RequiredProperties)
+        {
+            if (!values.ContainsKey(required))
+            {
+                errors.Add($"Missing required property '{required}'.");
+            }
         }
 
         values.TryGetValue("id", out var id);
@@ -138,14 +296,23 @@ public sealed class RuleLoader
         values.TryGetValue("appliesTo", out var appliesTo);
         values.TryGetValue("recommendation", out var recommendation);
 
-        return new RuleDefinition(
+        var rule = new RuleDefinition(
             id ?? string.Empty,
             description ?? string.Empty,
             severity ?? string.Empty,
             checkId ?? string.Empty,
             string.IsNullOrWhiteSpace(appliesTo) ? null : appliesTo,
             string.IsNullOrWhiteSpace(recommendation) ? null : recommendation);
+
+        var ruleId = string.IsNullOrWhiteSpace(id) ? Path.GetFileNameWithoutExtension(path) : id;
+        return new RuleFileLoadResult(rule, errors, ruleId, HasParseError: false);
     }
+
+    private sealed record RuleFileLoadResult(
+        RuleDefinition Rule,
+        IReadOnlyList<string> Errors,
+        string RuleIdForError,
+        bool HasParseError);
 }
 
 /// <summary>

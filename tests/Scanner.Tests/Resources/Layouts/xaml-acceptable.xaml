@@ -1,0 +1,5 @@
+<Grid>
+  <StackPanel>
+    <TextBlock TextWrapping="Wrap" Width="Auto">Flexible</TextBlock>
+  </StackPanel>
+</Grid>

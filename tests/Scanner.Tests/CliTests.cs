@@ -55,6 +55,36 @@ public sealed class CliTests
     }
 
     [Fact]
+    public void CommandDispatcher_RulesList_WorksOfflineHeadless()
+    {
+        var root = TestUtilities.CreateTempDirectory();
+        TestUtilities.WriteFile(root, "rules/team/rule.json", "{\"id\":\"alt-1\",\"description\":\"Missing alt\",\"severity\":\"low\",\"checkId\":\"missing-alt-text\"}");
+
+        var dispatcher = new CommandDispatcher();
+        var console = new TestConsole();
+        var code = dispatcher.Dispatch(new[] { "rules", "list", "--rules", Path.Combine(root, "rules") }, console);
+
+        Assert.Equal(0, code);
+        Assert.Single(console.Outputs);
+        Assert.Empty(console.Errors);
+    }
+
+    [Fact]
+    public void CommandDispatcher_RulesValidate_WorksOfflineHeadless()
+    {
+        var root = TestUtilities.CreateTempDirectory();
+        TestUtilities.WriteFile(root, "rules/team/rule.json", "{\"id\":\"alt-1\",\"description\":\"Missing alt\",\"severity\":\"low\",\"checkId\":\"missing-alt-text\"}");
+
+        var dispatcher = new CommandDispatcher();
+        var console = new TestConsole();
+        var code = dispatcher.Dispatch(new[] { "rules", "validate", "--rules", Path.Combine(root, "rules") }, console);
+
+        Assert.Equal(0, code);
+        Assert.Contains("All rules are valid.", console.Outputs);
+        Assert.Empty(console.Errors);
+    }
+
+    [Fact]
     public void CommandDispatcher_Report_WritesArtifacts()
     {
         var root = TestUtilities.CreateTempDirectory();

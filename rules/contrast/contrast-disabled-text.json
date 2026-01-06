@@ -1,0 +1,8 @@
+{
+  "id": "contrast-disabled-text",
+  "description": "Ensure disabled text remains readable with sufficient contrast.",
+  "severity": "low",
+  "checkId": "insufficient-contrast",
+  "appliesTo": "html",
+  "recommendation": "Avoid dropping disabled text contrast below 4.5:1 unless additional cues are provided."
+}

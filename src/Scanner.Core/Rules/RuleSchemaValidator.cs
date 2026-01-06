@@ -14,14 +14,27 @@ public sealed class RuleSchemaValidator
 
     private static readonly HashSet<string> AllowedChecks = new(StringComparer.OrdinalIgnoreCase)
     {
+        "absolute-positioning",
+        "fixed-width-layout",
         "missing-label",
         "unlabeled-button",
         "missing-table-headers",
         "missing-alt-text",
+        "non-wrapping-container",
         "invalid-aria-role",
         "hidden-navigation",
+        "hidden-focusable",
         "insufficient-contrast",
         "xaml-missing-name"
+    };
+
+    private static readonly HashSet<string> AllowedAppliesTo = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "xaml",
+        "cshtml",
+        "razor",
+        "html",
+        "htm"
     };
 
     /// <summary>
@@ -50,6 +63,19 @@ public sealed class RuleSchemaValidator
         if (string.IsNullOrWhiteSpace(rule.CheckId) || !AllowedChecks.Contains(rule.CheckId))
         {
             errors.Add("Rule check id is invalid or missing.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(rule.AppliesTo))
+        {
+            var invalidKinds = rule.AppliesTo
+                .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Select(kind => kind.Trim())
+                .Where(kind => !AllowedAppliesTo.Contains(kind))
+                .ToArray();
+            if (invalidKinds.Length > 0)
+            {
+                errors.Add($"Rule appliesTo contains invalid values: {string.Join(", ", invalidKinds)}.");
+            }
         }
 
         return errors;

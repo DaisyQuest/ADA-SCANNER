@@ -1,0 +1,8 @@
+{
+  "id": "reflow-fixed-width",
+  "description": "Avoid fixed-width layouts that prevent responsive resizing.",
+  "severity": "medium",
+  "checkId": "fixed-width-layout",
+  "appliesTo": "html,htm,cshtml,razor,xaml",
+  "recommendation": "Prefer percentage, auto, or flexible sizing instead of fixed pixel widths."
+}

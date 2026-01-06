@@ -214,6 +214,60 @@ public sealed class ChecksTests
     {
         var check = new UnlabeledButtonCheck();
         var content = "<button aria-labelledby=\"missing\"></button>";
+    public void HiddenFocusableElementCheck_FlagsHiddenFocusableElement()
+    {
+        var check = new HiddenFocusableElementCheck();
+        var content = "<button style=\"display: none\">Hidden</button>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Single(issues);
+    }
+
+    [Fact]
+    public void HiddenFocusableElementCheck_FlagsHiddenFocusableElementViaAriaHidden()
+    {
+        var check = new HiddenFocusableElementCheck();
+        var content = "<div aria-hidden=\"true\"><input type=\"text\"></div>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Single(issues);
+    }
+
+    [Fact]
+    public void HiddenFocusableElementCheck_FlagsHiddenFocusableElementViaVisibilityHidden()
+    {
+        var check = new HiddenFocusableElementCheck();
+        var content = "<div style=\"visibility: hidden\"><a href=\"/home\">Home</a></div>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Single(issues);
+    }
+
+    [Fact]
+    public void HiddenFocusableElementCheck_FlagsNestedHiddenContainerWithFocusableChild()
+    {
+        var check = new HiddenFocusableElementCheck();
+        var content = "<section hidden><div><input type=\"text\"></div></section>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Single(issues);
+    }
+
+    [Fact]
+    public void HiddenFocusableElementCheck_FlagsHiddenTargetReferencedByNavigation()
+    {
+        var check = new HiddenFocusableElementCheck();
+        var content = "<a href=\"#skip-target\">Skip</a><div id=\"skip-target\" style=\"display:none\">Target</div>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Single(issues);
+    }
+
+    [Fact]
+    public void HiddenFocusableElementCheck_FlagsHiddenTargetReferencedByAriaControls()
+    {
+        var check = new HiddenFocusableElementCheck();
+        var content = "<button aria-controls=\"panel\">Toggle</button><div id=\"panel\" style=\"visibility:hidden\">Panel</div>";
         var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
 
         Assert.Single(issues);
@@ -224,6 +278,10 @@ public sealed class ChecksTests
     {
         var check = new UnlabeledButtonCheck();
         var content = "<input type=\"submit\" value=\"Save\">";
+    public void HiddenFocusableElementCheck_AllowsHiddenElementRemovedFromTabOrder()
+    {
+        var check = new HiddenFocusableElementCheck();
+        var content = "<div style=\"display:none\"><button tabindex=\"-1\">Hidden</button></div>";
         var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
 
         Assert.Empty(issues);
@@ -234,6 +292,10 @@ public sealed class ChecksTests
     {
         var check = new UnlabeledButtonCheck();
         var content = "<input type=\"image\" alt=\"Search\">";
+    public void HiddenFocusableElementCheck_AllowsHiddenDisabledElements()
+    {
+        var check = new HiddenFocusableElementCheck();
+        var content = "<div aria-hidden=\"true\"><button disabled>Hidden</button></div>";
         var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
 
         Assert.Empty(issues);
@@ -267,6 +329,62 @@ public sealed class ChecksTests
         var content = "<table><thead><tr><th scope=\"col\">Name</th></tr></thead></table>";
         var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
 
+    public void HiddenFocusableElementCheck_AllowsHiddenInputTypeHidden()
+    {
+        var check = new HiddenFocusableElementCheck();
+        var content = "<div style=\"display: none\"><input type=\"hidden\" id=\"token\"></div>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Empty(issues);
+    }
+
+    [Fact]
+    public void HiddenFocusableElementCheck_FlagsHiddenTabIndexWhenNotNegative()
+    {
+        var check = new HiddenFocusableElementCheck();
+        var content = "<div style=\"display:none\"><span tabindex=\"0\">Hidden</span></div>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Single(issues);
+    }
+
+    [Fact]
+    public void HiddenFocusableElementCheck_FlagsHiddenTabIndexWithNonNumericValue()
+    {
+        var check = new HiddenFocusableElementCheck();
+        var content = "<div style=\"display:none\"><span tabindex=\"auto\">Hidden</span></div>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Single(issues);
+    }
+
+    [Fact]
+    public void HiddenFocusableElementCheck_FlagsHiddenXamlTabStop()
+    {
+        var check = new HiddenFocusableElementCheck();
+        var content = "<Button Visibility=\"Collapsed\" IsTabStop=\"True\" />";
+        var issues = check.Run(new CheckContext("MainPage.xaml", content, "xaml"), Rule(check.Id)).ToList();
+
+        Assert.Single(issues);
+    }
+
+    [Fact]
+    public void HiddenFocusableElementCheck_FlagsHiddenXamlTabIndexWithinHiddenContainer()
+    {
+        var check = new HiddenFocusableElementCheck();
+        var content = "<Grid Visibility=\"Hidden\"><TextBox TabIndex=\"0\" /></Grid>";
+        var issues = check.Run(new CheckContext("MainPage.xaml", content, "xaml"), Rule(check.Id)).ToList();
+
+        Assert.Single(issues);
+    }
+
+    [Fact]
+    public void HiddenFocusableElementCheck_AllowsHiddenXamlElementRemovedFromTabOrder()
+    {
+        var check = new HiddenFocusableElementCheck();
+        var content = "<TextBox Visibility=\"Collapsed\" IsTabStop=\"False\" />";
+        var issues = check.Run(new CheckContext("MainPage.xaml", content, "xaml"), Rule(check.Id)).ToList();
+
         Assert.Empty(issues);
     }
 
@@ -276,6 +394,11 @@ public sealed class ChecksTests
         var check = new MissingTableHeaderCheck();
         var content = "<table role=\"presentation\"><tr><td>Layout</td></tr></table>";
         var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+    public void HiddenFocusableElementCheck_AllowsHiddenXamlElementWithNegativeTabIndex()
+    {
+        var check = new HiddenFocusableElementCheck();
+        var content = "<StackPanel Visibility=\"Hidden\"><TextBox TabIndex=\"-1\" /></StackPanel>";
+        var issues = check.Run(new CheckContext("MainPage.xaml", content, "xaml"), Rule(check.Id)).ToList();
 
         Assert.Empty(issues);
     }
@@ -291,11 +414,131 @@ public sealed class ChecksTests
     }
 
     [Fact]
+    public void InsufficientContrastCheck_AllowsSufficientContrast()
+    {
+        var check = new InsufficientContrastCheck();
+        var content = "<div style=\"color:#000000;background-color:#ffffff\">Text</div>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Empty(issues);
+    }
+
+    [Fact]
     public void InsufficientContrastCheck_SkipsWhenColorsMissing()
     {
         var check = new InsufficientContrastCheck();
         var content = "<div style=\"color:#000000\">Text</div>";
         var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Empty(issues);
+    }
+
+    [Fact]
+    public void InsufficientContrastCheck_SkipsWhenColorParsingFails()
+    {
+        var check = new InsufficientContrastCheck();
+        var content = "<div style=\"color:not-a-color;background-color:#ffffff\">Text</div>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Empty(issues);
+    }
+
+    [Fact]
+    public void InsufficientContrastCheck_UsesCssFallbackColors()
+    {
+        var check = new InsufficientContrastCheck();
+        var content = "<div style=\"color:var(--text-color, #777777);background-color:#888888\">Text</div>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Single(issues);
+    }
+
+    [Fact]
+    public void InsufficientContrastCheck_StripsImportantKeyword()
+    {
+        var check = new InsufficientContrastCheck();
+        var content = "<div style=\"color:#777777 !important;background-color:#888888\">Text</div>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Single(issues);
+    }
+
+    [Fact]
+    public void InsufficientContrastCheck_SkipsCssVariablesWithoutFallback()
+    {
+        var check = new InsufficientContrastCheck();
+        var content = "<div style=\"color:var(--text-color);background-color:#888888\">Text</div>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Empty(issues);
+    }
+
+    [Fact]
+    public void InsufficientContrastCheck_FlagsXamlForegroundBackground()
+    {
+        var check = new InsufficientContrastCheck();
+        var content = "<TextBlock Foreground=\"#777777\" Background=\"#888888\">Text</TextBlock>";
+        var issues = check.Run(new CheckContext("MainPage.xaml", content, "xaml"), Rule(check.Id)).ToList();
+
+        Assert.Single(issues);
+    }
+
+    [Fact]
+    public void InsufficientContrastCheck_SkipsXamlDynamicResource()
+    {
+        var check = new InsufficientContrastCheck();
+        var content = "<TextBlock Foreground=\"{DynamicResource TextBrush}\" Background=\"#ffffff\">Text</TextBlock>";
+        var issues = check.Run(new CheckContext("MainPage.xaml", content, "xaml"), Rule(check.Id)).ToList();
+
+        Assert.Empty(issues);
+    }
+
+    [Fact]
+    public void InsufficientContrastCheck_UsesXamlFallbackValue()
+    {
+        var check = new InsufficientContrastCheck();
+        var content = "<TextBlock Foreground=\"{Binding ThemeBrush, FallbackValue=#777777}\" Background=\"#888888\">Text</TextBlock>";
+        var issues = check.Run(new CheckContext("MainPage.xaml", content, "xaml"), Rule(check.Id)).ToList();
+
+        Assert.Single(issues);
+    }
+
+    [Fact]
+    public void InsufficientContrastCheck_SkipsXamlWhenBackgroundMissing()
+    {
+        var check = new InsufficientContrastCheck();
+        var content = "<TextBlock Foreground=\"#777777\">Text</TextBlock>";
+        var issues = check.Run(new CheckContext("MainPage.xaml", content, "xaml"), Rule(check.Id)).ToList();
+
+        Assert.Empty(issues);
+    }
+
+    [Fact]
+    public void InsufficientContrastCheck_FlagsCssBlockWithExplicitColors()
+    {
+        var check = new InsufficientContrastCheck();
+        var content = ".card { color: #777777; background-color: #888888; }";
+        var issues = check.Run(new CheckContext("site.css", content, "css"), Rule(check.Id)).ToList();
+
+        Assert.Single(issues);
+    }
+
+    [Fact]
+    public void InsufficientContrastCheck_SkipsCssBlocksMissingBackground()
+    {
+        var check = new InsufficientContrastCheck();
+        var content = ".card { color: #777777; }";
+        var issues = check.Run(new CheckContext("site.css", content, "css"), Rule(check.Id)).ToList();
+
+        Assert.Empty(issues);
+    }
+
+    [Fact]
+    public void InsufficientContrastCheck_SkipsCssBlocksWithUnresolvedColors()
+    {
+        var check = new InsufficientContrastCheck();
+        var content = ".card { color: var(--text-color); background-color: #888888; }";
+        var issues = check.Run(new CheckContext("site.css", content, "css"), Rule(check.Id)).ToList();
 
         Assert.Empty(issues);
     }

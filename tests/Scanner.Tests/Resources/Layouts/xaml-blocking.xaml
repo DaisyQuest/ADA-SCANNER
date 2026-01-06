@@ -1,0 +1,5 @@
+<Grid>
+  <Canvas>
+    <TextBlock Canvas.Left="40" TextWrapping="NoWrap" Width="320">Blocking</TextBlock>
+  </Canvas>
+</Grid>

@@ -48,4 +48,16 @@ public sealed class DiscoveryTests
 
         Assert.Contains(result.Files, file => file.Path == razor);
     }
+
+    [Fact]
+    public void Discover_FromDirectory_IncludesCssFiles()
+    {
+        var root = TestUtilities.CreateTempDirectory();
+        var css = TestUtilities.WriteFile(root, "wwwroot/site.css", ".card { color: #000; }");
+
+        var discovery = new ProjectDiscovery();
+        var result = discovery.Discover(root);
+
+        Assert.Contains(result.Files, file => file.Path == css && file.Kind == "css");
+    }
 }
