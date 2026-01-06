@@ -25,7 +25,14 @@ public sealed class MissingLabelCheck : ICheck
                 continue;
             }
 
-            if (TextUtilities.ContainsAttribute(attrs, "aria-label") || TextUtilities.ContainsAttribute(attrs, "aria-labelledby"))
+            var ariaLabel = AttributeParser.GetAttributeValue(attrs, "aria-label");
+            if (!string.IsNullOrWhiteSpace(ariaLabel))
+            {
+                continue;
+            }
+
+            var ariaLabelledBy = AttributeParser.GetAttributeValue(attrs, "aria-labelledby");
+            if (!string.IsNullOrWhiteSpace(ariaLabelledBy))
             {
                 continue;
             }
