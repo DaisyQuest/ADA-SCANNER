@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text.Json;
+using Scanner.Core.Runtime;
 
 namespace Scanner.Core.Reporting;
 
@@ -64,7 +65,7 @@ public sealed class ReportGenerator
     /// <param name="outputDirectory">The directory to write artifacts into.</param>
     /// <param name="baseName">The base filename for report artifacts.</param>
     /// <returns>The paths to the generated report artifacts.</returns>
-    public ReportArtifacts WriteReport(ScanResult scan, string outputDirectory, string baseName, Runtime.RuntimeScanResult? runtimeScan = null)
+    public ReportArtifacts WriteReport(ScanResult scan, string outputDirectory, string baseName, RuntimeScanResult? runtimeScan = null)
     {
         if (scan == null)
         {
@@ -118,7 +119,7 @@ public sealed class ReportGenerator
                 : string.Join("", runtimeIssues.Select(issue =>
                     $"<tr><td>{HtmlEncode(issue.RuleId)}</td><td>{HtmlEncode(issue.CheckId)}</td><td>{HtmlEncode(issue.FilePath)}</td><td>{issue.Line}</td><td>{HtmlEncode(issue.Message)}</td></tr>"));
 
-        var runtimeForms = report.RuntimeScan?.Forms ?? Array.Empty<Runtime.RuntimeFormConfiguration>();
+        var runtimeForms = report.RuntimeScan?.Forms ?? Array.Empty<RuntimeFormConfiguration>();
         var formRows = report.RuntimeScan == null
             ? string.Empty
             : string.Join("", runtimeForms.Select(form =>
@@ -241,7 +242,7 @@ public sealed class ReportGenerator
         var scanIssues = report.Scan.Issues ?? Array.Empty<Issue>();
         var scanFiles = report.Scan.Files ?? Array.Empty<DiscoveredFile>();
         var runtimeIssues = report.RuntimeScan?.Issues ?? Array.Empty<Issue>();
-        var runtimeForms = report.RuntimeScan?.Forms ?? Array.Empty<Runtime.RuntimeFormConfiguration>();
+        var runtimeForms = report.RuntimeScan?.Forms ?? Array.Empty<RuntimeFormConfiguration>();
         var lines = new List<string>
         {
             "# ADA Scanner Report",

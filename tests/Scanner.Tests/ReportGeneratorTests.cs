@@ -69,6 +69,37 @@ public sealed class ReportGeneratorTests
     }
 
     [Fact]
+    public void ReportGenerator_ReportsEmptyRuntimeIssues()
+    {
+        var root = TestUtilities.CreateTempDirectory();
+        var scan = new ScanResult
+        {
+            ScannedPath = root,
+            Files = Array.Empty<DiscoveredFile>(),
+            Issues = new[] { new Issue("rule", "check", "file", 1, "message", null) }
+        };
+        var runtime = new RuntimeScanResult
+        {
+            SeedUrls = new[] { "http://example.test" },
+            Documents = Array.Empty<RuntimeHtmlDocument>(),
+            Issues = Array.Empty<Issue>(),
+            Forms = Array.Empty<RuntimeFormConfiguration>()
+        };
+
+        var generator = new ReportGenerator();
+        var artifacts = generator.WriteReport(scan, root, "report", runtime);
+
+        var html = File.ReadAllText(artifacts.HtmlPath);
+        Assert.Contains("Runtime Scan", html, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("No issues found", html, StringComparison.OrdinalIgnoreCase);
+
+        var markdown = File.ReadAllText(artifacts.MarkdownPath);
+        Assert.Contains("Runtime Issues by Rule", markdown, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("| _None_ | 0 |", markdown, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Discovered Forms", markdown, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void ReportGenerator_LoadsScanResult()
     {
         var root = TestUtilities.CreateTempDirectory();
