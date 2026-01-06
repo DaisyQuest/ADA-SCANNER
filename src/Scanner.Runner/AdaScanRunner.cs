@@ -76,6 +76,7 @@ public sealed class AdaScanRunner
 
             _output.WriteLine($"Scan complete. Results written to {scanPath}.");
             _output.WriteLine($"Report written to {artifacts.JsonPath}, {artifacts.HtmlPath}, {artifacts.MarkdownPath}.");
+            WriteFormEditorIfConfigured(parsed.RuntimeOptions, outputDir);
             return 0;
         }
         catch (Exception ex)
@@ -107,6 +108,45 @@ public sealed class AdaScanRunner
         }
     }
 
+    private void WriteFormEditorIfConfigured(RuntimeScanOptions? options, string outputDir)
+    {
+        if (options?.FormConfigPath == null)
+        {
+            return;
+        }
+
+        var editorPath = Path.Combine(outputDir, "form-config-editor.html");
+        try
+        {
+            var html = LoadEmbeddedResource("Scanner.Runner.Assets.form-config-editor.html");
+            if (string.IsNullOrWhiteSpace(html))
+            {
+                return;
+            }
+
+            File.WriteAllText(editorPath, html);
+            _output.WriteLine($"Form configuration editor written to {editorPath}.");
+            _output.WriteLine($"Edit {options.FormConfigPath} with the local editor.");
+        }
+        catch (Exception ex)
+        {
+            _error.WriteLine($"Failed to write form editor: {ex.Message}");
+        }
+    }
+
+    private static string? LoadEmbeddedResource(string resourceName)
+    {
+        var assembly = typeof(AdaScanRunner).Assembly;
+        using var stream = assembly.GetManifestResourceStream(resourceName);
+        if (stream == null)
+        {
+            return null;
+        }
+
+        using var reader = new StreamReader(stream);
+        return reader.ReadToEnd();
+    }
+
     private sealed class RunnerArguments
     {
         public string? StartDirectory { get; init; }
@@ -130,6 +170,7 @@ public sealed class AdaScanRunner
             var excludedContentTypes = new List<string>();
             var allowedStatusCodes = new List<int>();
             var excludedStatusCodes = new List<int>();
+            string? formConfigPath = null;
 
             for (var i = 0; i < args.Length; i++)
             {
@@ -268,6 +309,17 @@ public sealed class AdaScanRunner
 
                         sampleRate = sampleValue;
                         break;
+                    case "--runtime-form-config":
+                        if (string.IsNullOrWhiteSpace(value))
+                        {
+                            error.WriteLine("Runtime form config path cannot be empty.");
+                            WriteUsage(error);
+                            parsed = new RunnerArguments();
+                            return false;
+                        }
+
+                        formConfigPath = value;
+                        break;
                     default:
                         error.WriteLine($"Unknown argument: {arg}");
                         WriteUsage(error);
@@ -283,6 +335,10 @@ public sealed class AdaScanRunner
                 parsed = new RunnerArguments();
                 return false;
             }
+
+            var formStore = !string.IsNullOrWhiteSpace(formConfigPath)
+                ? RuntimeFormConfigurationStore.Load(formConfigPath)
+                : null;
 
             parsed = new RunnerArguments
             {
@@ -303,7 +359,9 @@ public sealed class AdaScanRunner
                         ExcludedStatusCodes = excludedStatusCodes,
                         AllowedContentTypes = allowedContentTypes,
                         ExcludedContentTypes = excludedContentTypes,
-                        SampleRate = sampleRate ?? 1.0
+                        SampleRate = sampleRate ?? 1.0,
+                        FormConfigPath = formConfigPath,
+                        FormConfigurationStore = formStore
                     }
             };
 
@@ -336,6 +394,7 @@ public sealed class AdaScanRunner
             error.WriteLine("  --runtime-excluded-content-type <type> Excluded content type (repeatable).");
             error.WriteLine("  --runtime-max-body-bytes <n>   Maximum bytes captured per response.");
             error.WriteLine("  --runtime-sample-rate <0-1>    Sample rate for runtime documents.");
+            error.WriteLine("  --runtime-form-config <path>   Path to runtime form configuration JSON.");
         }
     }
 }

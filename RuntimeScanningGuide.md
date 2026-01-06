@@ -42,6 +42,7 @@ Use these with `run-ada-scan.exe` (or the CLI host executable) to configure the 
 | `--runtime-excluded-content-type <type>` | Excluded content type. Repeatable. | `--runtime-excluded-content-type text/plain` |
 | `--runtime-max-body-bytes <n>` | Max response bytes captured per page. | `--runtime-max-body-bytes 1048576` |
 | `--runtime-sample-rate <0-1>` | Random sampling rate for captured documents. | `--runtime-sample-rate 0.25` |
+| `--runtime-form-config <path>` | Path to the runtime form configuration JSON. | `--runtime-form-config ./runtime-forms.json` |
 
 ### Default behavior
 
@@ -121,6 +122,62 @@ If a site is large but you still want insight, sample captured pages:
 ```
 
 Sampling happens after the crawler discovers a page and validates its content type/status.
+
+## Runtime form workflow specification
+
+The runtime scanner supports form-aware crawling for login flows and multi-step experiences without browser automation. The workflow is intentionally deterministic and offline-safe:
+
+1. **Intercept HTML responses**
+   - Every captured HTML response is parsed for `<form>`, `<input>`, `<select>`, and `<textarea>` elements.
+   - A stable form key is generated from the action URL, method, and input names.
+2. **Build a configurable form JSON**
+   - Discovered forms are stored in a runtime form configuration JSON file.
+   - Each form includes its inputs, labels, default values, and a configurable `value` field for auto-submission.
+   - Forms are disabled by default until you enable them.
+3. **Analyze HTML for ADA problems**
+   - Captured HTML is scanned with the same static rules engine used for file-based scanning.
+   - Runtime findings are deduplicated and aggregated with static results.
+4. **Recursive walk with saved inputs and links**
+   - Enabled forms are automatically submitted using configured values.
+   - Resulting responses are crawled recursively using the same depth and page limits as link traversal.
+5. **Generate report**
+   - Runtime findings, form discovery metadata, and the configuration path are included in the report outputs.
+
+### Runtime form configuration JSON
+
+Use `--runtime-form-config` to specify where the JSON configuration lives. The scanner will create or update the file as forms are discovered.
+
+```bash
+--runtime-form-config ./runtime-forms.json
+```
+
+Example structure:
+
+```json
+{
+  "forms": [
+    {
+      "key": "POST::https://example.test/login::password,username",
+      "sourceUrl": "https://example.test/login",
+      "action": "https://example.test/login",
+      "method": "POST",
+      "enabled": true,
+      "inputs": [
+        { "name": "username", "type": "text", "label": "User Name", "value": "ada" },
+        { "name": "password", "type": "password", "value": "secret" }
+      ]
+    }
+  ]
+}
+```
+
+### Form configuration editor
+
+When `--runtime-form-config` is set, the scanner writes `form-config-editor.html` into the output directory. Open the file locally to edit the JSON using a streamlined, offline editor:
+
+- Toggle forms on/off for auto-submission.
+- Edit field values for login flows or multi-step navigation.
+- Download the updated JSON for reuse in future scans.
 
 ## ASP.NET Core response capture configuration
 

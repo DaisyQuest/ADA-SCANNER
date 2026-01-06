@@ -41,4 +41,14 @@ public sealed class RuntimeScanResult
     /// Gets the list of issues found during runtime scanning.
     /// </summary>
     public IReadOnlyList<Issue> Issues { get; init; } = Array.Empty<Issue>();
+
+    /// <summary>
+    /// Gets the runtime form configurations discovered during the scan.
+    /// </summary>
+    public IReadOnlyList<RuntimeFormConfiguration> Forms { get; init; } = Array.Empty<RuntimeFormConfiguration>();
+
+    /// <summary>
+    /// Gets the path to the runtime form configuration file, if provided.
+    /// </summary>
+    public string? FormConfigurationPath { get; init; }
 }

@@ -299,6 +299,141 @@ public sealed class RuntimeCrawlerTests
         Assert.Equal(2, handler.Requests.Count);
     }
 
+    [Fact]
+    public async Task Crawler_RegistersDiscoveredForms()
+    {
+        var handler = new RecordingHandler(_ => HtmlResponse("""
+            <form action="/login" method="post">
+              <label for="user">User</label>
+              <input id="user" name="user" type="text" />
+              <input name="password" type="password" />
+            </form>
+            """));
+        var client = new HttpClient(handler);
+        var crawler = new HttpRuntimeCrawler(client);
+        var store = new RuntimeFormConfigurationStore();
+
+        var options = new RuntimeScanOptions
+        {
+            SeedUrls = new[] { new Uri("http://example.test/index") },
+            FormConfigurationStore = store
+        };
+
+        var documents = await CollectAsync(crawler, options);
+
+        Assert.Single(documents);
+        Assert.Single(store.Forms);
+        Assert.Equal("http://example.test/login", store.Forms[0].Action);
+    }
+
+    [Fact]
+    public async Task Crawler_SubmitsEnabledForms()
+    {
+        var handler = new RecordingHandler(request =>
+        {
+            if (request.RequestUri!.AbsolutePath == "/login")
+            {
+                return HtmlResponse("<html>logged in</html>");
+            }
+
+            return HtmlResponse("""
+                <form action="/login" method="post">
+                  <label for="user">User</label>
+                  <input id="user" name="user" type="text" />
+                  <input name="password" type="password" />
+                </form>
+                """);
+        });
+
+        var temp = TestUtilities.CreateTempDirectory();
+        var configPath = Path.Combine(temp, "forms.json");
+        File.WriteAllText(configPath, """
+            {
+              "forms": [
+                {
+                  "key": "POST::http://example.test/login::password,user",
+                  "sourceUrl": "http://example.test/index",
+                  "action": "http://example.test/login",
+                  "method": "POST",
+                  "enabled": true,
+                  "inputs": [
+                    { "name": "user", "type": "text", "value": "ada" },
+                    { "name": "password", "type": "password", "value": "secret" }
+                  ]
+                }
+              ]
+            }
+            """);
+
+        var store = RuntimeFormConfigurationStore.Load(configPath);
+        var client = new HttpClient(handler);
+        var crawler = new HttpRuntimeCrawler(client);
+
+        var options = new RuntimeScanOptions
+        {
+            SeedUrls = new[] { new Uri("http://example.test/index") },
+            MaxPages = 2,
+            FormConfigurationStore = store
+        };
+
+        var documents = await CollectAsync(crawler, options);
+
+        Assert.Equal(2, documents.Count);
+        Assert.Equal(2, handler.Requests.Count);
+        Assert.Equal(HttpMethod.Post, handler.Requests[1].Method);
+        Assert.Contains("user=ada", handler.RequestBodies[1], StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("password=secret", handler.RequestBodies[1], StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Crawler_SubmitsGetFormsWithQueryString()
+    {
+        var handler = new RecordingHandler(request =>
+        {
+            return request.RequestUri!.AbsolutePath switch
+            {
+                "/search" => HtmlResponse("<html>results</html>"),
+                _ => HtmlResponse("<form action=\"/search\" method=\"get\"><input name=\"q\"></form>")
+            };
+        });
+
+        var temp = TestUtilities.CreateTempDirectory();
+        var configPath = Path.Combine(temp, "forms.json");
+        File.WriteAllText(configPath, """
+            {
+              "forms": [
+                {
+                  "key": "GET::http://example.test/search::q",
+                  "sourceUrl": "http://example.test/index",
+                  "action": "http://example.test/search",
+                  "method": "GET",
+                  "enabled": true,
+                  "inputs": [
+                    { "name": "q", "type": "text", "value": "ada" }
+                  ]
+                }
+              ]
+            }
+            """);
+
+        var store = RuntimeFormConfigurationStore.Load(configPath);
+        var client = new HttpClient(handler);
+        var crawler = new HttpRuntimeCrawler(client);
+
+        var options = new RuntimeScanOptions
+        {
+            SeedUrls = new[] { new Uri("http://example.test/index") },
+            MaxPages = 2,
+            FormConfigurationStore = store
+        };
+
+        var documents = await CollectAsync(crawler, options);
+
+        Assert.Equal(2, documents.Count);
+        Assert.Equal(2, handler.Requests.Count);
+        Assert.Equal("q=ada", handler.Requests[1].RequestUri!.Query.TrimStart('?'));
+    }
+
     private static async Task<List<RuntimeHtmlDocument>> CollectAsync(
         IRuntimeDocumentSource source,
         RuntimeScanOptions options)
@@ -331,9 +466,12 @@ public sealed class RuntimeCrawlerTests
 
         public List<HttpRequestMessage> Requests { get; } = new();
 
+        public List<string> RequestBodies { get; } = new();
+
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             Requests.Add(request);
+            RequestBodies.Add(request.Content == null ? string.Empty : request.Content.ReadAsStringAsync(cancellationToken).GetAwaiter().GetResult());
             return Task.FromResult(_handler(request));
         }
     }

@@ -263,6 +263,48 @@ public sealed class RunAdaScanTests
         }
     }
 
+    [Fact]
+    public void Run_WritesFormConfigAndEditor()
+    {
+        var root = TestUtilities.CreateTempDirectory();
+        TestUtilities.WriteFile(root, "index.html", "<img src=\"hero.png\">");
+        TestUtilities.WriteFile(root, "rules/team/rule.json", "{\"id\":\"alt-1\",\"description\":\"Missing alt\",\"severity\":\"low\",\"checkId\":\"missing-alt-text\"}");
+        var outputDir = Path.Combine(root, "out");
+        var configPath = Path.Combine(root, "runtime-forms.json");
+
+        var runtimeSource = new StubRuntimeSource(new[]
+        {
+            new RuntimeHtmlDocument("http://example.test/page", 200, "text/html", "<form action=\"/login\"><input name=\"user\"></form>", DateTimeOffset.UtcNow)
+        });
+
+        var original = Directory.GetCurrentDirectory();
+        Directory.SetCurrentDirectory(root);
+        try
+        {
+            var output = new StringWriter();
+            var error = new StringWriter();
+            var runner = new AdaScanRunner(output, error, runtimeSource);
+
+            var code = runner.Run(new[]
+            {
+                root,
+                outputDir,
+                "--runtime-url",
+                "http://example.test/page",
+                "--runtime-form-config",
+                configPath
+            });
+
+            Assert.Equal(0, code);
+            Assert.True(File.Exists(configPath));
+            Assert.True(File.Exists(Path.Combine(outputDir, "form-config-editor.html")));
+        }
+        finally
+        {
+            Directory.SetCurrentDirectory(original);
+        }
+    }
+
     private sealed class StubRuntimeSource : IRuntimeDocumentSource
     {
         private readonly IReadOnlyList<RuntimeHtmlDocument> _documents;

@@ -74,4 +74,14 @@ public sealed class RuntimeScanOptions
     /// Gets the random source used for sampling.
     /// </summary>
     public Random Random { get; init; } = Random.Shared;
+
+    /// <summary>
+    /// Gets the optional path for the runtime form configuration file.
+    /// </summary>
+    public string? FormConfigPath { get; init; }
+
+    /// <summary>
+    /// Gets the optional form configuration store used for auto-submission.
+    /// </summary>
+    public RuntimeFormConfigurationStore? FormConfigurationStore { get; init; }
 }
