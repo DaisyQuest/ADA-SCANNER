@@ -3,3 +3,4 @@
 2026-01-06 - Added testing matrix, per-team coverage checks, and test gate guidance/scripts. (SPEC-013)
 2026-01-06 - Add rule inventory documentation and validation tests for SPEC-008 coverage (SPEC-008, SPEC-016)
 2026-01-06 - Added Visual Studio integration guide for ADA Scanner CLI (SPEC-007) [team: BACKEND]
+2026-01-06 - Selected team: backend; repaired rule loading/validation, discovery path handling, and CLI/check tests for scan/report outputs and parsing edge cases (SPEC-002, SPEC-003, SPEC-004, SPEC-009, SPEC-013, SPEC-014)

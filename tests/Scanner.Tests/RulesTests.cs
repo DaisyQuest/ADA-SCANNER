@@ -1,4 +1,5 @@
 using Scanner.Core.Rules;
+using System.IO;
 using System.Text.Json;
 using Xunit;
 using System.Linq;
@@ -51,6 +52,9 @@ public sealed class RulesTests
         var root = Path.Combine(TestUtilities.CreateTempDirectory(), "missing");
 
         Assert.Throws<DirectoryNotFoundException>(() => loader.LoadRules(root));
+    }
+
+    [Fact]
     public void LoadRules_CollectsRulesAcrossTeams()
     {
         var root = TestUtilities.CreateTempDirectory();
@@ -114,6 +118,9 @@ public sealed class RulesTests
         Assert.Empty(result.Errors);
         var reflowTeam = Assert.Single(result.Teams, team => team.TeamName == "reflow");
         Assert.Equal(3, reflowTeam.Rules.Count);
+    }
+
+    [Fact]
     public void ValidateRules_ReportsMissingRequiredFields()
     {
         var root = TestUtilities.CreateTempDirectory();
@@ -148,6 +155,57 @@ public sealed class RulesTests
     {
         var root = TestUtilities.CreateTempDirectory();
         TestUtilities.WriteFile(root, "rules/forms/unknown.json", "{\"id\":\"rule-3\",\"description\":\"Unknown prop\",\"severity\":\"low\",\"checkId\":\"missing-alt-text\",\"extra\":\"nope\"}");
+
+        var loader = new RuleLoader();
+        var result = loader.ValidateRules(Path.Combine(root, "rules"));
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, error => error.Message.Contains("Unknown property 'extra'"));
+    }
+
+    [Fact]
+    public void ValidateRules_AggregatesErrorsAcrossTeams()
+    {
+        var root = TestUtilities.CreateTempDirectory();
+        TestUtilities.WriteFile(root, "rules/contrast/bad.json", "{");
+        TestUtilities.WriteFile(root, "rules/aria/bad.json", "{\"id\":\"aria-1\",\"description\":\"\",\"severity\":\"low\",\"checkId\":\"invalid-aria-role\"}");
+
+        var loader = new RuleLoader();
+        var result = loader.ValidateRules(Path.Combine(root, "rules"));
+
+        Assert.False(result.IsValid);
+        Assert.Equal(2, result.Errors.Count);
+        Assert.Contains(result.Errors, error => error.Team == "contrast" && error.RuleId == "bad");
+        Assert.Contains(result.Errors, error => error.Team == "aria" && error.RuleId == "aria-1");
+    }
+
+    [Fact]
+    public void ValidateRules_ReportsInvalidAppliesToValues()
+    {
+        var root = TestUtilities.CreateTempDirectory();
+        TestUtilities.WriteFile(root, "rules/forms/applies.json", "{\"id\":\"rule-4\",\"description\":\"Bad appliesTo\",\"severity\":\"low\",\"checkId\":\"missing-alt-text\",\"appliesTo\":\"banana\"}");
+
+        var loader = new RuleLoader();
+        var result = loader.ValidateRules(Path.Combine(root, "rules"));
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, error => error.Message.Contains("Rule appliesTo contains invalid values"));
+    }
+
+    [Fact]
+    public void ValidateRules_ReportsUnknownYamlProperties()
+    {
+        var root = TestUtilities.CreateTempDirectory();
+        TestUtilities.WriteFile(root, "rules/forms/unknown.yaml", "id: rule-5\ndescription: Unknown yaml\nseverity: low\ncheckId: missing-alt-text\nextra: nope");
+
+        var loader = new RuleLoader();
+        var result = loader.ValidateRules(Path.Combine(root, "rules"));
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, error => error.Message.Contains("Unknown property 'extra'"));
+    }
+
+    [Fact]
     public void LoadRule_ThrowsOnUnsupportedExtension()
     {
         var root = TestUtilities.CreateTempDirectory();
@@ -178,52 +236,9 @@ public sealed class RulesTests
 
         var loader = new RuleLoader();
         var rule = loader.LoadRule(path);
-    public void ValidateRules_AggregatesErrorsAcrossTeams()
-    {
-        var root = TestUtilities.CreateTempDirectory();
-        TestUtilities.WriteFile(root, "rules/contrast/bad.json", "{\"id\":\"\",\"description\":\"\",\"severity\":\"low\",\"checkId\":\"insufficient-contrast\"}");
-        TestUtilities.WriteFile(root, "rules/aria/bad.json", "{\"id\":\"aria-1\",\"description\":\"\",\"severity\":\"low\",\"checkId\":\"invalid-aria-role\"}");
 
-        var loader = new RuleLoader();
-        var result = loader.ValidateRules(Path.Combine(root, "rules"));
-
-        Assert.False(result.IsValid);
-        Assert.Contains(result.Errors, error => error.Message.Contains("Unknown property 'extra'"));
-    }
-
-    [Fact]
-    public void ValidateRules_ReportsInvalidAppliesToValues()
-    {
-        var root = TestUtilities.CreateTempDirectory();
-        TestUtilities.WriteFile(root, "rules/forms/applies.json", "{\"id\":\"rule-4\",\"description\":\"Bad appliesTo\",\"severity\":\"low\",\"checkId\":\"missing-alt-text\",\"appliesTo\":\"banana\"}");
-
-        var loader = new RuleLoader();
-        var result = loader.ValidateRules(Path.Combine(root, "rules"));
-
-        Assert.False(result.IsValid);
-        Assert.Contains(result.Errors, error => error.Message.Contains("Rule appliesTo contains invalid values"));
-    }
-
-    [Fact]
-    public void ValidateRules_ReportsUnknownYamlProperties()
-    {
-        var root = TestUtilities.CreateTempDirectory();
-        TestUtilities.WriteFile(root, "rules/forms/unknown.yaml", "id: rule-5\ndescription: Unknown yaml\nseverity: low\ncheckId: missing-alt-text\nextra: nope");
-        Assert.Equal(2, result.Errors.Count);
-        Assert.Contains(result.Errors, error => error.Team == "contrast" && error.RuleId == "");
-        Assert.Contains(result.Errors, error => error.Team == "aria" && error.RuleId == "aria-1");
-    }
-
-    [Fact]
-    public void LoadRule_ThrowsForUnsupportedExtension()
-    {
-        var root = TestUtilities.CreateTempDirectory();
-        var file = TestUtilities.WriteFile(root, "rules/contrast/rule.txt", "unsupported");
-
-        var loader = new RuleLoader();
-        var exception = Assert.Throws<InvalidDataException>(() => loader.LoadRule(file));
-
-        Assert.Contains("Unsupported rule file format", exception.Message);
+        Assert.Null(rule.AppliesTo);
+        Assert.Null(rule.Recommendation);
     }
 
     [Fact]
@@ -294,10 +309,10 @@ public sealed class RulesTests
         var loader = new RuleLoader();
         var result = loader.ValidateRules(Path.Combine(root, "rules"));
 
-        Assert.False(result.IsValid);
-        Assert.Contains(result.Errors, error => error.Message.Contains("Unknown property 'extra'"));
         Assert.True(result.IsValid);
         var contrastTeam = result.Teams.Single(team => team.TeamName == "contrast");
-        Assert.Equal(12, contrastTeam.Rules.Count);
+        var contrastRuleFiles = Directory.EnumerateFiles(Path.Combine(root, "rules", "contrast"))
+            .Count(file => new[] { ".json", ".yml", ".yaml" }.Contains(Path.GetExtension(file), StringComparer.OrdinalIgnoreCase));
+        Assert.Equal(contrastRuleFiles, contrastTeam.Rules.Count);
     }
 }

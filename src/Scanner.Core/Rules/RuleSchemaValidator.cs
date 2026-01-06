@@ -34,7 +34,8 @@ public sealed class RuleSchemaValidator
         "cshtml",
         "razor",
         "html",
-        "htm"
+        "htm",
+        "css"
     };
 
     /// <summary>

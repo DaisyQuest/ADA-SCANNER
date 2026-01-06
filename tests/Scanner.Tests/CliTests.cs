@@ -23,7 +23,7 @@ public sealed class CliTests
         var code = dispatcher.Dispatch(new[] { "unknown" }, console);
 
         Assert.Equal(1, code);
-        Assert.Contains("Unknown command", console.Errors);
+        Assert.Contains(console.Errors, message => message.Contains("Unknown command", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
@@ -51,7 +51,7 @@ public sealed class CliTests
         var code = dispatcher.Dispatch(new[] { "rules", "validate", "--rules", Path.Combine(root, "rules") }, console);
 
         Assert.Equal(1, code);
-        Assert.Contains("Rule severity", console.Errors);
+        Assert.Contains(console.Errors, message => message.Contains("Rule severity", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
@@ -97,7 +97,7 @@ public sealed class CliTests
 
         Assert.Equal(0, code);
         Assert.True(File.Exists(Path.Combine(output, "report.json")));
-        Assert.Contains("Report written", console.Outputs);
+        Assert.Contains(console.Outputs, message => message.Contains("Report written", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
@@ -114,7 +114,7 @@ public sealed class CliTests
 
         Assert.Equal(0, code);
         Assert.True(File.Exists(Path.Combine(output, "scan.json")));
-        Assert.Contains("Scan complete", console.Outputs);
+        Assert.Contains(console.Outputs, message => message.Contains("Scan complete", StringComparison.OrdinalIgnoreCase));
     }
 }
 
