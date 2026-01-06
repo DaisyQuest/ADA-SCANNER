@@ -13,3 +13,4 @@
 
 2026-01-06 - Enhance runtime and Visual Studio workflow documentation for CLI usage and reporting (SPEC-007, SPEC-016)
 2026-01-06 - Added WCAG criteria and problem tags metadata to backend rules for improved issue isolation (SPEC-008)
+2026-01-06 - Added scan option to generate report artifacts with validation tests (SPEC-002)

@@ -116,6 +116,106 @@ public sealed class CliTests
         Assert.True(File.Exists(Path.Combine(output, "scan.json")));
         Assert.Contains(console.Outputs, message => message.Contains("Scan complete", StringComparison.OrdinalIgnoreCase));
     }
+
+    [Fact]
+    public void CommandDispatcher_Scan_WithReportOut_WritesReportArtifacts()
+    {
+        var root = TestUtilities.CreateTempDirectory();
+        TestUtilities.WriteFile(root, "index.html", "<img src=\"hero.png\">" );
+        TestUtilities.WriteFile(root, "rules/team/rule.json", "{\"id\":\"alt-1\",\"description\":\"Missing alt\",\"severity\":\"low\",\"checkId\":\"missing-alt-text\"}");
+
+        var dispatcher = new CommandDispatcher();
+        var console = new TestConsole();
+        var output = Path.Combine(root, "artifacts");
+        var reportOutput = Path.Combine(root, "report");
+        var code = dispatcher.Dispatch(new[]
+        {
+            "scan",
+            "--path",
+            root,
+            "--rules",
+            Path.Combine(root, "rules"),
+            "--out",
+            output,
+            "--report-out",
+            reportOutput
+        }, console);
+
+        Assert.Equal(0, code);
+        Assert.True(File.Exists(Path.Combine(output, "scan.json")));
+        Assert.True(File.Exists(Path.Combine(reportOutput, "report.json")));
+        Assert.True(File.Exists(Path.Combine(reportOutput, "report.html")));
+        Assert.True(File.Exists(Path.Combine(reportOutput, "report.md")));
+        Assert.Contains(console.Outputs, message => message.Contains("Report written", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void CommandDispatcher_Scan_ReportBaseWithoutReportOut_ReturnsError()
+    {
+        var root = TestUtilities.CreateTempDirectory();
+
+        var dispatcher = new CommandDispatcher();
+        var console = new TestConsole();
+        var code = dispatcher.Dispatch(new[]
+        {
+            "scan",
+            "--path",
+            root,
+            "--rules",
+            Path.Combine(root, "rules"),
+            "--report-base",
+            "custom"
+        }, console);
+
+        Assert.Equal(1, code);
+        Assert.Contains(console.Errors, message => message.Contains("report-base", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void CommandDispatcher_Scan_ReportOutWhitespace_ReturnsError()
+    {
+        var root = TestUtilities.CreateTempDirectory();
+
+        var dispatcher = new CommandDispatcher();
+        var console = new TestConsole();
+        var code = dispatcher.Dispatch(new[]
+        {
+            "scan",
+            "--path",
+            root,
+            "--rules",
+            Path.Combine(root, "rules"),
+            "--report-out",
+            "   "
+        }, console);
+
+        Assert.Equal(1, code);
+        Assert.Contains(console.Errors, message => message.Contains("--report-out", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void CommandDispatcher_Scan_ReportBaseWhitespace_ReturnsError()
+    {
+        var root = TestUtilities.CreateTempDirectory();
+
+        var dispatcher = new CommandDispatcher();
+        var console = new TestConsole();
+        var code = dispatcher.Dispatch(new[]
+        {
+            "scan",
+            "--path",
+            root,
+            "--rules",
+            Path.Combine(root, "rules"),
+            "--report-out",
+            Path.Combine(root, "report"),
+            "--report-base",
+            "   "
+        }, console);
+
+        Assert.Equal(1, code);
+        Assert.Contains(console.Errors, message => message.Contains("--report-base", StringComparison.OrdinalIgnoreCase));
+    }
 }
 
 public sealed class TestConsole : IConsole
