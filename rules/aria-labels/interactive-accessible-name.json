@@ -1,0 +1,7 @@
+{
+  "id": "aria-labels-interactive-accessible-name",
+  "description": "Interactive elements must expose an accessible name via text or ARIA.",
+  "severity": "high",
+  "checkId": "missing-interactive-label",
+  "recommendation": "Provide visible text, aria-label, or aria-labelledby for interactive elements."
+}

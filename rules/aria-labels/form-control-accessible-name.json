@@ -1,0 +1,7 @@
+{
+  "id": "aria-labels-form-control-accessible-name",
+  "description": "Form controls must expose an accessible name via labels or ARIA.",
+  "severity": "high",
+  "checkId": "missing-label",
+  "recommendation": "Use <label> elements, aria-label, or aria-labelledby to provide a name."
+}
