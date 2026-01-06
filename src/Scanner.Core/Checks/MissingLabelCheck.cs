@@ -3,14 +3,21 @@ using Scanner.Core.Rules;
 
 namespace Scanner.Core.Checks;
 
+/// <summary>
+/// Checks form controls for missing accessible labels.
+/// </summary>
 public sealed class MissingLabelCheck : ICheck
 {
     private static readonly Regex InputRegex = new("<(input|select|textarea)(?<attrs>[^>]*)>", RegexOptions.IgnoreCase | RegexOptions.Compiled);
     private static readonly Regex LabelRegex = new("<label[^>]*for=\"(?<id>[^\"]+)\"[^>]*>", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
+    /// <inheritdoc />
     public string Id => "missing-label";
+
+    /// <inheritdoc />
     public IReadOnlyCollection<string> ApplicableKinds { get; } = new[] { "html", "htm", "cshtml", "razor" };
 
+    /// <inheritdoc />
     public IEnumerable<Issue> Run(CheckContext context, RuleDefinition rule)
     {
         var issues = new List<Issue>();

@@ -3,13 +3,20 @@ using Scanner.Core.Rules;
 
 namespace Scanner.Core.Checks;
 
+/// <summary>
+/// Checks inline styles for insufficient text contrast.
+/// </summary>
 public sealed class InsufficientContrastCheck : ICheck
 {
     private static readonly Regex StyleRegex = new("style=\"(?<style>[^\"]+)\"", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
+    /// <inheritdoc />
     public string Id => "insufficient-contrast";
+
+    /// <inheritdoc />
     public IReadOnlyCollection<string> ApplicableKinds { get; } = new[] { "html", "htm", "cshtml", "razor" };
 
+    /// <inheritdoc />
     public IEnumerable<Issue> Run(CheckContext context, RuleDefinition rule)
     {
         foreach (Match match in StyleRegex.Matches(context.Content))

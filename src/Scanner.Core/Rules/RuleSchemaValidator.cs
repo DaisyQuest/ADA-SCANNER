@@ -1,5 +1,8 @@
 namespace Scanner.Core.Rules;
 
+/// <summary>
+/// Validates rule definitions against expected schema constraints.
+/// </summary>
 public sealed class RuleSchemaValidator
 {
     private static readonly HashSet<string> AllowedSeverities = new(StringComparer.OrdinalIgnoreCase)
@@ -19,6 +22,11 @@ public sealed class RuleSchemaValidator
         "xaml-missing-name"
     };
 
+    /// <summary>
+    /// Validates a rule definition and returns any schema errors.
+    /// </summary>
+    /// <param name="rule">The rule definition to validate.</param>
+    /// <returns>A list of validation error messages.</returns>
     public IReadOnlyList<string> Validate(RuleDefinition rule)
     {
         var errors = new List<string>();
