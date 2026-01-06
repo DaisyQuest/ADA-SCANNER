@@ -25,6 +25,23 @@ public static class ColorContrastAnalyzer
             trimmed = trimmed[1..];
         }
 
+        if (trimmed.Length == 3)
+        {
+            trimmed = string.Concat(trimmed.Select(c => $"{c}{c}"));
+        }
+        else if (trimmed.Length == 4)
+        {
+            trimmed = string.Concat(trimmed.Skip(1).Select(c => $"{c}{c}"));
+        }
+        else if (trimmed.Length == 8)
+        {
+            trimmed = trimmed[2..];
+        }
+        else if (trimmed.Length != 6)
+        {
+            return false;
+        }
+
         if (trimmed.Length != 6)
         {
             return false;

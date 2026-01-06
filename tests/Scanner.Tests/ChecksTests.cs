@@ -159,11 +159,131 @@ public sealed class ChecksTests
     }
 
     [Fact]
+    public void InsufficientContrastCheck_AllowsSufficientContrast()
+    {
+        var check = new InsufficientContrastCheck();
+        var content = "<div style=\"color:#000000;background-color:#ffffff\">Text</div>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Empty(issues);
+    }
+
+    [Fact]
     public void InsufficientContrastCheck_SkipsWhenColorsMissing()
     {
         var check = new InsufficientContrastCheck();
         var content = "<div style=\"color:#000000\">Text</div>";
         var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Empty(issues);
+    }
+
+    [Fact]
+    public void InsufficientContrastCheck_SkipsWhenColorParsingFails()
+    {
+        var check = new InsufficientContrastCheck();
+        var content = "<div style=\"color:not-a-color;background-color:#ffffff\">Text</div>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Empty(issues);
+    }
+
+    [Fact]
+    public void InsufficientContrastCheck_UsesCssFallbackColors()
+    {
+        var check = new InsufficientContrastCheck();
+        var content = "<div style=\"color:var(--text-color, #777777);background-color:#888888\">Text</div>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Single(issues);
+    }
+
+    [Fact]
+    public void InsufficientContrastCheck_StripsImportantKeyword()
+    {
+        var check = new InsufficientContrastCheck();
+        var content = "<div style=\"color:#777777 !important;background-color:#888888\">Text</div>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Single(issues);
+    }
+
+    [Fact]
+    public void InsufficientContrastCheck_SkipsCssVariablesWithoutFallback()
+    {
+        var check = new InsufficientContrastCheck();
+        var content = "<div style=\"color:var(--text-color);background-color:#888888\">Text</div>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Empty(issues);
+    }
+
+    [Fact]
+    public void InsufficientContrastCheck_FlagsXamlForegroundBackground()
+    {
+        var check = new InsufficientContrastCheck();
+        var content = "<TextBlock Foreground=\"#777777\" Background=\"#888888\">Text</TextBlock>";
+        var issues = check.Run(new CheckContext("MainPage.xaml", content, "xaml"), Rule(check.Id)).ToList();
+
+        Assert.Single(issues);
+    }
+
+    [Fact]
+    public void InsufficientContrastCheck_SkipsXamlDynamicResource()
+    {
+        var check = new InsufficientContrastCheck();
+        var content = "<TextBlock Foreground=\"{DynamicResource TextBrush}\" Background=\"#ffffff\">Text</TextBlock>";
+        var issues = check.Run(new CheckContext("MainPage.xaml", content, "xaml"), Rule(check.Id)).ToList();
+
+        Assert.Empty(issues);
+    }
+
+    [Fact]
+    public void InsufficientContrastCheck_UsesXamlFallbackValue()
+    {
+        var check = new InsufficientContrastCheck();
+        var content = "<TextBlock Foreground=\"{Binding ThemeBrush, FallbackValue=#777777}\" Background=\"#888888\">Text</TextBlock>";
+        var issues = check.Run(new CheckContext("MainPage.xaml", content, "xaml"), Rule(check.Id)).ToList();
+
+        Assert.Single(issues);
+    }
+
+    [Fact]
+    public void InsufficientContrastCheck_SkipsXamlWhenBackgroundMissing()
+    {
+        var check = new InsufficientContrastCheck();
+        var content = "<TextBlock Foreground=\"#777777\">Text</TextBlock>";
+        var issues = check.Run(new CheckContext("MainPage.xaml", content, "xaml"), Rule(check.Id)).ToList();
+
+        Assert.Empty(issues);
+    }
+
+    [Fact]
+    public void InsufficientContrastCheck_FlagsCssBlockWithExplicitColors()
+    {
+        var check = new InsufficientContrastCheck();
+        var content = ".card { color: #777777; background-color: #888888; }";
+        var issues = check.Run(new CheckContext("site.css", content, "css"), Rule(check.Id)).ToList();
+
+        Assert.Single(issues);
+    }
+
+    [Fact]
+    public void InsufficientContrastCheck_SkipsCssBlocksMissingBackground()
+    {
+        var check = new InsufficientContrastCheck();
+        var content = ".card { color: #777777; }";
+        var issues = check.Run(new CheckContext("site.css", content, "css"), Rule(check.Id)).ToList();
+
+        Assert.Empty(issues);
+    }
+
+    [Fact]
+    public void InsufficientContrastCheck_SkipsCssBlocksWithUnresolvedColors()
+    {
+        var check = new InsufficientContrastCheck();
+        var content = ".card { color: var(--text-color); background-color: #888888; }";
+        var issues = check.Run(new CheckContext("site.css", content, "css"), Rule(check.Id)).ToList();
 
         Assert.Empty(issues);
     }
