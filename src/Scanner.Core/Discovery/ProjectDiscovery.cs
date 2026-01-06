@@ -13,7 +13,8 @@ public sealed class ProjectDiscovery
         ".cshtml",
         ".razor",
         ".html",
-        ".htm"
+        ".htm",
+        ".css"
     };
 
     /// <summary>
