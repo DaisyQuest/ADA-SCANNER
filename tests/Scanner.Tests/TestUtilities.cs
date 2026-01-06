@@ -15,7 +15,7 @@ public static class TestUtilities
         var directory = Path.GetDirectoryName(path)!;
         Directory.CreateDirectory(directory);
         File.WriteAllText(path, content);
-        return path;
+        return Path.GetFullPath(path);
     }
 
     public static string FindRepositoryRoot()

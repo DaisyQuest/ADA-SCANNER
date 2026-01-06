@@ -32,7 +32,7 @@ public sealed class ChecksTests
     public void MissingLabelCheck_AllowsAriaLabelledBy()
     {
         var check = new MissingLabelCheck();
-        var content = "<input type=\"text\" aria-labelledby=\"name-label\">";
+        var content = "<span id=\"name-label\">Name</span><input type=\"text\" aria-labelledby=\"missing name-label\">";
         var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
 
         Assert.Empty(issues);

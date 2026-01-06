@@ -29,6 +29,11 @@ public static class TextUtilities
             }
         }
 
+        if (index < content.Length && content[index] == '\n')
+        {
+            line++;
+        }
+
         return line;
     }
 

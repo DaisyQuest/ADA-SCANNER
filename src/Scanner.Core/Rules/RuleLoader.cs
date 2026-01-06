@@ -131,18 +131,35 @@ public sealed class RuleLoader
     /// <exception cref="InvalidDataException">Thrown when the rule file cannot be parsed.</exception>
     public RuleDefinition LoadRule(string path)
     {
-        return LoadRuleFile(path, captureErrors: false).Rule;
+        return LoadRuleFile(path, captureErrors: false, allowJsonExceptions: true).Rule;
     }
 
-    private RuleFileLoadResult LoadRuleFile(string path, bool captureErrors)
+    private RuleFileLoadResult LoadRuleFile(string path, bool captureErrors, bool allowJsonExceptions = false)
     {
         try
         {
             var extension = Path.GetExtension(path);
             if (extension.Equals(".json", StringComparison.OrdinalIgnoreCase))
             {
-                var result = ParseJsonRule(File.ReadAllText(path), path);
-                if (!captureErrors && result.HasParseError)
+                var json = File.ReadAllText(path);
+                if (captureErrors)
+                {
+                    try
+                    {
+                        return ParseJsonRule(json, path);
+                    }
+                    catch (JsonException)
+                    {
+                        return new RuleFileLoadResult(
+                            new RuleDefinition(string.Empty, string.Empty, string.Empty, string.Empty),
+                            new[] { $"Rule file {path} contains empty or invalid JSON." },
+                            Path.GetFileNameWithoutExtension(path),
+                            HasParseError: true);
+                    }
+                }
+
+                var result = ParseJsonRule(json, path);
+                if (result.HasParseError)
                 {
                     throw new InvalidDataException(string.Join(" ", result.Errors));
                 }
@@ -163,6 +180,10 @@ public sealed class RuleLoader
 
             throw new InvalidDataException($"Unsupported rule file format: {path}");
         }
+        catch (JsonException ex) when (!allowJsonExceptions)
+        {
+            throw new InvalidDataException($"Rule file {path} contains empty or invalid JSON.", ex);
+        }
         catch (Exception ex) when (captureErrors)
         {
             return new RuleFileLoadResult(
@@ -177,19 +198,7 @@ public sealed class RuleLoader
     {
         var errors = new List<string>();
         JsonDocument document;
-        try
-        {
-            document = JsonDocument.Parse(json);
-        }
-        catch (JsonException)
-        {
-            errors.Add($"Rule file {path} contains invalid JSON.");
-            return new RuleFileLoadResult(
-                new RuleDefinition(string.Empty, string.Empty, string.Empty, string.Empty),
-                errors,
-                Path.GetFileNameWithoutExtension(path),
-                HasParseError: true);
-        }
+        document = JsonDocument.Parse(json);
 
         using (document)
         {

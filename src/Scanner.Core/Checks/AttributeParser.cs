@@ -7,7 +7,7 @@ namespace Scanner.Core.Checks;
 /// </summary>
 public static class AttributeParser
 {
-    private static readonly Regex AttributeRegex = new("(?<name>[a-zA-Z0-9:-]+)\\s*=\\s*\"(?<value>[^\"]*)\"", RegexOptions.Compiled);
+    private static readonly Regex AttributeRegex = new("(?<name>[a-zA-Z0-9:.-]+)\\s*=\\s*\"(?<value>[^\"]*)\"", RegexOptions.Compiled);
 
     /// <summary>
     /// Extracts the attribute value for the specified attribute name.
