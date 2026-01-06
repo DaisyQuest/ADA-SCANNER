@@ -79,6 +79,36 @@ public sealed class RuntimeCrawlerTests
     }
 
     [Fact]
+    public async Task Crawler_RespectsMaxDepth()
+    {
+        var handler = new RecordingHandler(request =>
+        {
+            return request.RequestUri!.AbsolutePath switch
+            {
+                "/index" => HtmlResponse("<a href=\"/level1\">Level1</a>"),
+                "/level1" => HtmlResponse("<a href=\"/level2\">Level2</a>"),
+                _ => HtmlResponse("<html></html>")
+            };
+        });
+
+        var client = new HttpClient(handler);
+        var crawler = new HttpRuntimeCrawler(client);
+
+        var options = new RuntimeScanOptions
+        {
+            SeedUrls = new[] { new Uri("http://example.test/index") },
+            MaxDepth = 1,
+            MaxPages = 3
+        };
+
+        var documents = await CollectAsync(crawler, options);
+
+        Assert.Equal(2, handler.Requests.Count);
+        Assert.DoesNotContain(handler.Requests, request => request.RequestUri!.AbsolutePath == "/level2");
+        Assert.Equal(2, documents.Count);
+    }
+
+    [Fact]
     public async Task Crawler_RespectsBodySizeCap()
     {
         var handler = new RecordingHandler(_ => HtmlResponse(new string('x', 20)));
@@ -95,6 +125,130 @@ public sealed class RuntimeCrawlerTests
 
         Assert.Single(documents);
         Assert.True(documents[0].Body.Length <= 5);
+    }
+
+    [Fact]
+    public async Task Crawler_FiltersByAllowedContentTypes()
+    {
+        var handler = new RecordingHandler(request =>
+        {
+            return request.RequestUri!.AbsolutePath switch
+            {
+                "/xhtml" => new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent("<html></html>", Encoding.UTF8, "application/xhtml+xml")
+                },
+                _ => HtmlResponse("<html></html>")
+            };
+        });
+
+        var client = new HttpClient(handler);
+        var crawler = new HttpRuntimeCrawler(client);
+
+        var options = new RuntimeScanOptions
+        {
+            SeedUrls = new[]
+            {
+                new Uri("http://example.test/html"),
+                new Uri("http://example.test/xhtml")
+            },
+            AllowedContentTypes = new[] { "application/xhtml+xml" }
+        };
+
+        var documents = await CollectAsync(crawler, options);
+
+        Assert.Equal(2, handler.Requests.Count);
+        Assert.Single(documents);
+        Assert.Equal("application/xhtml+xml", documents[0].ContentType);
+    }
+
+    [Fact]
+    public async Task Crawler_ExcludesContentTypes()
+    {
+        var handler = new RecordingHandler(_ => HtmlResponse("<html></html>"));
+        var client = new HttpClient(handler);
+        var crawler = new HttpRuntimeCrawler(client);
+
+        var options = new RuntimeScanOptions
+        {
+            SeedUrls = new[] { new Uri("http://example.test/html") },
+            ExcludedContentTypes = new[] { "text/html" }
+        };
+
+        var documents = await CollectAsync(crawler, options);
+
+        Assert.Single(handler.Requests);
+        Assert.Empty(documents);
+    }
+
+    [Fact]
+    public async Task Crawler_FiltersByStatusCodes()
+    {
+        var handler = new RecordingHandler(request =>
+        {
+            return request.RequestUri!.AbsolutePath switch
+            {
+                "/ok" => HtmlResponse("<html></html>"),
+                _ => new HttpResponseMessage(HttpStatusCode.NotFound)
+                {
+                    Content = new StringContent("<html></html>", Encoding.UTF8, "text/html")
+                }
+            };
+        });
+
+        var client = new HttpClient(handler);
+        var crawler = new HttpRuntimeCrawler(client);
+
+        var options = new RuntimeScanOptions
+        {
+            SeedUrls = new[]
+            {
+                new Uri("http://example.test/ok"),
+                new Uri("http://example.test/missing")
+            },
+            AllowedStatusCodes = new[] { 200 }
+        };
+
+        var documents = await CollectAsync(crawler, options);
+
+        Assert.Equal(2, handler.Requests.Count);
+        Assert.Single(documents);
+        Assert.Equal(200, documents[0].StatusCode);
+    }
+
+    [Fact]
+    public async Task Crawler_ExcludesStatusCodes()
+    {
+        var handler = new RecordingHandler(request =>
+        {
+            return request.RequestUri!.AbsolutePath switch
+            {
+                "/blocked" => new HttpResponseMessage(HttpStatusCode.Forbidden)
+                {
+                    Content = new StringContent("<html></html>", Encoding.UTF8, "text/html")
+                },
+                _ => HtmlResponse("<html></html>")
+            };
+        });
+
+        var client = new HttpClient(handler);
+        var crawler = new HttpRuntimeCrawler(client);
+
+        var options = new RuntimeScanOptions
+        {
+            SeedUrls = new[]
+            {
+                new Uri("http://example.test/allowed"),
+                new Uri("http://example.test/blocked")
+            },
+            ExcludedStatusCodes = new[] { 403 }
+        };
+
+        var documents = await CollectAsync(crawler, options);
+
+        Assert.Equal(2, handler.Requests.Count);
+        Assert.Single(documents);
+        Assert.Equal(200, documents[0].StatusCode);
     }
 
     [Fact]

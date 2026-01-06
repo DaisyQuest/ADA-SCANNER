@@ -38,19 +38,20 @@ public sealed class HttpRuntimeCrawler : IRuntimeDocumentSource
         var includePatterns = CompilePatterns(options.IncludeUrlPatterns);
         var excludePatterns = CompilePatterns(options.ExcludeUrlPatterns);
 
-        var queue = new Queue<Uri>();
+        var queue = new Queue<QueueEntry>();
         var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var seed in options.SeedUrls)
         {
-            TryEnqueue(seed, includePatterns, excludePatterns, visited, queue);
+            TryEnqueue(seed, 0, options.MaxDepth, includePatterns, excludePatterns, visited, queue);
         }
 
         var processed = 0;
         while (queue.Count > 0 && processed < options.MaxPages)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var current = queue.Dequeue();
+            var entry = queue.Dequeue();
+            var current = entry.Url;
             processed++;
 
             using var request = new HttpRequestMessage(HttpMethod.Get, current);
@@ -75,7 +76,8 @@ public sealed class HttpRuntimeCrawler : IRuntimeDocumentSource
                 var body = await ReadBodyAsync(response.Content, options.MaxBodyBytes, cancellationToken)
                     .ConfigureAwait(false);
 
-                if (IsHtml(contentType))
+                if (IsAllowedStatusCode(response.StatusCode, options.AllowedStatusCodes, options.ExcludedStatusCodes)
+                    && IsAllowedContentType(contentType, options.AllowedContentTypes, options.ExcludedContentTypes))
                 {
                     if (ShouldSample(options))
                     {
@@ -87,9 +89,12 @@ public sealed class HttpRuntimeCrawler : IRuntimeDocumentSource
                             DateTimeOffset.UtcNow);
                     }
 
-                    foreach (var link in ExtractLinks(body, current))
+                    if (entry.Depth < options.MaxDepth && ShouldExtractLinks(contentType))
                     {
-                        TryEnqueue(link, includePatterns, excludePatterns, visited, queue);
+                        foreach (var link in ExtractLinks(body, current))
+                        {
+                            TryEnqueue(link, entry.Depth + 1, options.MaxDepth, includePatterns, excludePatterns, visited, queue);
+                        }
                     }
                 }
             }
@@ -117,11 +122,18 @@ public sealed class HttpRuntimeCrawler : IRuntimeDocumentSource
 
     private static bool TryEnqueue(
         Uri url,
+        int depth,
+        int maxDepth,
         IReadOnlyList<Regex> includePatterns,
         IReadOnlyList<Regex> excludePatterns,
         ISet<string> visited,
-        Queue<Uri> queue)
+        Queue<QueueEntry> queue)
     {
+        if (depth > maxDepth)
+        {
+            return false;
+        }
+
         if (!IsHttp(url))
         {
             return false;
@@ -138,7 +150,7 @@ public sealed class HttpRuntimeCrawler : IRuntimeDocumentSource
             return false;
         }
 
-        queue.Enqueue(url);
+        queue.Enqueue(new QueueEntry(url, depth));
         return true;
     }
 
@@ -166,10 +178,47 @@ public sealed class HttpRuntimeCrawler : IRuntimeDocumentSource
         return includePatterns.Any(pattern => pattern.IsMatch(url));
     }
 
-    private static bool IsHtml(string? contentType)
+    private static bool IsAllowedStatusCode(
+        System.Net.HttpStatusCode statusCode,
+        IReadOnlyList<int> allowed,
+        IReadOnlyList<int> excluded)
+    {
+        var code = (int)statusCode;
+        if (excluded.Contains(code))
+        {
+            return false;
+        }
+
+        return allowed.Count == 0 || allowed.Contains(code);
+    }
+
+    private static bool IsAllowedContentType(
+        string? contentType,
+        IReadOnlyList<string> allowed,
+        IReadOnlyList<string> excluded)
+    {
+        if (string.IsNullOrWhiteSpace(contentType))
+        {
+            return false;
+        }
+
+        if (excluded.Any(type => contentType.Contains(type, StringComparison.OrdinalIgnoreCase)))
+        {
+            return false;
+        }
+
+        if (allowed.Count == 0)
+        {
+            return contentType.Contains("text/html", StringComparison.OrdinalIgnoreCase);
+        }
+
+        return allowed.Any(type => contentType.Contains(type, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static bool ShouldExtractLinks(string? contentType)
     {
         return !string.IsNullOrWhiteSpace(contentType)
-            && contentType.Contains("text/html", StringComparison.OrdinalIgnoreCase);
+            && contentType.Contains("html", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool ShouldSample(RuntimeScanOptions options)
@@ -234,4 +283,6 @@ public sealed class HttpRuntimeCrawler : IRuntimeDocumentSource
 
         return Encoding.UTF8.GetString(memory.ToArray());
     }
+
+    private sealed record QueueEntry(Uri Url, int Depth);
 }

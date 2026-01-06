@@ -31,9 +31,34 @@ public sealed class RuntimeScanOptions
     public IReadOnlyList<string> ExcludeUrlPatterns { get; init; } = Array.Empty<string>();
 
     /// <summary>
+    /// Gets the maximum depth to follow links from the seed URLs.
+    /// </summary>
+    public int MaxDepth { get; init; } = int.MaxValue;
+
+    /// <summary>
     /// Gets the maximum number of pages to crawl.
     /// </summary>
     public int MaxPages { get; init; } = 50;
+
+    /// <summary>
+    /// Gets the HTTP status codes that should be captured. Empty means all statuses.
+    /// </summary>
+    public IReadOnlyList<int> AllowedStatusCodes { get; init; } = Array.Empty<int>();
+
+    /// <summary>
+    /// Gets the HTTP status codes that should be excluded from capture.
+    /// </summary>
+    public IReadOnlyList<int> ExcludedStatusCodes { get; init; } = Array.Empty<int>();
+
+    /// <summary>
+    /// Gets the content types that should be captured. Empty defaults to text/html.
+    /// </summary>
+    public IReadOnlyList<string> AllowedContentTypes { get; init; } = Array.Empty<string>();
+
+    /// <summary>
+    /// Gets the content types that should be excluded from capture.
+    /// </summary>
+    public IReadOnlyList<string> ExcludedContentTypes { get; init; } = Array.Empty<string>();
 
     /// <summary>
     /// Gets the maximum number of body bytes to capture for each page.

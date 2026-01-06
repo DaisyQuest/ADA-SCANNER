@@ -159,6 +159,44 @@ public sealed class RunAdaScanTests
     }
 
     [Fact]
+    public void Run_FailsWithUsageWhenRuntimeMaxDepthInvalid()
+    {
+        var output = new StringWriter();
+        var error = new StringWriter();
+        var runner = new AdaScanRunner(output, error);
+
+        var code = runner.Run(new[]
+        {
+            "--runtime-url",
+            "http://example.test",
+            "--runtime-max-depth",
+            "-1"
+        });
+
+        Assert.Equal(1, code);
+        Assert.Contains("Invalid max depth value", error.ToString(), StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Run_FailsWithUsageWhenRuntimeStatusInvalid()
+    {
+        var output = new StringWriter();
+        var error = new StringWriter();
+        var runner = new AdaScanRunner(output, error);
+
+        var code = runner.Run(new[]
+        {
+            "--runtime-url",
+            "http://example.test",
+            "--runtime-allowed-status",
+            "999"
+        });
+
+        Assert.Equal(1, code);
+        Assert.Contains("Invalid allowed status code", error.ToString(), StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void Run_AllowsRuntimeOptionsAndWritesCombinedReport()
     {
         var root = TestUtilities.CreateTempDirectory();
