@@ -18,6 +18,7 @@ public sealed class RuleSchemaValidator
         "missing-alt-text",
         "invalid-aria-role",
         "hidden-navigation",
+        "hidden-focusable",
         "insufficient-contrast",
         "xaml-missing-name"
     };
