@@ -1,0 +1,8 @@
+{
+  "id": "aria-missing-label-razor",
+  "description": "Ensure Razor form controls include accessible names in templated markup.",
+  "severity": "high",
+  "checkId": "missing-label",
+  "appliesTo": "cshtml, razor",
+  "recommendation": "Bind label text to inputs via for/id or use aria-label/aria-labelledby in Razor components."
+}

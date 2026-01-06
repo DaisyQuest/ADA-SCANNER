@@ -1,0 +1,8 @@
+{
+  "id": "aria-xaml-missing-name",
+  "description": "Ensure XAML controls declare AutomationProperties.Name for assistive tech.",
+  "severity": "high",
+  "checkId": "xaml-missing-name",
+  "appliesTo": "xaml",
+  "recommendation": "Set AutomationProperties.Name or bind a descriptive accessible name on interactive controls."
+}
