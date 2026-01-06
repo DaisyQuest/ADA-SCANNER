@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using System.Linq;
 using Scanner.Core.Rules;
 
 namespace Scanner.Core.Checks;
@@ -17,6 +18,7 @@ public sealed class AbsolutePositioningCheck : ICheck
         "Canvas.Bottom",
         "AbsoluteLayout.LayoutBounds"
     };
+    private static readonly string[] PositioningValues = { "absolute", "fixed" };
 
     /// <summary>
     /// Gets the unique identifier for this check.
@@ -47,13 +49,19 @@ public sealed class AbsolutePositioningCheck : ICheck
             var attrs = match.Groups["attrs"].Value;
             var style = AttributeParser.GetAttributeValue(attrs, "style");
             var position = StyleUtilities.GetLastPropertyValue(style, "position");
-            if (!string.Equals(position, "absolute", StringComparison.OrdinalIgnoreCase))
+            if (!IsAbsolutePositioningValue(position))
             {
                 continue;
             }
 
             var line = TextUtilities.GetLineNumber(context.Content, match.Index);
-            yield return new Issue(rule.Id, Id, context.FilePath, line, "Element uses absolute positioning.", match.Value);
+            yield return new Issue(
+                rule.Id,
+                Id,
+                context.FilePath,
+                line,
+                $"Element uses position: {position}.",
+                match.Value);
         }
     }
 
@@ -62,27 +70,47 @@ public sealed class AbsolutePositioningCheck : ICheck
         foreach (Match match in TagRegex.Matches(context.Content))
         {
             var attrs = match.Groups["attrs"].Value;
-            if (!HasCanvasPositioning(attrs))
+            if (!TryGetCanvasPositioning(attrs, out var attributeName, out var attributeValue))
             {
                 continue;
             }
 
             var line = TextUtilities.GetLineNumber(context.Content, match.Index);
-            yield return new Issue(rule.Id, Id, context.FilePath, line, "XAML element uses absolute positioning.", match.Value);
+            yield return new Issue(
+                rule.Id,
+                Id,
+                context.FilePath,
+                line,
+                $"XAML element uses absolute positioning ({attributeName}=\"{attributeValue}\").",
+                match.Value);
         }
     }
 
-    private static bool HasCanvasPositioning(string attrs)
+    private static bool TryGetCanvasPositioning(string attrs, out string attributeName, out string attributeValue)
     {
         foreach (var attribute in CanvasAttributes)
         {
             var value = AttributeParser.GetAttributeValue(attrs, attribute);
             if (!string.IsNullOrWhiteSpace(value))
             {
+                attributeName = attribute;
+                attributeValue = value;
                 return true;
             }
         }
 
+        attributeName = string.Empty;
+        attributeValue = string.Empty;
         return false;
+    }
+
+    private static bool IsAbsolutePositioningValue(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return false;
+        }
+
+        return PositioningValues.Any(position => value.Equals(position, StringComparison.OrdinalIgnoreCase));
     }
 }
