@@ -80,4 +80,107 @@ public sealed class ReportGeneratorTests
 
         Assert.Equal(root, loaded.ScannedPath);
     }
+
+    [Fact]
+    public void ReportGenerator_ReportsNoIssuesWhenEmpty()
+    {
+        var root = TestUtilities.CreateTempDirectory();
+        var scan = new ScanResult
+        {
+            ScannedPath = root,
+            Files = Array.Empty<DiscoveredFile>(),
+            Issues = Array.Empty<Issue>()
+        };
+
+        var generator = new ReportGenerator();
+        var artifacts = generator.WriteReport(scan, root, "report");
+
+        var html = File.ReadAllText(artifacts.HtmlPath);
+        Assert.Contains("No issues found", html, StringComparison.OrdinalIgnoreCase);
+
+        var markdown = File.ReadAllText(artifacts.MarkdownPath);
+        Assert.Contains("No issues found", markdown, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("_None_", markdown, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void ReportGenerator_SanitizesInvalidBaseName()
+    {
+        var root = TestUtilities.CreateTempDirectory();
+        var invalidChar = Path.GetInvalidFileNameChars()[0];
+        var scan = new ScanResult
+        {
+            ScannedPath = root,
+            Files = Array.Empty<DiscoveredFile>(),
+            Issues = new[] { new Issue("rule", "check", "file", 1, "message", null) }
+        };
+
+        var generator = new ReportGenerator();
+        var artifacts = generator.WriteReport(scan, root, $"report{invalidChar}name");
+
+        Assert.DoesNotContain(invalidChar, Path.GetFileName(artifacts.JsonPath));
+        Assert.True(File.Exists(artifacts.JsonPath));
+    }
+
+    [Fact]
+    public void ReportGenerator_EscapesOutputFields()
+    {
+        var root = TestUtilities.CreateTempDirectory();
+        var scan = new ScanResult
+        {
+            ScannedPath = root,
+            Files = Array.Empty<DiscoveredFile>(),
+            Issues = new[] { new Issue("rule", "check", "file|path", 1, "<script>alert(1)</script>", null) }
+        };
+
+        var generator = new ReportGenerator();
+        var artifacts = generator.WriteReport(scan, root, "report");
+
+        var html = File.ReadAllText(artifacts.HtmlPath);
+        Assert.Contains("&lt;script&gt;alert(1)&lt;/script&gt;", html, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("<script>", html, StringComparison.OrdinalIgnoreCase);
+
+        var markdown = File.ReadAllText(artifacts.MarkdownPath);
+        Assert.Contains("&lt;script&gt;alert(1)&lt;/script&gt;", markdown, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("file\\|path", markdown, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void ReportGenerator_ThrowsOnInvalidInputs()
+    {
+        var generator = new ReportGenerator();
+        Assert.Throws<ArgumentException>(() => generator.LoadScanResult(" "));
+        Assert.Throws<ArgumentException>(() => generator.WriteReport(new ScanResult(), " ", "report"));
+        Assert.Throws<ArgumentException>(() => generator.WriteReport(new ScanResult(), "output", " "));
+    }
+
+    [Fact]
+    public void ReportGenerator_ThrowsOnInvalidScanJson()
+    {
+        var root = TestUtilities.CreateTempDirectory();
+        var path = Path.Combine(root, "scan.json");
+        File.WriteAllText(path, "not-json");
+
+        var generator = new ReportGenerator();
+
+        Assert.Throws<InvalidDataException>(() => generator.LoadScanResult(path));
+    }
+
+    [Fact]
+    public void ReportGenerator_HandlesNullCollections()
+    {
+        var root = TestUtilities.CreateTempDirectory();
+        var scan = new ScanResult
+        {
+            ScannedPath = root,
+            Files = null!,
+            Issues = null!
+        };
+
+        var generator = new ReportGenerator();
+        var artifacts = generator.WriteReport(scan, root, "report");
+
+        var markdown = File.ReadAllText(artifacts.MarkdownPath);
+        Assert.Contains("No issues found", markdown, StringComparison.OrdinalIgnoreCase);
+    }
 }
