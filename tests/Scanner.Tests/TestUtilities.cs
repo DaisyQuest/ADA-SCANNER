@@ -38,5 +38,17 @@ public static class TestUtilities
     {
         var baseDir = AppContext.BaseDirectory;
         return Path.Combine(baseDir, "Resources", "Layouts", fileName);
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory != null)
+        {
+            if (File.Exists(Path.Combine(directory.FullName, "AdaScanner.sln")))
+            {
+                return directory.FullName;
+            }
+
+            directory = directory.Parent;
+        }
+
+        throw new DirectoryNotFoundException("Repository root not found starting from test directory.");
     }
 }

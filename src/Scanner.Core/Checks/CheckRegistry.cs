@@ -40,6 +40,7 @@ public sealed class CheckRegistry
         new NonWrappingContainerCheck(),
         new InvalidAriaRoleCheck(),
         new HiddenNavigationCheck(),
+        new HiddenFocusableElementCheck(),
         new InsufficientContrastCheck(),
         new XamlMissingNameCheck()
     });
