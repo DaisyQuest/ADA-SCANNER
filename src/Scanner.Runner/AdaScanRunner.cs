@@ -125,6 +125,11 @@ public sealed class AdaScanRunner
             var maxPages = default(int?);
             var maxBodyBytes = default(int?);
             var sampleRate = default(double?);
+            var maxDepth = default(int?);
+            var allowedContentTypes = new List<string>();
+            var excludedContentTypes = new List<string>();
+            var allowedStatusCodes = new List<int>();
+            var excludedStatusCodes = new List<int>();
 
             for (var i = 0; i < args.Length; i++)
             {
@@ -186,6 +191,61 @@ public sealed class AdaScanRunner
 
                         maxPages = maxPagesValue;
                         break;
+                    case "--runtime-max-depth":
+                        if (!int.TryParse(value, out var maxDepthValue) || maxDepthValue < 0)
+                        {
+                            error.WriteLine($"Invalid max depth value: {value}");
+                            WriteUsage(error);
+                            parsed = new RunnerArguments();
+                            return false;
+                        }
+
+                        maxDepth = maxDepthValue;
+                        break;
+                    case "--runtime-allowed-status":
+                        if (!TryParseStatusCode(value, out var allowedStatus))
+                        {
+                            error.WriteLine($"Invalid allowed status code: {value}");
+                            WriteUsage(error);
+                            parsed = new RunnerArguments();
+                            return false;
+                        }
+
+                        allowedStatusCodes.Add(allowedStatus);
+                        break;
+                    case "--runtime-excluded-status":
+                        if (!TryParseStatusCode(value, out var excludedStatus))
+                        {
+                            error.WriteLine($"Invalid excluded status code: {value}");
+                            WriteUsage(error);
+                            parsed = new RunnerArguments();
+                            return false;
+                        }
+
+                        excludedStatusCodes.Add(excludedStatus);
+                        break;
+                    case "--runtime-allowed-content-type":
+                        if (string.IsNullOrWhiteSpace(value))
+                        {
+                            error.WriteLine("Allowed content type cannot be empty.");
+                            WriteUsage(error);
+                            parsed = new RunnerArguments();
+                            return false;
+                        }
+
+                        allowedContentTypes.Add(value);
+                        break;
+                    case "--runtime-excluded-content-type":
+                        if (string.IsNullOrWhiteSpace(value))
+                        {
+                            error.WriteLine("Excluded content type cannot be empty.");
+                            WriteUsage(error);
+                            parsed = new RunnerArguments();
+                            return false;
+                        }
+
+                        excludedContentTypes.Add(value);
+                        break;
                     case "--runtime-max-body-bytes":
                         if (!int.TryParse(value, out var maxBodyValue) || maxBodyValue < 0)
                         {
@@ -237,12 +297,27 @@ public sealed class AdaScanRunner
                         IncludeUrlPatterns = includePatterns,
                         ExcludeUrlPatterns = excludePatterns,
                         MaxPages = maxPages ?? 50,
+                        MaxDepth = maxDepth ?? int.MaxValue,
                         MaxBodyBytes = maxBodyBytes ?? 1024 * 1024,
+                        AllowedStatusCodes = allowedStatusCodes,
+                        ExcludedStatusCodes = excludedStatusCodes,
+                        AllowedContentTypes = allowedContentTypes,
+                        ExcludedContentTypes = excludedContentTypes,
                         SampleRate = sampleRate ?? 1.0
                     }
             };
 
             return true;
+        }
+
+        private static bool TryParseStatusCode(string value, out int statusCode)
+        {
+            if (!int.TryParse(value, out statusCode))
+            {
+                return false;
+            }
+
+            return statusCode >= 100 && statusCode <= 599;
         }
 
         private static void WriteUsage(TextWriter error)
@@ -254,6 +329,11 @@ public sealed class AdaScanRunner
             error.WriteLine("  --runtime-include <pattern>    Regex include pattern for runtime URLs.");
             error.WriteLine("  --runtime-exclude <pattern>    Regex exclude pattern for runtime URLs.");
             error.WriteLine("  --runtime-max-pages <count>    Maximum runtime pages to crawl.");
+            error.WriteLine("  --runtime-max-depth <depth>    Maximum link depth to follow from seeds.");
+            error.WriteLine("  --runtime-allowed-status <n>   Allowed HTTP status code (repeatable).");
+            error.WriteLine("  --runtime-excluded-status <n>  Excluded HTTP status code (repeatable).");
+            error.WriteLine("  --runtime-allowed-content-type <type>  Allowed content type (repeatable).");
+            error.WriteLine("  --runtime-excluded-content-type <type> Excluded content type (repeatable).");
             error.WriteLine("  --runtime-max-body-bytes <n>   Maximum bytes captured per response.");
             error.WriteLine("  --runtime-sample-rate <0-1>    Sample rate for runtime documents.");
         }
