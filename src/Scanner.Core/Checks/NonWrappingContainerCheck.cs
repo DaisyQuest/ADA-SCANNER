@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using System.Linq;
 using Scanner.Core.Rules;
 
 namespace Scanner.Core.Checks;
@@ -9,6 +10,7 @@ namespace Scanner.Core.Checks;
 public sealed class NonWrappingContainerCheck : ICheck
 {
     private static readonly Regex TagRegex = new("<(?<tag>[a-zA-Z0-9:-]+)(?<attrs>[^>]*)>", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+    private static readonly string[] NonWrappingValues = { "nowrap", "pre" };
 
     /// <summary>
     /// Gets the unique identifier for this check.
@@ -39,13 +41,19 @@ public sealed class NonWrappingContainerCheck : ICheck
             var attrs = match.Groups["attrs"].Value;
             var style = AttributeParser.GetAttributeValue(attrs, "style");
             var whiteSpace = StyleUtilities.GetLastPropertyValue(style, "white-space");
-            if (!string.Equals(whiteSpace, "nowrap", StringComparison.OrdinalIgnoreCase))
+            if (!IsNonWrappingValue(whiteSpace))
             {
                 continue;
             }
 
             var line = TextUtilities.GetLineNumber(context.Content, match.Index);
-            yield return new Issue(rule.Id, Id, context.FilePath, line, "Element prevents text wrapping.", match.Value);
+            yield return new Issue(
+                rule.Id,
+                Id,
+                context.FilePath,
+                line,
+                $"Element prevents text wrapping (white-space: {whiteSpace}).",
+                match.Value);
         }
     }
 
@@ -61,7 +69,23 @@ public sealed class NonWrappingContainerCheck : ICheck
             }
 
             var line = TextUtilities.GetLineNumber(context.Content, match.Index);
-            yield return new Issue(rule.Id, Id, context.FilePath, line, "XAML element disables text wrapping.", match.Value);
+            yield return new Issue(
+                rule.Id,
+                Id,
+                context.FilePath,
+                line,
+                "XAML element disables text wrapping (TextWrapping=\"NoWrap\").",
+                match.Value);
         }
+    }
+
+    private static bool IsNonWrappingValue(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return false;
+        }
+
+        return NonWrappingValues.Any(nonWrapping => value.Equals(nonWrapping, StringComparison.OrdinalIgnoreCase));
     }
 }

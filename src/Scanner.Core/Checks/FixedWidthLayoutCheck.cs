@@ -33,20 +33,36 @@ public sealed class FixedWidthLayoutCheck : ICheck
         return RunMarkup(context, rule);
     }
 
+    private static readonly string[] StyleWidthProperties = { "width", "min-width" };
+
     private static IEnumerable<Issue> RunMarkup(CheckContext context, RuleDefinition rule)
     {
         foreach (Match match in TagRegex.Matches(context.Content))
         {
             var attrs = match.Groups["attrs"].Value;
             var style = AttributeParser.GetAttributeValue(attrs, "style");
-            var width = StyleUtilities.GetLastPropertyValue(style, "width");
-            if (width == null || !StyleUtilities.IsFixedLength(width))
+            if (TryGetFixedStyleWidth(style, out var propertyName, out var propertyValue))
+            {
+                var line = TextUtilities.GetLineNumber(context.Content, match.Index);
+                var description = $"Element uses fixed {DescribeProperty(propertyName)} ({propertyName}: {propertyValue}).";
+                yield return new Issue(rule.Id, Id, context.FilePath, line, description, match.Value);
+                continue;
+            }
+
+            var widthAttribute = AttributeParser.GetAttributeValue(attrs, "width");
+            if (!IsFixedMarkupLength(widthAttribute))
             {
                 continue;
             }
 
             var line = TextUtilities.GetLineNumber(context.Content, match.Index);
-            yield return new Issue(rule.Id, Id, context.FilePath, line, "Element uses a fixed width.", match.Value);
+            yield return new Issue(
+                rule.Id,
+                Id,
+                context.FilePath,
+                line,
+                $"Element uses a fixed width attribute (width=\"{widthAttribute}\").",
+                match.Value);
         }
     }
 
@@ -56,13 +72,33 @@ public sealed class FixedWidthLayoutCheck : ICheck
         {
             var attrs = match.Groups["attrs"].Value;
             var widthValue = AttributeParser.GetAttributeValue(attrs, "Width");
-            if (!IsFixedWidthValue(widthValue))
+            if (IsFixedWidthValue(widthValue))
+            {
+                var line = TextUtilities.GetLineNumber(context.Content, match.Index);
+                yield return new Issue(
+                    rule.Id,
+                    Id,
+                    context.FilePath,
+                    line,
+                    $"XAML element uses fixed width (Width=\"{widthValue}\").",
+                    match.Value);
+                continue;
+            }
+
+            var minWidthValue = AttributeParser.GetAttributeValue(attrs, "MinWidth");
+            if (!IsFixedWidthValue(minWidthValue))
             {
                 continue;
             }
 
             var line = TextUtilities.GetLineNumber(context.Content, match.Index);
-            yield return new Issue(rule.Id, Id, context.FilePath, line, "XAML element uses a fixed width.", match.Value);
+            yield return new Issue(
+                rule.Id,
+                Id,
+                context.FilePath,
+                line,
+                $"XAML element uses fixed minimum width (MinWidth=\"{minWidthValue}\").",
+                match.Value);
         }
     }
 
@@ -84,5 +120,51 @@ public sealed class FixedWidthLayoutCheck : ICheck
         }
 
         return double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var number) && number > 0;
+    }
+
+    private static bool TryGetFixedStyleWidth(string? style, out string propertyName, out string propertyValue)
+    {
+        foreach (var property in StyleWidthProperties)
+        {
+            var value = StyleUtilities.GetLastPropertyValue(style, property);
+            if (!string.IsNullOrWhiteSpace(value) && StyleUtilities.IsFixedLength(value))
+            {
+                propertyName = property;
+                propertyValue = value;
+                return true;
+            }
+        }
+
+        propertyName = string.Empty;
+        propertyValue = string.Empty;
+        return false;
+    }
+
+    private static bool IsFixedMarkupLength(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return false;
+        }
+
+        var trimmed = value.Trim();
+        if (trimmed.EndsWith('%'))
+        {
+            return false;
+        }
+
+        if (StyleUtilities.IsFixedLength(trimmed))
+        {
+            return true;
+        }
+
+        return double.TryParse(trimmed, NumberStyles.Float, CultureInfo.InvariantCulture, out var number) && number > 0;
+    }
+
+    private static string DescribeProperty(string propertyName)
+    {
+        return propertyName.Equals("min-width", StringComparison.OrdinalIgnoreCase)
+            ? "minimum width"
+            : "width";
     }
 }

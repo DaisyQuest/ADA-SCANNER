@@ -86,6 +86,31 @@ public sealed class LayoutChecksTests
     }
 
     [Fact]
+    public void AbsolutePositioningCheck_FlagsFixedPositioning()
+    {
+        var content = "<div style=\"position: fixed; top: 0;\"></div>";
+        var check = new AbsolutePositioningCheck();
+
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(AbsolutePositioningCheck.Id)).ToList();
+
+        var issue = Assert.Single(issues);
+        Assert.Contains("position: fixed", issue.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void AbsolutePositioningCheck_DescribesXamlCanvasAttribute()
+    {
+        var content = "<Label Canvas.Left=\"24\" Text=\"Pinned\"></Label>";
+        var check = new AbsolutePositioningCheck();
+
+        var issues = check.Run(new CheckContext("MainPage.xaml", content, "xaml"), Rule(AbsolutePositioningCheck.Id)).ToList();
+
+        var issue = Assert.Single(issues);
+        Assert.Contains("Canvas.Left", issue.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("24", issue.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void FixedWidthLayoutCheck_FlagsHtmlFixture()
     {
         var content = File.ReadAllText(TestUtilities.GetLayoutFixturePath("html-blocking.html"));
@@ -111,6 +136,42 @@ public sealed class LayoutChecksTests
     public void FixedWidthLayoutCheck_IgnoresFlexibleWidths()
     {
         var content = File.ReadAllText(TestUtilities.GetLayoutFixturePath("html-acceptable.html"));
+        var check = new FixedWidthLayoutCheck();
+
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(FixedWidthLayoutCheck.Id)).ToList();
+
+        Assert.Empty(issues);
+    }
+
+    [Fact]
+    public void FixedWidthLayoutCheck_FlagsMinWidthStyles()
+    {
+        var content = "<section style=\"min-width: 420px;\"></section>";
+        var check = new FixedWidthLayoutCheck();
+
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(FixedWidthLayoutCheck.Id)).ToList();
+
+        var issue = Assert.Single(issues);
+        Assert.Contains("min-width", issue.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("420px", issue.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void FixedWidthLayoutCheck_FlagsWidthAttribute()
+    {
+        var content = "<img width=\"320\" src=\"hero.png\" />";
+        var check = new FixedWidthLayoutCheck();
+
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(FixedWidthLayoutCheck.Id)).ToList();
+
+        var issue = Assert.Single(issues);
+        Assert.Contains("width=\"320\"", issue.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void FixedWidthLayoutCheck_IgnoresPercentageWidthAttribute()
+    {
+        var content = "<img width=\"100%\" src=\"hero.png\" />";
         var check = new FixedWidthLayoutCheck();
 
         var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(FixedWidthLayoutCheck.Id)).ToList();
@@ -149,6 +210,19 @@ public sealed class LayoutChecksTests
         var issues = check.Run(new CheckContext("MainPage.xaml", content, "xaml"), Rule(FixedWidthLayoutCheck.Id)).ToList();
 
         Assert.Empty(issues);
+    }
+
+    [Fact]
+    public void FixedWidthLayoutCheck_FlagsXamlMinWidth()
+    {
+        var content = "<StackLayout MinWidth=\"300\" />";
+        var check = new FixedWidthLayoutCheck();
+
+        var issues = check.Run(new CheckContext("MainPage.xaml", content, "xaml"), Rule(FixedWidthLayoutCheck.Id)).ToList();
+
+        var issue = Assert.Single(issues);
+        Assert.Contains("MinWidth", issue.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("300", issue.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -202,6 +276,29 @@ public sealed class LayoutChecksTests
         var check = new NonWrappingContainerCheck();
 
         var issues = check.Run(new CheckContext("MainPage.xaml", content, "xaml"), Rule(NonWrappingContainerCheck.Id)).ToList();
+
+        Assert.Empty(issues);
+    }
+
+    [Fact]
+    public void NonWrappingContainerCheck_FlagsWhiteSpacePre()
+    {
+        var content = "<pre style=\"white-space: pre;\">Code</pre>";
+        var check = new NonWrappingContainerCheck();
+
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(NonWrappingContainerCheck.Id)).ToList();
+
+        var issue = Assert.Single(issues);
+        Assert.Contains("white-space: pre", issue.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void NonWrappingContainerCheck_IgnoresPreWrap()
+    {
+        var content = "<pre style=\"white-space: pre-wrap;\">Code</pre>";
+        var check = new NonWrappingContainerCheck();
+
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(NonWrappingContainerCheck.Id)).ToList();
 
         Assert.Empty(issues);
     }
