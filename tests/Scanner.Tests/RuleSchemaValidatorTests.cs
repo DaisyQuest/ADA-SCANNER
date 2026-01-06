@@ -65,4 +65,55 @@ public sealed class RuleSchemaValidatorTests
 
         Assert.Empty(errors);
     }
+
+    [Fact]
+    public void Validate_RejectsInvalidWcagCriteria()
+    {
+        var rule = new RuleDefinition(
+            "rule-3",
+            "Bad criteria",
+            "low",
+            "missing-alt-text",
+            WcagCriteria: "1.4, abc");
+        var validator = new RuleSchemaValidator();
+
+        var errors = validator.Validate(rule);
+
+        Assert.Single(errors);
+        Assert.Contains("Rule wcagCriteria must list WCAG success criteria like 1.4.3.", errors);
+    }
+
+    [Fact]
+    public void Validate_AllowsValidWcagCriteriaAndProblemTags()
+    {
+        var rule = new RuleDefinition(
+            "rule-4",
+            "Valid tags",
+            "low",
+            "missing-alt-text",
+            WcagCriteria: "1.1.1, 1.4.3",
+            ProblemTags: "image-text, non-text-content");
+        var validator = new RuleSchemaValidator();
+
+        var errors = validator.Validate(rule);
+
+        Assert.Empty(errors);
+    }
+
+    [Fact]
+    public void Validate_RejectsInvalidProblemTags()
+    {
+        var rule = new RuleDefinition(
+            "rule-5",
+            "Bad tags",
+            "medium",
+            "missing-alt-text",
+            ProblemTags: "Image Text, ,bad");
+        var validator = new RuleSchemaValidator();
+
+        var errors = validator.Validate(rule);
+
+        Assert.Single(errors);
+        Assert.Contains("Rule problemTags must be comma-separated slugs like document-language.", errors);
+    }
 }

@@ -15,7 +15,9 @@ public sealed class RuleLoader
         "severity",
         "checkId",
         "appliesTo",
-        "recommendation"
+        "recommendation",
+        "wcagCriteria",
+        "problemTags"
     };
 
     private static readonly string[] RequiredProperties =
@@ -246,6 +248,8 @@ public sealed class RuleLoader
             values.TryGetValue("checkId", out var checkId);
             values.TryGetValue("appliesTo", out var appliesTo);
             values.TryGetValue("recommendation", out var recommendation);
+            values.TryGetValue("wcagCriteria", out var wcagCriteria);
+            values.TryGetValue("problemTags", out var problemTags);
 
             var rule = new RuleDefinition(
                 id ?? string.Empty,
@@ -253,7 +257,9 @@ public sealed class RuleLoader
                 severity ?? string.Empty,
                 checkId ?? string.Empty,
                 string.IsNullOrWhiteSpace(appliesTo) ? null : appliesTo,
-                string.IsNullOrWhiteSpace(recommendation) ? null : recommendation);
+                string.IsNullOrWhiteSpace(recommendation) ? null : recommendation,
+                string.IsNullOrWhiteSpace(wcagCriteria) ? null : wcagCriteria,
+                string.IsNullOrWhiteSpace(problemTags) ? null : problemTags);
 
             var ruleId = string.IsNullOrWhiteSpace(id) ? Path.GetFileNameWithoutExtension(path) : id;
 
@@ -304,6 +310,8 @@ public sealed class RuleLoader
         values.TryGetValue("checkId", out var checkId);
         values.TryGetValue("appliesTo", out var appliesTo);
         values.TryGetValue("recommendation", out var recommendation);
+        values.TryGetValue("wcagCriteria", out var wcagCriteria);
+        values.TryGetValue("problemTags", out var problemTags);
 
         var rule = new RuleDefinition(
             id ?? string.Empty,
@@ -311,7 +319,9 @@ public sealed class RuleLoader
             severity ?? string.Empty,
             checkId ?? string.Empty,
             string.IsNullOrWhiteSpace(appliesTo) ? null : appliesTo,
-            string.IsNullOrWhiteSpace(recommendation) ? null : recommendation);
+            string.IsNullOrWhiteSpace(recommendation) ? null : recommendation,
+            string.IsNullOrWhiteSpace(wcagCriteria) ? null : wcagCriteria,
+            string.IsNullOrWhiteSpace(problemTags) ? null : problemTags);
 
         var ruleId = string.IsNullOrWhiteSpace(id) ? Path.GetFileNameWithoutExtension(path) : id;
         return new RuleFileLoadResult(rule, errors, ruleId, HasParseError: false);

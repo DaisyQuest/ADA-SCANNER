@@ -232,13 +232,15 @@ public sealed class RulesTests
     public void LoadRule_YamlTreatsEmptyOptionalFieldsAsNull()
     {
         var root = TestUtilities.CreateTempDirectory();
-        var path = TestUtilities.WriteFile(root, "rules/contrast/rule.yaml", "id: contrast-1\ndescription: Check contrast\nseverity: high\ncheckId: insufficient-contrast\nappliesTo:\nrecommendation: \"\"");
+        var path = TestUtilities.WriteFile(root, "rules/contrast/rule.yaml", "id: contrast-1\ndescription: Check contrast\nseverity: high\ncheckId: insufficient-contrast\nappliesTo:\nrecommendation: \"\"\nwcagCriteria:\nproblemTags: \"  \"");
 
         var loader = new RuleLoader();
         var rule = loader.LoadRule(path);
 
         Assert.Null(rule.AppliesTo);
         Assert.Null(rule.Recommendation);
+        Assert.Null(rule.WcagCriteria);
+        Assert.Null(rule.ProblemTags);
     }
 
     [Fact]
@@ -260,26 +262,46 @@ public sealed class RulesTests
     public void LoadRule_AllowsOptionalFieldsInYaml()
     {
         var root = TestUtilities.CreateTempDirectory();
-        var file = TestUtilities.WriteFile(root, "rules/contrast/rule.yaml", "id: contrast-2\ndescription: Optional fields\nseverity: medium\ncheckId: insufficient-contrast\nappliesTo: html\nrecommendation: Use compliant colors\n");
+        var file = TestUtilities.WriteFile(root, "rules/contrast/rule.yaml", "id: contrast-2\ndescription: Optional fields\nseverity: medium\ncheckId: insufficient-contrast\nappliesTo: html\nrecommendation: Use compliant colors\nwcagCriteria: 1.4.3\nproblemTags: text-contrast\n");
 
         var loader = new RuleLoader();
         var rule = loader.LoadRule(file);
 
         Assert.Equal("html", rule.AppliesTo);
         Assert.Equal("Use compliant colors", rule.Recommendation);
+        Assert.Equal("1.4.3", rule.WcagCriteria);
+        Assert.Equal("text-contrast", rule.ProblemTags);
     }
 
     [Fact]
     public void LoadRule_TrimsEmptyOptionalFieldsInYaml()
     {
         var root = TestUtilities.CreateTempDirectory();
-        var file = TestUtilities.WriteFile(root, "rules/contrast/rule.yaml", "id: contrast-3\ndescription: Optional fields\nseverity: medium\ncheckId: insufficient-contrast\nappliesTo: \"  \"\nrecommendation:\n");
+        var file = TestUtilities.WriteFile(root, "rules/contrast/rule.yaml", "id: contrast-3\ndescription: Optional fields\nseverity: medium\ncheckId: insufficient-contrast\nappliesTo: \"  \"\nrecommendation:\nwcagCriteria: \" \"\nproblemTags:\n");
 
         var loader = new RuleLoader();
         var rule = loader.LoadRule(file);
 
         Assert.Null(rule.AppliesTo);
         Assert.Null(rule.Recommendation);
+        Assert.Null(rule.WcagCriteria);
+        Assert.Null(rule.ProblemTags);
+    }
+
+    [Fact]
+    public void LoadRule_ParsesWcagCriteriaAndProblemTagsFromJson()
+    {
+        var root = TestUtilities.CreateTempDirectory();
+        var file = TestUtilities.WriteFile(
+            root,
+            "rules/contrast/rule.json",
+            "{\"id\":\"contrast-4\",\"description\":\"Optional fields\",\"severity\":\"medium\",\"checkId\":\"insufficient-contrast\",\"wcagCriteria\":\"1.4.3\",\"problemTags\":\"text-contrast\"}");
+
+        var loader = new RuleLoader();
+        var rule = loader.LoadRule(file);
+
+        Assert.Equal("1.4.3", rule.WcagCriteria);
+        Assert.Equal("text-contrast", rule.ProblemTags);
     }
 
     [Fact]

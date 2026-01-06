@@ -9,13 +9,17 @@ namespace Scanner.Core.Rules;
 /// <param name="CheckId">The check identifier to execute.</param>
 /// <param name="AppliesTo">Optional list of applicable UI kinds.</param>
 /// <param name="Recommendation">Optional guidance for remediation.</param>
+/// <param name="WcagCriteria">Optional WCAG success criteria references (comma-separated).</param>
+/// <param name="ProblemTags">Optional problem tags for filtering (comma-separated).</param>
 public sealed record RuleDefinition(
     string Id,
     string Description,
     string Severity,
     string CheckId,
     string? AppliesTo = null,
-    string? Recommendation = null);
+    string? Recommendation = null,
+    string? WcagCriteria = null,
+    string? ProblemTags = null);
 
 /// <summary>
 /// Groups rule definitions by owning team.
