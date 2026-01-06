@@ -17,4 +17,20 @@ public static class TestUtilities
         File.WriteAllText(path, content);
         return path;
     }
+
+    public static string FindRepositoryRoot()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory != null)
+        {
+            if (File.Exists(Path.Combine(directory.FullName, "AdaScanner.sln")))
+            {
+                return directory.FullName;
+            }
+
+            directory = directory.Parent;
+        }
+
+        throw new DirectoryNotFoundException("Repository root not found starting from test directory.");
+    }
 }

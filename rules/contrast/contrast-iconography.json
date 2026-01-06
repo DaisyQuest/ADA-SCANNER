@@ -1,0 +1,8 @@
+{
+  "id": "contrast-iconography",
+  "description": "Ensure icon colors have sufficient contrast against surrounding surfaces.",
+  "severity": "medium",
+  "checkId": "insufficient-contrast",
+  "appliesTo": "html",
+  "recommendation": "Adjust icon color or background to reach a 4.5:1 contrast ratio."
+}
