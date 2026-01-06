@@ -38,21 +38,42 @@ public sealed class CommandDispatcher
             return 1;
         }
 
+        var options = optionsResult.Options;
         if (!optionsResult.Options.TryGetValue("path", out var path) || string.IsNullOrWhiteSpace(path))
         {
             console.WriteError("Missing --path for scan command.");
             return 1;
         }
 
-        if (!optionsResult.Options.TryGetValue("rules", out var rulesRoot) || string.IsNullOrWhiteSpace(rulesRoot))
+        if (!options.TryGetValue("rules", out var rulesRoot) || string.IsNullOrWhiteSpace(rulesRoot))
         {
             console.WriteError("Missing --rules for scan command.");
             return 1;
         }
 
-        var outputDir = optionsResult.Options.TryGetValue("out", out var outDir) && !string.IsNullOrWhiteSpace(outDir)
+        var outputDir = options.TryGetValue("out", out var outDir) && !string.IsNullOrWhiteSpace(outDir)
             ? outDir
             : Path.Combine(Directory.GetCurrentDirectory(), "artifacts");
+
+        var reportBaseProvided = options.TryGetValue("report-base", out var reportBaseName);
+        if (reportBaseProvided && string.IsNullOrWhiteSpace(reportBaseName))
+        {
+            console.WriteError("Missing --report-base for scan command.");
+            return 1;
+        }
+
+        var reportOutProvided = options.TryGetValue("report-out", out var reportOutDir);
+        if (reportOutProvided && string.IsNullOrWhiteSpace(reportOutDir))
+        {
+            console.WriteError("Missing --report-out for scan command.");
+            return 1;
+        }
+
+        if (reportBaseProvided && !reportOutProvided)
+        {
+            console.WriteError("Cannot use --report-base without --report-out.");
+            return 1;
+        }
 
         var engine = new ScanEngine(new ProjectDiscovery(), new RuleLoader(), CheckRegistry.Default());
         var result = engine.Scan(new ScanOptions { Path = path, RulesRoot = rulesRoot });
@@ -66,6 +87,14 @@ public sealed class CommandDispatcher
         }));
 
         console.WriteLine($"Scan complete. Results written to {outputPath}.");
+
+        if (reportOutProvided)
+        {
+            var generator = new ReportGenerator();
+            var reportArtifacts = generator.WriteReport(result, reportOutDir!, reportBaseName ?? "report");
+            console.WriteLine($"Report written to {reportArtifacts.JsonPath}, {reportArtifacts.HtmlPath}, {reportArtifacts.MarkdownPath}.");
+        }
+
         return 0;
     }
 
