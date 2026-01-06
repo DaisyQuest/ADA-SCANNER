@@ -1,3 +1,4 @@
+using System.IO;
 using Scanner.Core;
 using Scanner.Core.Checks;
 using Scanner.Core.Discovery;
@@ -35,5 +36,18 @@ public sealed class ScanEngineTests
 
         Assert.Single(result.Issues);
         Assert.Equal(Path.GetFullPath(root), result.ScannedPath);
+    }
+
+    [Fact]
+    public void Scan_ThrowsWhenRulesAreInvalid()
+    {
+        var root = TestUtilities.CreateTempDirectory();
+        TestUtilities.WriteFile(root, "index.html", "<img src=\"hero.png\">");
+        var rulesRoot = Path.Combine(root, "rules");
+        TestUtilities.WriteFile(rulesRoot, "team/rule.json", "{\"id\":\"alt-1\",\"description\":\"Missing alt\",\"severity\":\"bogus\",\"checkId\":\"missing-alt-text\"}");
+
+        var engine = new ScanEngine(new ProjectDiscovery(), new RuleLoader(), CheckRegistry.Default());
+
+        Assert.Throws<InvalidDataException>(() => engine.Scan(new ScanOptions { Path = root, RulesRoot = rulesRoot }));
     }
 }
