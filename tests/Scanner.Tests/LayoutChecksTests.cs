@@ -14,7 +14,7 @@ public sealed class LayoutChecksTests
         var content = File.ReadAllText(TestUtilities.GetLayoutFixturePath("html-blocking.html"));
         var check = new AbsolutePositioningCheck();
 
-        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(AbsolutePositioningCheck.Id)).ToList();
 
         Assert.Single(issues);
     }
@@ -25,7 +25,7 @@ public sealed class LayoutChecksTests
         var content = File.ReadAllText(TestUtilities.GetLayoutFixturePath("xaml-blocking.xaml"));
         var check = new AbsolutePositioningCheck();
 
-        var issues = check.Run(new CheckContext("MainPage.xaml", content, "xaml"), Rule(check.Id)).ToList();
+        var issues = check.Run(new CheckContext("MainPage.xaml", content, "xaml"), Rule(AbsolutePositioningCheck.Id)).ToList();
 
         Assert.Single(issues);
     }
@@ -36,7 +36,7 @@ public sealed class LayoutChecksTests
         var content = File.ReadAllText(TestUtilities.GetLayoutFixturePath("html-acceptable.html"));
         var check = new AbsolutePositioningCheck();
 
-        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(AbsolutePositioningCheck.Id)).ToList();
 
         Assert.Empty(issues);
     }
@@ -47,7 +47,7 @@ public sealed class LayoutChecksTests
         var content = File.ReadAllText(TestUtilities.GetLayoutFixturePath("xaml-acceptable.xaml"));
         var check = new AbsolutePositioningCheck();
 
-        var issues = check.Run(new CheckContext("MainPage.xaml", content, "xaml"), Rule(check.Id)).ToList();
+        var issues = check.Run(new CheckContext("MainPage.xaml", content, "xaml"), Rule(AbsolutePositioningCheck.Id)).ToList();
 
         Assert.Empty(issues);
     }
@@ -58,7 +58,7 @@ public sealed class LayoutChecksTests
         var content = File.ReadAllText(TestUtilities.GetLayoutFixturePath("html-style-overrides.html"));
         var check = new AbsolutePositioningCheck();
 
-        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(AbsolutePositioningCheck.Id)).ToList();
 
         Assert.Single(issues);
     }
@@ -69,7 +69,7 @@ public sealed class LayoutChecksTests
         var content = File.ReadAllText(TestUtilities.GetLayoutFixturePath("razor-blocking.cshtml"));
         var check = new AbsolutePositioningCheck();
 
-        var issues = check.Run(new CheckContext("index.cshtml", content, "cshtml"), Rule(check.Id)).ToList();
+        var issues = check.Run(new CheckContext("index.cshtml", content, "cshtml"), Rule(AbsolutePositioningCheck.Id)).ToList();
 
         Assert.Single(issues);
     }
@@ -80,7 +80,7 @@ public sealed class LayoutChecksTests
         var content = File.ReadAllText(TestUtilities.GetLayoutFixturePath("razor-acceptable.cshtml"));
         var check = new AbsolutePositioningCheck();
 
-        var issues = check.Run(new CheckContext("index.cshtml", content, "cshtml"), Rule(check.Id)).ToList();
+        var issues = check.Run(new CheckContext("index.cshtml", content, "cshtml"), Rule(AbsolutePositioningCheck.Id)).ToList();
 
         Assert.Empty(issues);
     }
@@ -91,7 +91,7 @@ public sealed class LayoutChecksTests
         var content = File.ReadAllText(TestUtilities.GetLayoutFixturePath("html-blocking.html"));
         var check = new FixedWidthLayoutCheck();
 
-        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(FixedWidthLayoutCheck.Id)).ToList();
 
         Assert.Single(issues);
     }
@@ -102,7 +102,7 @@ public sealed class LayoutChecksTests
         var content = File.ReadAllText(TestUtilities.GetLayoutFixturePath("xaml-blocking.xaml"));
         var check = new FixedWidthLayoutCheck();
 
-        var issues = check.Run(new CheckContext("MainPage.xaml", content, "xaml"), Rule(check.Id)).ToList();
+        var issues = check.Run(new CheckContext("MainPage.xaml", content, "xaml"), Rule(FixedWidthLayoutCheck.Id)).ToList();
 
         Assert.Single(issues);
     }
@@ -113,7 +113,7 @@ public sealed class LayoutChecksTests
         var content = File.ReadAllText(TestUtilities.GetLayoutFixturePath("html-acceptable.html"));
         var check = new FixedWidthLayoutCheck();
 
-        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(FixedWidthLayoutCheck.Id)).ToList();
 
         Assert.Empty(issues);
     }
@@ -124,7 +124,7 @@ public sealed class LayoutChecksTests
         var content = File.ReadAllText(TestUtilities.GetLayoutFixturePath("razor-blocking.cshtml"));
         var check = new FixedWidthLayoutCheck();
 
-        var issues = check.Run(new CheckContext("index.cshtml", content, "cshtml"), Rule(check.Id)).ToList();
+        var issues = check.Run(new CheckContext("index.cshtml", content, "cshtml"), Rule(FixedWidthLayoutCheck.Id)).ToList();
 
         Assert.Single(issues);
     }
@@ -135,7 +135,7 @@ public sealed class LayoutChecksTests
         var content = File.ReadAllText(TestUtilities.GetLayoutFixturePath("razor-acceptable.cshtml"));
         var check = new FixedWidthLayoutCheck();
 
-        var issues = check.Run(new CheckContext("index.cshtml", content, "cshtml"), Rule(check.Id)).ToList();
+        var issues = check.Run(new CheckContext("index.cshtml", content, "cshtml"), Rule(FixedWidthLayoutCheck.Id)).ToList();
 
         Assert.Empty(issues);
     }
@@ -146,7 +146,7 @@ public sealed class LayoutChecksTests
         var content = "<Grid><ColumnDefinition Width=\"*\" /><TextBlock Width=\"Auto\">Text</TextBlock></Grid>";
         var check = new FixedWidthLayoutCheck();
 
-        var issues = check.Run(new CheckContext("MainPage.xaml", content, "xaml"), Rule(check.Id)).ToList();
+        var issues = check.Run(new CheckContext("MainPage.xaml", content, "xaml"), Rule(FixedWidthLayoutCheck.Id)).ToList();
 
         Assert.Empty(issues);
     }
@@ -157,7 +157,7 @@ public sealed class LayoutChecksTests
         var content = File.ReadAllText(TestUtilities.GetLayoutFixturePath("html-style-overrides.html"));
         var check = new FixedWidthLayoutCheck();
 
-        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(FixedWidthLayoutCheck.Id)).ToList();
 
         Assert.Single(issues);
     }
@@ -168,7 +168,7 @@ public sealed class LayoutChecksTests
         var content = File.ReadAllText(TestUtilities.GetLayoutFixturePath("html-blocking.html"));
         var check = new NonWrappingContainerCheck();
 
-        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(NonWrappingContainerCheck.Id)).ToList();
 
         Assert.Single(issues);
     }
@@ -179,7 +179,7 @@ public sealed class LayoutChecksTests
         var content = File.ReadAllText(TestUtilities.GetLayoutFixturePath("xaml-blocking.xaml"));
         var check = new NonWrappingContainerCheck();
 
-        var issues = check.Run(new CheckContext("MainPage.xaml", content, "xaml"), Rule(check.Id)).ToList();
+        var issues = check.Run(new CheckContext("MainPage.xaml", content, "xaml"), Rule(NonWrappingContainerCheck.Id)).ToList();
 
         Assert.Single(issues);
     }
@@ -190,7 +190,7 @@ public sealed class LayoutChecksTests
         var content = File.ReadAllText(TestUtilities.GetLayoutFixturePath("xaml-acceptable.xaml"));
         var check = new NonWrappingContainerCheck();
 
-        var issues = check.Run(new CheckContext("MainPage.xaml", content, "xaml"), Rule(check.Id)).ToList();
+        var issues = check.Run(new CheckContext("MainPage.xaml", content, "xaml"), Rule(NonWrappingContainerCheck.Id)).ToList();
 
         Assert.Empty(issues);
     }
@@ -201,7 +201,7 @@ public sealed class LayoutChecksTests
         var content = "<TextBlock Width=\"200\">Text</TextBlock>";
         var check = new NonWrappingContainerCheck();
 
-        var issues = check.Run(new CheckContext("MainPage.xaml", content, "xaml"), Rule(check.Id)).ToList();
+        var issues = check.Run(new CheckContext("MainPage.xaml", content, "xaml"), Rule(NonWrappingContainerCheck.Id)).ToList();
 
         Assert.Empty(issues);
     }
@@ -212,7 +212,7 @@ public sealed class LayoutChecksTests
         var content = File.ReadAllText(TestUtilities.GetLayoutFixturePath("html-style-overrides.html"));
         var check = new NonWrappingContainerCheck();
 
-        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(NonWrappingContainerCheck.Id)).ToList();
 
         Assert.Single(issues);
     }
@@ -223,7 +223,7 @@ public sealed class LayoutChecksTests
         var content = File.ReadAllText(TestUtilities.GetLayoutFixturePath("razor-blocking.cshtml"));
         var check = new NonWrappingContainerCheck();
 
-        var issues = check.Run(new CheckContext("index.cshtml", content, "cshtml"), Rule(check.Id)).ToList();
+        var issues = check.Run(new CheckContext("index.cshtml", content, "cshtml"), Rule(NonWrappingContainerCheck.Id)).ToList();
 
         Assert.Single(issues);
     }
@@ -234,7 +234,7 @@ public sealed class LayoutChecksTests
         var content = File.ReadAllText(TestUtilities.GetLayoutFixturePath("razor-acceptable.cshtml"));
         var check = new NonWrappingContainerCheck();
 
-        var issues = check.Run(new CheckContext("index.cshtml", content, "cshtml"), Rule(check.Id)).ToList();
+        var issues = check.Run(new CheckContext("index.cshtml", content, "cshtml"), Rule(NonWrappingContainerCheck.Id)).ToList();
 
         Assert.Empty(issues);
     }
@@ -246,10 +246,22 @@ public sealed class LayoutChecksTests
         var absoluteCheck = new AbsolutePositioningCheck();
         var widthCheck = new FixedWidthLayoutCheck();
 
-        var absoluteIssues = absoluteCheck.Run(new CheckContext("index.html", content, "html"), Rule(absoluteCheck.Id)).ToList();
-        var widthIssues = widthCheck.Run(new CheckContext("index.html", content, "html"), Rule(widthCheck.Id)).ToList();
+        var absoluteIssues = absoluteCheck.Run(new CheckContext("index.html", content, "html"), Rule(AbsolutePositioningCheck.Id)).ToList();
+        var widthIssues = widthCheck.Run(new CheckContext("index.html", content, "html"), Rule(FixedWidthLayoutCheck.Id)).ToList();
 
         Assert.Single(absoluteIssues);
         Assert.Single(widthIssues);
+    }
+
+    [Fact]
+    public void LayoutChecks_ExposeStaticIdsThroughInterface()
+    {
+        ICheck absoluteCheck = new AbsolutePositioningCheck();
+        ICheck widthCheck = new FixedWidthLayoutCheck();
+        ICheck wrappingCheck = new NonWrappingContainerCheck();
+
+        Assert.Equal(AbsolutePositioningCheck.Id, absoluteCheck.Id);
+        Assert.Equal(FixedWidthLayoutCheck.Id, widthCheck.Id);
+        Assert.Equal(NonWrappingContainerCheck.Id, wrappingCheck.Id);
     }
 }

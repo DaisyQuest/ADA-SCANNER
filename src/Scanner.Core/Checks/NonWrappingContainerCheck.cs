@@ -10,8 +10,13 @@ public sealed class NonWrappingContainerCheck : ICheck
 {
     private static readonly Regex TagRegex = new("<(?<tag>[a-zA-Z0-9:-]+)(?<attrs>[^>]*)>", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
+    /// <summary>
+    /// Gets the unique identifier for this check.
+    /// </summary>
+    public static string Id => "non-wrapping-container";
+
     /// <inheritdoc />
-    public string Id => "non-wrapping-container";
+    string ICheck.Id => Id;
 
     /// <inheritdoc />
     public IReadOnlyCollection<string> ApplicableKinds { get; } = new[] { "html", "htm", "cshtml", "razor", "xaml" };

@@ -11,8 +11,13 @@ public sealed class FixedWidthLayoutCheck : ICheck
 {
     private static readonly Regex TagRegex = new("<(?<tag>[a-zA-Z0-9:-]+)(?<attrs>[^>]*)>", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
+    /// <summary>
+    /// Gets the unique identifier for this check.
+    /// </summary>
+    public static string Id => "fixed-width-layout";
+
     /// <inheritdoc />
-    public string Id => "fixed-width-layout";
+    string ICheck.Id => Id;
 
     /// <inheritdoc />
     public IReadOnlyCollection<string> ApplicableKinds { get; } = new[] { "html", "htm", "cshtml", "razor", "xaml" };

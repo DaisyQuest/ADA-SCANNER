@@ -18,8 +18,13 @@ public sealed class AbsolutePositioningCheck : ICheck
         "AbsoluteLayout.LayoutBounds"
     };
 
+    /// <summary>
+    /// Gets the unique identifier for this check.
+    /// </summary>
+    public static string Id => "absolute-positioning";
+
     /// <inheritdoc />
-    public string Id => "absolute-positioning";
+    string ICheck.Id => Id;
 
     /// <inheritdoc />
     public IReadOnlyCollection<string> ApplicableKinds { get; } = new[] { "html", "htm", "cshtml", "razor", "xaml" };
