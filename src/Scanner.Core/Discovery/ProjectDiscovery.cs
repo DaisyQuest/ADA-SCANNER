@@ -2,6 +2,9 @@ using System.Xml.Linq;
 
 namespace Scanner.Core.Discovery;
 
+/// <summary>
+/// Discovers UI files from solution, project, or directory inputs.
+/// </summary>
 public sealed class ProjectDiscovery
 {
     private static readonly string[] UiExtensions =
@@ -10,9 +13,17 @@ public sealed class ProjectDiscovery
         ".cshtml",
         ".razor",
         ".html",
-        ".htm"
+        ".htm",
+        ".css"
     };
 
+    /// <summary>
+    /// Discovers UI files based on the provided path.
+    /// </summary>
+    /// <param name="path">Path to a solution, project, or directory.</param>
+    /// <returns>The discovery result containing UI files and projects.</returns>
+    /// <exception cref="ArgumentException">Thrown when the path is empty.</exception>
+    /// <exception cref="FileNotFoundException">Thrown when the path does not exist.</exception>
     public DiscoveryResult Discover(string path)
     {
         if (string.IsNullOrWhiteSpace(path))
@@ -178,4 +189,10 @@ public sealed class ProjectDiscovery
     }
 }
 
+/// <summary>
+/// Represents the output of a discovery operation.
+/// </summary>
+/// <param name="Root">The root path that was scanned.</param>
+/// <param name="Files">The discovered UI files.</param>
+/// <param name="Projects">The discovered project paths.</param>
 public sealed record DiscoveryResult(string Root, IReadOnlyList<DiscoveredFile> Files, IReadOnlyList<string> Projects);

@@ -2,10 +2,20 @@ using System.Text.Json;
 
 namespace Scanner.Core.Rules;
 
+/// <summary>
+/// Loads rule definitions from per-team directories and validates them.
+/// </summary>
 public sealed class RuleLoader
 {
     private readonly RuleSchemaValidator _validator = new();
 
+    /// <summary>
+    /// Loads all rule definitions from the provided rules root.
+    /// </summary>
+    /// <param name="rulesRoot">Root directory containing per-team rule folders.</param>
+    /// <returns>Rules grouped by team.</returns>
+    /// <exception cref="ArgumentException">Thrown when the rules root is missing.</exception>
+    /// <exception cref="DirectoryNotFoundException">Thrown when the rules directory is missing.</exception>
     public IReadOnlyList<TeamRules> LoadRules(string rulesRoot)
     {
         if (string.IsNullOrWhiteSpace(rulesRoot))
@@ -43,6 +53,11 @@ public sealed class RuleLoader
         return teamRules;
     }
 
+    /// <summary>
+    /// Loads and validates rules under the provided root.
+    /// </summary>
+    /// <param name="rulesRoot">Root directory containing per-team rule folders.</param>
+    /// <returns>The validation result including any errors.</returns>
     public RuleValidationResult ValidateRules(string rulesRoot)
     {
         var teamRules = LoadRules(rulesRoot);
@@ -62,6 +77,12 @@ public sealed class RuleLoader
         return new RuleValidationResult(teamRules, errors);
     }
 
+    /// <summary>
+    /// Loads a single rule definition from a JSON or YAML file.
+    /// </summary>
+    /// <param name="path">The file path to the rule definition.</param>
+    /// <returns>The parsed rule definition.</returns>
+    /// <exception cref="InvalidDataException">Thrown when the rule file cannot be parsed.</exception>
     public RuleDefinition LoadRule(string path)
     {
         var extension = Path.GetExtension(path);
@@ -127,9 +148,23 @@ public sealed class RuleLoader
     }
 }
 
+/// <summary>
+/// Captures a validation error for a specific rule.
+/// </summary>
+/// <param name="Team">The owning team.</param>
+/// <param name="RuleId">The rule identifier.</param>
+/// <param name="Message">The validation error message.</param>
 public sealed record RuleValidationError(string Team, string RuleId, string Message);
 
+/// <summary>
+/// Summarizes rule validation results.
+/// </summary>
+/// <param name="Teams">The loaded team rules.</param>
+/// <param name="Errors">The validation errors.</param>
 public sealed record RuleValidationResult(IReadOnlyList<TeamRules> Teams, IReadOnlyList<RuleValidationError> Errors)
 {
+    /// <summary>
+    /// Gets a value indicating whether the validation completed with no errors.
+    /// </summary>
     public bool IsValid => Errors.Count == 0;
 }

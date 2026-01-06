@@ -3,13 +3,20 @@ using Scanner.Core.Rules;
 
 namespace Scanner.Core.Checks;
 
+/// <summary>
+/// Checks XAML controls for missing automation names.
+/// </summary>
 public sealed class XamlMissingNameCheck : ICheck
 {
     private static readonly Regex ControlRegex = new("<(Image|Button|TextBox)(?<attrs>[^>]*)>", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
+    /// <inheritdoc />
     public string Id => "xaml-missing-name";
+
+    /// <inheritdoc />
     public IReadOnlyCollection<string> ApplicableKinds { get; } = new[] { "xaml" };
 
+    /// <inheritdoc />
     public IEnumerable<Issue> Run(CheckContext context, RuleDefinition rule)
     {
         foreach (Match match in ControlRegex.Matches(context.Content))

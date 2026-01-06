@@ -1,7 +1,16 @@
 namespace Scanner.Core.Checks;
 
+/// <summary>
+/// Provides helpers for parsing colors and calculating contrast ratios.
+/// </summary>
 public static class ColorContrastAnalyzer
 {
+    /// <summary>
+    /// Attempts to parse a hex color string into normalized RGB values.
+    /// </summary>
+    /// <param name="value">Hex color string, with or without leading '#'.</param>
+    /// <param name="color">The parsed normalized RGB values.</param>
+    /// <returns>True when parsing succeeds; otherwise, false.</returns>
     public static bool TryParseHex(string value, out (double r, double g, double b) color)
     {
         color = default;
@@ -14,6 +23,23 @@ public static class ColorContrastAnalyzer
         if (trimmed.StartsWith("#", StringComparison.Ordinal))
         {
             trimmed = trimmed[1..];
+        }
+
+        if (trimmed.Length == 3)
+        {
+            trimmed = string.Concat(trimmed.Select(c => $"{c}{c}"));
+        }
+        else if (trimmed.Length == 4)
+        {
+            trimmed = string.Concat(trimmed.Skip(1).Select(c => $"{c}{c}"));
+        }
+        else if (trimmed.Length == 8)
+        {
+            trimmed = trimmed[2..];
+        }
+        else if (trimmed.Length != 6)
+        {
+            return false;
         }
 
         if (trimmed.Length != 6)
@@ -32,6 +58,12 @@ public static class ColorContrastAnalyzer
         return true;
     }
 
+    /// <summary>
+    /// Calculates the WCAG contrast ratio for two colors.
+    /// </summary>
+    /// <param name="foreground">The foreground color.</param>
+    /// <param name="background">The background color.</param>
+    /// <returns>The contrast ratio.</returns>
     public static double ContrastRatio((double r, double g, double b) foreground, (double r, double g, double b) background)
     {
         var l1 = RelativeLuminance(foreground);
