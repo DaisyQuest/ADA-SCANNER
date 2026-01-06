@@ -36,6 +36,7 @@ public sealed class CheckRegistry
         new AbsolutePositioningCheck(),
         new FixedWidthLayoutCheck(),
         new MissingLabelCheck(),
+        new MissingInteractiveLabelCheck(),
         new MissingAltTextCheck(),
         new NonWrappingContainerCheck(),
         new InvalidAriaRoleCheck(),

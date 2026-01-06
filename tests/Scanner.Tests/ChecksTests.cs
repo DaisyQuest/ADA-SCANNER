@@ -32,7 +32,7 @@ public sealed class ChecksTests
     public void MissingLabelCheck_AllowsAriaLabelledBy()
     {
         var check = new MissingLabelCheck();
-        var content = "<input type=\"text\" aria-labelledby=\"name-label\">";
+        var content = "<span id=\"name-label\">Name</span><input type=\"text\" aria-labelledby=\"name-label\">";
         var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
 
         Assert.Empty(issues);
@@ -79,6 +79,36 @@ public sealed class ChecksTests
     }
 
     [Fact]
+    public void MissingLabelCheck_AllowsWrappedLabelWithText()
+    {
+        var check = new MissingLabelCheck();
+        var content = "<label>Name <input type=\"text\"></label>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Empty(issues);
+    }
+
+    [Fact]
+    public void MissingLabelCheck_FlagsAriaLabelledByMissingReference()
+    {
+        var check = new MissingLabelCheck();
+        var content = "<input type=\"text\" aria-labelledby=\"missing-id\">";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Single(issues);
+    }
+
+    [Fact]
+    public void MissingLabelCheck_FlagsLabelWithoutText()
+    {
+        var check = new MissingLabelCheck();
+        var content = "<label for=\"name\"></label><input type=\"text\" id=\"name\">";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Single(issues);
+    }
+
+    [Fact]
     public void MissingAltTextCheck_FlagsImage()
     {
         var check = new MissingAltTextCheck();
@@ -86,6 +116,76 @@ public sealed class ChecksTests
         var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
 
         Assert.Single(issues);
+    }
+
+    [Fact]
+    public void MissingInteractiveLabelCheck_FlagsButtonWithoutName()
+    {
+        var check = new MissingInteractiveLabelCheck();
+        var content = "<button><span class=\"icon\"></span></button>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Single(issues);
+    }
+
+    [Fact]
+    public void MissingInteractiveLabelCheck_AllowsButtonText()
+    {
+        var check = new MissingInteractiveLabelCheck();
+        var content = "<button>Save</button>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Empty(issues);
+    }
+
+    [Fact]
+    public void MissingInteractiveLabelCheck_FlagsInvalidAriaLabelledBy()
+    {
+        var check = new MissingInteractiveLabelCheck();
+        var content = "<button aria-labelledby=\"missing\"></button>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Single(issues);
+    }
+
+    [Fact]
+    public void MissingInteractiveLabelCheck_AllowsRoleButtonWithText()
+    {
+        var check = new MissingInteractiveLabelCheck();
+        var content = "<div role=\"button\"><span>Submit</span></div>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Empty(issues);
+    }
+
+    [Fact]
+    public void MissingInteractiveLabelCheck_SkipsAnchorWithoutHrefOrRole()
+    {
+        var check = new MissingInteractiveLabelCheck();
+        var content = "<a>Not interactive</a>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Empty(issues);
+    }
+
+    [Fact]
+    public void MissingInteractiveLabelCheck_AllowsAriaLabelledByWithText()
+    {
+        var check = new MissingInteractiveLabelCheck();
+        var content = "<span id=\"cta\">Continue</span><button aria-labelledby=\"cta\"></button>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Empty(issues);
+    }
+
+    [Fact]
+    public void MissingInteractiveLabelCheck_SkipsNonInteractiveRole()
+    {
+        var check = new MissingInteractiveLabelCheck();
+        var content = "<div role=\"presentation\"></div>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Empty(issues);
     }
 
     [Fact]
