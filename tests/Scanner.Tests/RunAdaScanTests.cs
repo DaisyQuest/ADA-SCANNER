@@ -1,4 +1,5 @@
 using Scanner.Runner;
+using Scanner.Core.Runtime;
 using Xunit;
 
 namespace Scanner.Tests;
@@ -155,5 +156,105 @@ public sealed class RunAdaScanTests
 
         Assert.Equal(1, code);
         Assert.Contains("Usage", error.ToString(), StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Run_AllowsRuntimeOptionsAndWritesCombinedReport()
+    {
+        var root = TestUtilities.CreateTempDirectory();
+        TestUtilities.WriteFile(root, "index.html", "<img src=\"hero.png\">");
+        TestUtilities.WriteFile(root, "rules/team/rule.json", "{\"id\":\"alt-1\",\"description\":\"Missing alt\",\"severity\":\"low\",\"checkId\":\"missing-alt-text\"}");
+        var outputDir = Path.Combine(root, "custom-output");
+
+        var runtimeSource = new StubRuntimeSource(new[]
+        {
+            new RuntimeHtmlDocument("http://example.test/page", 200, "text/html", "<img src=\"hero.png\">", DateTimeOffset.UtcNow)
+        });
+
+        var original = Directory.GetCurrentDirectory();
+        Directory.SetCurrentDirectory(root);
+        try
+        {
+            var output = new StringWriter();
+            var error = new StringWriter();
+            var runner = new AdaScanRunner(output, error, runtimeSource);
+
+            var code = runner.Run(new[]
+            {
+                root,
+                outputDir,
+                "--runtime-url",
+                "http://example.test/page",
+                "--auth-header",
+                "Authorization: Bearer token"
+            });
+
+            Assert.Equal(0, code);
+            var reportJson = File.ReadAllText(Path.Combine(outputDir, "report.json"));
+            Assert.Contains("runtimeScan", reportJson, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            Directory.SetCurrentDirectory(original);
+        }
+    }
+
+    [Fact]
+    public void Run_RuntimeFailuresDoNotFailStaticScan()
+    {
+        var root = TestUtilities.CreateTempDirectory();
+        TestUtilities.WriteFile(root, "index.html", "<img src=\"hero.png\">");
+        TestUtilities.WriteFile(root, "rules/team/rule.json", "{\"id\":\"alt-1\",\"description\":\"Missing alt\",\"severity\":\"low\",\"checkId\":\"missing-alt-text\"}");
+
+        var original = Directory.GetCurrentDirectory();
+        Directory.SetCurrentDirectory(root);
+        try
+        {
+            var output = new StringWriter();
+            var error = new StringWriter();
+            var runner = new AdaScanRunner(output, error, new FailingRuntimeSource());
+
+            var code = runner.Run(new[] { root, "--runtime-url", "http://example.test/page" });
+
+            Assert.Equal(0, code);
+            Assert.Contains("Runtime scan failed", error.ToString(), StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            Directory.SetCurrentDirectory(original);
+        }
+    }
+
+    private sealed class StubRuntimeSource : IRuntimeDocumentSource
+    {
+        private readonly IReadOnlyList<RuntimeHtmlDocument> _documents;
+
+        public StubRuntimeSource(IReadOnlyList<RuntimeHtmlDocument> documents)
+        {
+            _documents = documents;
+        }
+
+        public async IAsyncEnumerable<RuntimeHtmlDocument> GetDocumentsAsync(
+            RuntimeScanOptions options,
+            [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
+        {
+            foreach (var document in _documents)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                yield return document;
+                await Task.Yield();
+            }
+        }
+    }
+
+    private sealed class FailingRuntimeSource : IRuntimeDocumentSource
+    {
+        public async IAsyncEnumerable<RuntimeHtmlDocument> GetDocumentsAsync(
+            RuntimeScanOptions options,
+            [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
+        {
+            await Task.Yield();
+            throw new InvalidOperationException("Boom");
+        }
     }
 }

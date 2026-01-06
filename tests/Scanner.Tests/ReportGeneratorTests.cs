@@ -1,5 +1,6 @@
 using Scanner.Core;
 using Scanner.Core.Reporting;
+using Scanner.Core.Runtime;
 using Xunit;
 
 namespace Scanner.Tests;
@@ -23,6 +24,33 @@ public sealed class ReportGeneratorTests
         Assert.True(File.Exists(artifacts.JsonPath));
         Assert.True(File.Exists(artifacts.HtmlPath));
         Assert.True(File.Exists(artifacts.MarkdownPath));
+    }
+
+    [Fact]
+    public void ReportGenerator_IncludesRuntimeScan()
+    {
+        var root = TestUtilities.CreateTempDirectory();
+        var scan = new ScanResult
+        {
+            ScannedPath = root,
+            Files = Array.Empty<DiscoveredFile>(),
+            Issues = Array.Empty<Issue>()
+        };
+        var runtime = new RuntimeScanResult
+        {
+            SeedUrls = new[] { "http://example.test" },
+            Documents = Array.Empty<RuntimeHtmlDocument>(),
+            Issues = new[] { new Issue("rule", "check", "http://example.test", 1, "message", null) }
+        };
+
+        var generator = new ReportGenerator();
+        var artifacts = generator.WriteReport(scan, root, "report", runtime);
+
+        var json = File.ReadAllText(artifacts.JsonPath);
+        Assert.Contains("\"runtimeScan\"", json, StringComparison.OrdinalIgnoreCase);
+
+        var markdown = File.ReadAllText(artifacts.MarkdownPath);
+        Assert.Contains("Runtime Scan", markdown, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
