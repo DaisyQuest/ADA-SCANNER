@@ -4,18 +4,37 @@ using Scanner.Core.Rules;
 
 namespace Scanner.Core;
 
+/// <summary>
+/// Options that configure a scan run, including the target path and rules directory.
+/// </summary>
 public sealed class ScanOptions
 {
+    /// <summary>
+    /// Gets the path to a solution, project, or directory to scan.
+    /// </summary>
     public string Path { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Gets the root directory that contains per-team rule folders.
+    /// </summary>
     public string RulesRoot { get; init; } = string.Empty;
 }
 
+/// <summary>
+/// Coordinates project discovery, rule loading, and checks to produce scan results.
+/// </summary>
 public sealed class ScanEngine
 {
     private readonly ProjectDiscovery _discovery;
     private readonly RuleLoader _ruleLoader;
     private readonly CheckRegistry _checkRegistry;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ScanEngine"/> class.
+    /// </summary>
+    /// <param name="discovery">The discovery service for locating UI files.</param>
+    /// <param name="ruleLoader">The loader that reads rule files.</param>
+    /// <param name="checkRegistry">Registry used to resolve checks for rules.</param>
     public ScanEngine(ProjectDiscovery discovery, RuleLoader ruleLoader, CheckRegistry checkRegistry)
     {
         _discovery = discovery;
@@ -23,6 +42,12 @@ public sealed class ScanEngine
         _checkRegistry = checkRegistry;
     }
 
+    /// <summary>
+    /// Executes a scan using the provided options.
+    /// </summary>
+    /// <param name="options">The scan options that provide input and rule paths.</param>
+    /// <returns>The completed scan result.</returns>
+    /// <exception cref="ArgumentException">Thrown when required options are missing.</exception>
     public ScanResult Scan(ScanOptions options)
     {
         if (string.IsNullOrWhiteSpace(options.Path))
