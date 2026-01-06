@@ -1,3 +1,5 @@
+using System.Text.RegularExpressions;
+
 namespace Scanner.Core.Checks;
 
 public static class TextUtilities
@@ -21,8 +23,16 @@ public static class TextUtilities
         return line;
     }
 
-    public static bool ContainsAttribute(string attributes, string attributeName)
+    public static bool ContainsAttribute(string attributes, string attributeName, bool allowBoolean = false)
     {
-        return attributes.Contains(attributeName + "=", StringComparison.OrdinalIgnoreCase);
+        if (!allowBoolean)
+        {
+            return attributes.Contains(attributeName + "=", StringComparison.OrdinalIgnoreCase);
+        }
+
+        return Regex.IsMatch(
+            attributes,
+            $"(^|\\s){Regex.Escape(attributeName)}(\\s|=|$)",
+            RegexOptions.IgnoreCase);
     }
 }

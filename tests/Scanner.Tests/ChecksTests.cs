@@ -109,6 +109,46 @@ public sealed class ChecksTests
     }
 
     [Fact]
+    public void HiddenNavigationCheck_FlagsHiddenNavWithHiddenAttribute()
+    {
+        var check = new HiddenNavigationCheck();
+        var content = "<nav hidden></nav>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Single(issues);
+    }
+
+    [Fact]
+    public void HiddenNavigationCheck_FlagsHiddenNavWithDisplayNoneSpacing()
+    {
+        var check = new HiddenNavigationCheck();
+        var content = "<nav style=\"display: none;\"></nav>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Single(issues);
+    }
+
+    [Fact]
+    public void HiddenNavigationCheck_FlagsHiddenNavWithVisibilityHiddenSpacing()
+    {
+        var check = new HiddenNavigationCheck();
+        var content = "<nav style=\"visibility: hidden\"></nav>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Single(issues);
+    }
+
+    [Fact]
+    public void HiddenNavigationCheck_AllowsVisibleNav()
+    {
+        var check = new HiddenNavigationCheck();
+        var content = "<nav aria-hidden=\"false\" style=\"display: block; visibility: visible\"></nav>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Empty(issues);
+    }
+
+    [Fact]
     public void InsufficientContrastCheck_FlagsLowContrast()
     {
         var check = new InsufficientContrastCheck();
