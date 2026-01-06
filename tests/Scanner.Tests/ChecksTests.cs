@@ -29,6 +29,56 @@ public sealed class ChecksTests
     }
 
     [Fact]
+    public void MissingLabelCheck_AllowsAriaLabelledBy()
+    {
+        var check = new MissingLabelCheck();
+        var content = "<input type=\"text\" aria-labelledby=\"name-label\">";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Empty(issues);
+    }
+
+    [Fact]
+    public void MissingLabelCheck_FlagsEmptyAriaLabel()
+    {
+        var check = new MissingLabelCheck();
+        var content = "<input type=\"text\" aria-label=\"\">";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Single(issues);
+    }
+
+    [Fact]
+    public void MissingLabelCheck_FlagsEmptyAriaLabelledBy()
+    {
+        var check = new MissingLabelCheck();
+        var content = "<input type=\"text\" aria-labelledby=\" \">";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Single(issues);
+    }
+
+    [Fact]
+    public void MissingLabelCheck_SkipsHiddenInputs()
+    {
+        var check = new MissingLabelCheck();
+        var content = "<input type=\"hidden\" id=\"secret\">";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Empty(issues);
+    }
+
+    [Fact]
+    public void MissingLabelCheck_AllowsMatchingLabelForAttribute()
+    {
+        var check = new MissingLabelCheck();
+        var content = "<label for=\"name\">Name</label><input type=\"text\" id=\"name\">";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Empty(issues);
+    }
+
+    [Fact]
     public void MissingAltTextCheck_FlagsImage()
     {
         var check = new MissingAltTextCheck();
@@ -56,6 +106,46 @@ public sealed class ChecksTests
         var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
 
         Assert.Single(issues);
+    }
+
+    [Fact]
+    public void HiddenNavigationCheck_FlagsHiddenNavWithHiddenAttribute()
+    {
+        var check = new HiddenNavigationCheck();
+        var content = "<nav hidden></nav>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Single(issues);
+    }
+
+    [Fact]
+    public void HiddenNavigationCheck_FlagsHiddenNavWithDisplayNoneSpacing()
+    {
+        var check = new HiddenNavigationCheck();
+        var content = "<nav style=\"display: none;\"></nav>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Single(issues);
+    }
+
+    [Fact]
+    public void HiddenNavigationCheck_FlagsHiddenNavWithVisibilityHiddenSpacing()
+    {
+        var check = new HiddenNavigationCheck();
+        var content = "<nav style=\"visibility: hidden\"></nav>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Single(issues);
+    }
+
+    [Fact]
+    public void HiddenNavigationCheck_AllowsVisibleNav()
+    {
+        var check = new HiddenNavigationCheck();
+        var content = "<nav aria-hidden=\"false\" style=\"display: block; visibility: visible\"></nav>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Empty(issues);
     }
 
     [Fact]

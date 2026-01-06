@@ -1,3 +1,5 @@
+using System.Text.RegularExpressions;
+
 namespace Scanner.Core.Checks;
 
 /// <summary>
@@ -36,8 +38,16 @@ public static class TextUtilities
     /// <param name="attributes">The raw attribute string.</param>
     /// <param name="attributeName">The attribute name to look for.</param>
     /// <returns>True when the attribute is present; otherwise, false.</returns>
-    public static bool ContainsAttribute(string attributes, string attributeName)
+    public static bool ContainsAttribute(string attributes, string attributeName, bool allowBoolean = false)
     {
-        return attributes.Contains(attributeName + "=", StringComparison.OrdinalIgnoreCase);
+        if (!allowBoolean)
+        {
+            return attributes.Contains(attributeName + "=", StringComparison.OrdinalIgnoreCase);
+        }
+
+        return Regex.IsMatch(
+            attributes,
+            $"(^|\\s){Regex.Escape(attributeName)}(\\s|=|$)",
+            RegexOptions.IgnoreCase);
     }
 }
