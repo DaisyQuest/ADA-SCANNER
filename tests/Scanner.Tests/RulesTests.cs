@@ -1,4 +1,5 @@
 using Scanner.Core.Rules;
+using System.Text.Json;
 using Xunit;
 using System.Linq;
 
@@ -25,8 +26,8 @@ public sealed class RulesTests
     public void LoadRules_IgnoresNonRuleFiles()
     {
         var root = TestUtilities.CreateTempDirectory();
+        TestUtilities.WriteFile(root, "rules/contrast/readme.txt", "ignore");
         TestUtilities.WriteFile(root, "rules/contrast/rule.json", "{\"id\":\"contrast-1\",\"description\":\"Check contrast\",\"severity\":\"high\",\"checkId\":\"insufficient-contrast\"}");
-        TestUtilities.WriteFile(root, "rules/contrast/readme.txt", "not a rule");
 
         var loader = new RuleLoader();
         var teams = loader.LoadRules(Path.Combine(root, "rules"));
@@ -36,6 +37,20 @@ public sealed class RulesTests
     }
 
     [Fact]
+    public void LoadRules_ThrowsWhenRootIsMissing()
+    {
+        var loader = new RuleLoader();
+
+        Assert.Throws<ArgumentException>(() => loader.LoadRules(" "));
+    }
+
+    [Fact]
+    public void LoadRules_ThrowsWhenDirectoryDoesNotExist()
+    {
+        var loader = new RuleLoader();
+        var root = Path.Combine(TestUtilities.CreateTempDirectory(), "missing");
+
+        Assert.Throws<DirectoryNotFoundException>(() => loader.LoadRules(root));
     public void LoadRules_CollectsRulesAcrossTeams()
     {
         var root = TestUtilities.CreateTempDirectory();
@@ -88,6 +103,36 @@ public sealed class RulesTests
     }
 
     [Fact]
+    public void LoadRule_ThrowsOnUnsupportedExtension()
+    {
+        var root = TestUtilities.CreateTempDirectory();
+        var path = TestUtilities.WriteFile(root, "rules/contrast/rule.txt", "id: contrast-1");
+
+        var loader = new RuleLoader();
+
+        var ex = Assert.Throws<InvalidDataException>(() => loader.LoadRule(path));
+        Assert.Contains("Unsupported rule file format", ex.Message);
+    }
+
+    [Fact]
+    public void LoadRule_ThrowsOnInvalidJson()
+    {
+        var root = TestUtilities.CreateTempDirectory();
+        var path = TestUtilities.WriteFile(root, "rules/contrast/rule.json", "{");
+
+        var loader = new RuleLoader();
+
+        Assert.Throws<JsonException>(() => loader.LoadRule(path));
+    }
+
+    [Fact]
+    public void LoadRule_YamlTreatsEmptyOptionalFieldsAsNull()
+    {
+        var root = TestUtilities.CreateTempDirectory();
+        var path = TestUtilities.WriteFile(root, "rules/contrast/rule.yaml", "id: contrast-1\ndescription: Check contrast\nseverity: high\ncheckId: insufficient-contrast\nappliesTo:\nrecommendation: \"\"");
+
+        var loader = new RuleLoader();
+        var rule = loader.LoadRule(path);
     public void ValidateRules_AggregatesErrorsAcrossTeams()
     {
         var root = TestUtilities.CreateTempDirectory();
