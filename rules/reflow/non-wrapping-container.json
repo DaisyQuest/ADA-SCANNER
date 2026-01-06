@@ -1,0 +1,8 @@
+{
+  "id": "reflow-non-wrapping",
+  "description": "Avoid containers that disable text wrapping.",
+  "severity": "low",
+  "checkId": "non-wrapping-container",
+  "appliesTo": "html,htm,cshtml,razor,xaml",
+  "recommendation": "Allow text to wrap so content can reflow at narrow widths."
+}

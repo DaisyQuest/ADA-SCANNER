@@ -14,8 +14,11 @@ public sealed class RuleSchemaValidator
 
     private static readonly HashSet<string> AllowedChecks = new(StringComparer.OrdinalIgnoreCase)
     {
+        "absolute-positioning",
+        "fixed-width-layout",
         "missing-label",
         "missing-alt-text",
+        "non-wrapping-container",
         "invalid-aria-role",
         "hidden-navigation",
         "hidden-focusable",

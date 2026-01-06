@@ -103,6 +103,17 @@ public sealed class RulesTests
     }
 
     [Fact]
+    public void ValidateRules_PassesForRepositoryRules()
+    {
+        var root = TestUtilities.FindRepositoryRoot();
+        var loader = new RuleLoader();
+
+        var result = loader.ValidateRules(Path.Combine(root, "rules"));
+
+        Assert.True(result.IsValid);
+        Assert.Empty(result.Errors);
+        var reflowTeam = Assert.Single(result.Teams, team => team.TeamName == "reflow");
+        Assert.Equal(3, reflowTeam.Rules.Count);
     public void ValidateRules_ReportsMissingRequiredFields()
     {
         var root = TestUtilities.CreateTempDirectory();
