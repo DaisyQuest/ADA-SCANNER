@@ -58,6 +58,22 @@ dotnet ./artifacts/cli/Scanner.Cli.dll scan --path "C:\path\to\YourSolution.sln"
 dotnet ./artifacts/cli/Scanner.Cli.dll rules validate --rules "C:\path\to\rules"
 ```
 
+### Recommended workflow order
+
+When automating scans, use a consistent sequence so rule validation failures are surfaced early:
+
+1. **Validate rules** (`rules validate`)
+2. **Scan solution/project** (`scan`)
+3. **Generate reports** (`report`)
+
+Example:
+
+```bash
+dotnet ./artifacts/cli/Scanner.Cli.dll rules validate --rules "C:\path\to\rules"
+dotnet ./artifacts/cli/Scanner.Cli.dll scan --path "C:\path\to\YourSolution.sln" --rules "C:\path\to\rules" --out "C:\path\to\scan-output"
+dotnet ./artifacts/cli/Scanner.Cli.dll report --input "C:\path\to\scan-output\scan.json" --out "C:\path\to\report-output"
+```
+
 ### List rule counts per team
 
 ```bash
@@ -117,6 +133,21 @@ If you have multiple projects and want a centralized configuration, create or up
 
 This applies to all projects in the directory tree.
 
+## Option D: Local workflow script (PowerShell)
+
+If you want a repeatable local workflow for developers, add a small script to your repo:
+
+```powershell
+$cli = ".\\artifacts\\cli\\Scanner.Cli.dll"
+$rules = ".\\rules"
+$out = ".\\artifacts\\scan"
+$report = ".\\artifacts\\report"
+
+dotnet $cli rules validate --rules $rules
+dotnet $cli scan --path ".\\YourSolution.sln" --rules $rules --out $out
+dotnet $cli report --input "$out\\scan.json" --out $report
+```
+
 ## Suggested folder layout for Visual Studio solutions
 
 ```
@@ -140,3 +171,12 @@ YourSolution/
 - All operations are local; avoid network paths or external services.
 - Keep rules and scan outputs inside the solution tree for reproducibility.
 
+## Workflow checklist
+
+Use this quick checklist when onboarding a new solution:
+
+- [ ] CLI published locally (`dotnet publish ...`).
+- [ ] Rules directory matches the per-team layout under `rules/`.
+- [ ] `rules validate` passes.
+- [ ] `scan` produces a `scan.json` in the expected output folder.
+- [ ] `report` produces JSON/HTML/Markdown outputs.
