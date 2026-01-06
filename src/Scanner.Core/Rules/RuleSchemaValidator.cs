@@ -1,3 +1,5 @@
+using System.Text.RegularExpressions;
+
 namespace Scanner.Core.Rules;
 
 /// <summary>
@@ -40,6 +42,9 @@ public sealed class RuleSchemaValidator
         "css"
     };
 
+    private static readonly Regex WcagCriteriaPattern = new(@"^\d+\.\d+\.\d+$", RegexOptions.Compiled);
+    private static readonly Regex ProblemTagPattern = new(@"^[a-z0-9-]+$", RegexOptions.Compiled);
+
     /// <summary>
     /// Validates a rule definition and returns any schema errors.
     /// </summary>
@@ -78,6 +83,32 @@ public sealed class RuleSchemaValidator
             if (invalidKinds.Length > 0)
             {
                 errors.Add($"Rule appliesTo contains invalid values: {string.Join(", ", invalidKinds)}.");
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(rule.WcagCriteria))
+        {
+            var invalidCriteria = rule.WcagCriteria
+                .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Select(criteria => criteria.Trim())
+                .Where(criteria => string.IsNullOrWhiteSpace(criteria) || !WcagCriteriaPattern.IsMatch(criteria))
+                .ToArray();
+            if (invalidCriteria.Length > 0)
+            {
+                errors.Add("Rule wcagCriteria must list WCAG success criteria like 1.4.3.");
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(rule.ProblemTags))
+        {
+            var invalidTags = rule.ProblemTags
+                .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Select(tag => tag.Trim())
+                .Where(tag => string.IsNullOrWhiteSpace(tag) || !ProblemTagPattern.IsMatch(tag))
+                .ToArray();
+            if (invalidTags.Length > 0)
+            {
+                errors.Add("Rule problemTags must be comma-separated slugs like document-language.");
             }
         }
 

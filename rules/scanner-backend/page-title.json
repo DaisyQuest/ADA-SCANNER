@@ -4,5 +4,7 @@
   "severity": "high",
   "checkId": "missing-page-title",
   "appliesTo": "html, htm",
-  "recommendation": "Provide a non-empty <title> element in the document head."
+  "recommendation": "Provide a non-empty <title> element in the document head.",
+  "wcagCriteria": "2.4.2",
+  "problemTags": "document-title, head-metadata"
 }

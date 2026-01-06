@@ -12,3 +12,4 @@
 2026-01-06 - Added runtime checks and rules for document language/title plus tests (SPEC-008, SPEC-013)
 
 2026-01-06 - Enhance runtime and Visual Studio workflow documentation for CLI usage and reporting (SPEC-007, SPEC-016)
+2026-01-06 - Added WCAG criteria and problem tags metadata to backend rules for improved issue isolation (SPEC-008)
