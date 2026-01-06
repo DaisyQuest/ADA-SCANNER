@@ -24,6 +24,32 @@ run-ada-scan.exe "C:\path\to\solution.sln" "C:\path\to\out" \
   --auth-header "Authorization: Bearer <token>"
 ```
 
+## End-to-end runtime scan workflow
+
+Use this workflow when you want runtime capture to complement a static scan:
+
+1. **Validate rules first** so runtime findings match the current schema:
+   ```bash
+   dotnet Scanner.Cli.dll rules validate --rules "./rules"
+   ```
+2. **Run a static scan** (optional but recommended) for full file coverage:
+   ```bash
+   dotnet Scanner.Cli.dll scan --path "./YourSolution.sln" --rules "./rules" --out "./artifacts/scan"
+   ```
+3. **Run the runtime crawl** to capture HTML responses:
+   ```bash
+   dotnet Scanner.Cli.dll scan --path "./YourSolution.sln" --rules "./rules" --out "./artifacts/runtime" \
+     --runtime-url "https://example.test"
+   ```
+4. **Generate a report** that aggregates the runtime findings:
+   ```bash
+   dotnet Scanner.Cli.dll report --input "./artifacts/runtime/scan.json" --out "./artifacts/report"
+   ```
+
+> Notes:
+> - Runtime capture stays offline-safe and never uses browser automation.
+> - If you only want runtime results, skip the static scan step and report from the runtime `scan.json`.
+
 ## CLI runtime options
 
 Use these with `run-ada-scan.exe` (or the CLI host executable) to configure the runtime crawler:
@@ -59,6 +85,10 @@ If you omit a runtime option, the following defaults apply:
 - **Sample rate:** `1.0` (capture all).
 
 ## Configuration guidance
+
+### Rules directory layout reminders
+
+Runtime scanning uses the same rule loader as static scanning. Ensure your rules are organized in per-team subfolders under `./rules` and keep team ownership intact when adding or updating rule files.
 
 ### Authentication headers
 
@@ -211,3 +241,13 @@ Runtime results are included alongside static scan results in:
 - `report.json`, `report.html`, `report.md` (combined report)
 
 The report includes runtime seed URLs and any runtime issues that were detected.
+
+## Operational checklist
+
+Use this checklist to keep runtime scanning predictable and repeatable:
+
+- [ ] Rules validate cleanly (`rules validate`).
+- [ ] Seed URLs, include/exclude patterns, and auth headers are set.
+- [ ] `--runtime-max-pages` and `--runtime-max-depth` are scoped to the target environment.
+- [ ] Runtime form config is captured and reviewed before enabling submissions.
+- [ ] Reports are generated from the correct `scan.json` (static vs runtime).
