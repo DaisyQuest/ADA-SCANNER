@@ -79,6 +79,36 @@ public sealed class ChecksTests
     }
 
     [Fact]
+    public void MissingLabelCheck_AllowsNestedLabel()
+    {
+        var check = new MissingLabelCheck();
+        var content = "<label>Name <input type=\"text\"></label>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Empty(issues);
+    }
+
+    [Fact]
+    public void MissingLabelCheck_AllowsAriaLabelledByWithMatchingId()
+    {
+        var check = new MissingLabelCheck();
+        var content = "<span id=\"name-label\">Name</span><input type=\"text\" aria-labelledby=\"name-label\">";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Empty(issues);
+    }
+
+    [Fact]
+    public void MissingLabelCheck_FlagsAriaLabelledByWithoutMatchingId()
+    {
+        var check = new MissingLabelCheck();
+        var content = "<input type=\"text\" aria-labelledby=\"missing-label\">";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Single(issues);
+    }
+
+    [Fact]
     public void MissingAltTextCheck_FlagsImage()
     {
         var check = new MissingAltTextCheck();
@@ -149,6 +179,41 @@ public sealed class ChecksTests
     }
 
     [Fact]
+    public void UnlabeledButtonCheck_FlagsEmptyButton()
+    {
+        var check = new UnlabeledButtonCheck();
+        var content = "<button></button>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Single(issues);
+        Assert.Equal("Button missing accessible label.", issues[0].Message);
+    }
+
+    [Fact]
+    public void UnlabeledButtonCheck_AllowsButtonText()
+    {
+        var check = new UnlabeledButtonCheck();
+        var content = "<button>Save</button>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Empty(issues);
+    }
+
+    [Fact]
+    public void UnlabeledButtonCheck_AllowsAriaLabelledBy()
+    {
+        var check = new UnlabeledButtonCheck();
+        var content = "<span id=\"save-label\">Save</span><button aria-labelledby=\"save-label\"></button>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Empty(issues);
+    }
+
+    [Fact]
+    public void UnlabeledButtonCheck_FlagsAriaLabelledByWithoutMatchingId()
+    {
+        var check = new UnlabeledButtonCheck();
+        var content = "<button aria-labelledby=\"missing\"></button>";
     public void HiddenFocusableElementCheck_FlagsHiddenFocusableElement()
     {
         var check = new HiddenFocusableElementCheck();
@@ -209,6 +274,10 @@ public sealed class ChecksTests
     }
 
     [Fact]
+    public void UnlabeledButtonCheck_AllowsInputButtonValue()
+    {
+        var check = new UnlabeledButtonCheck();
+        var content = "<input type=\"submit\" value=\"Save\">";
     public void HiddenFocusableElementCheck_AllowsHiddenElementRemovedFromTabOrder()
     {
         var check = new HiddenFocusableElementCheck();
@@ -219,6 +288,10 @@ public sealed class ChecksTests
     }
 
     [Fact]
+    public void UnlabeledButtonCheck_AllowsInputImageAlt()
+    {
+        var check = new UnlabeledButtonCheck();
+        var content = "<input type=\"image\" alt=\"Search\">";
     public void HiddenFocusableElementCheck_AllowsHiddenDisabledElements()
     {
         var check = new HiddenFocusableElementCheck();
@@ -229,6 +302,33 @@ public sealed class ChecksTests
     }
 
     [Fact]
+    public void UnlabeledButtonCheck_FlagsInputButtonWithoutValue()
+    {
+        var check = new UnlabeledButtonCheck();
+        var content = "<input type=\"submit\">";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Single(issues);
+    }
+
+    [Fact]
+    public void MissingTableHeaderCheck_FlagsTableWithoutHeaders()
+    {
+        var check = new MissingTableHeaderCheck();
+        var content = "<table><tr><td>Value</td></tr></table>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Single(issues);
+        Assert.Equal("Table missing header cells.", issues[0].Message);
+    }
+
+    [Fact]
+    public void MissingTableHeaderCheck_AllowsTableWithHeaders()
+    {
+        var check = new MissingTableHeaderCheck();
+        var content = "<table><thead><tr><th scope=\"col\">Name</th></tr></thead></table>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
     public void HiddenFocusableElementCheck_AllowsHiddenInputTypeHidden()
     {
         var check = new HiddenFocusableElementCheck();
@@ -289,6 +389,11 @@ public sealed class ChecksTests
     }
 
     [Fact]
+    public void MissingTableHeaderCheck_AllowsPresentationTable()
+    {
+        var check = new MissingTableHeaderCheck();
+        var content = "<table role=\"presentation\"><tr><td>Layout</td></tr></table>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
     public void HiddenFocusableElementCheck_AllowsHiddenXamlElementWithNegativeTabIndex()
     {
         var check = new HiddenFocusableElementCheck();

@@ -9,7 +9,6 @@ namespace Scanner.Core.Checks;
 public sealed class MissingLabelCheck : ICheck
 {
     private static readonly Regex InputRegex = new("<(input|select|textarea)(?<attrs>[^>]*)>", RegexOptions.IgnoreCase | RegexOptions.Compiled);
-    private static readonly Regex LabelRegex = new("<label[^>]*for=\"(?<id>[^\"]+)\"[^>]*>", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     /// <inheritdoc />
     public string Id => "missing-label";
@@ -21,7 +20,9 @@ public sealed class MissingLabelCheck : ICheck
     public IEnumerable<Issue> Run(CheckContext context, RuleDefinition rule)
     {
         var issues = new List<Issue>();
-        var labels = LabelRegex.Matches(context.Content).Select(match => match.Groups["id"].Value).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var labels = AccessibleNameUtilities.CollectLabelForIds(context.Content);
+        var labelRanges = AccessibleNameUtilities.CollectLabelRanges(context.Content);
+        var elementIds = AccessibleNameUtilities.CollectElementIds(context.Content);
 
         foreach (Match match in InputRegex.Matches(context.Content))
         {
@@ -33,19 +34,24 @@ public sealed class MissingLabelCheck : ICheck
             }
 
             var ariaLabel = AttributeParser.GetAttributeValue(attrs, "aria-label");
-            if (!string.IsNullOrWhiteSpace(ariaLabel))
+            if (AccessibleNameUtilities.HasAriaLabel(ariaLabel))
             {
                 continue;
             }
 
             var ariaLabelledBy = AttributeParser.GetAttributeValue(attrs, "aria-labelledby");
-            if (!string.IsNullOrWhiteSpace(ariaLabelledBy))
+            if (AccessibleNameUtilities.HasValidAriaLabelledBy(ariaLabelledBy, elementIds))
             {
                 continue;
             }
 
             var id = AttributeParser.GetAttributeValue(attrs, "id");
-            if (!string.IsNullOrWhiteSpace(id) && labels.Contains(id))
+            if (AccessibleNameUtilities.HasLabelForId(id, labels))
+            {
+                continue;
+            }
+
+            if (AccessibleNameUtilities.IsWithinLabel(match.Index, labelRanges))
             {
                 continue;
             }

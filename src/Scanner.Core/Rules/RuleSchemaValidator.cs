@@ -17,6 +17,8 @@ public sealed class RuleSchemaValidator
         "absolute-positioning",
         "fixed-width-layout",
         "missing-label",
+        "unlabeled-button",
+        "missing-table-headers",
         "missing-alt-text",
         "non-wrapping-container",
         "invalid-aria-role",
