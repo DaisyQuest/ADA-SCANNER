@@ -1,0 +1,8 @@
+{
+  "id": "contrast-css-foreground-background",
+  "description": "Ensure sufficient contrast when explicit foreground and background colors are defined in CSS.",
+  "severity": "high",
+  "checkId": "insufficient-contrast",
+  "appliesTo": "css",
+  "recommendation": "Adjust the foreground or background color to meet WCAG 2.0 AA contrast requirements."
+}

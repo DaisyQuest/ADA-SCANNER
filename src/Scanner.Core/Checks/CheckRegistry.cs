@@ -37,6 +37,7 @@ public sealed class CheckRegistry
         new MissingAltTextCheck(),
         new InvalidAriaRoleCheck(),
         new HiddenNavigationCheck(),
+        new HiddenFocusableElementCheck(),
         new InsufficientContrastCheck(),
         new XamlMissingNameCheck()
     });
