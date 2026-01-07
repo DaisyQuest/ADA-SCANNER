@@ -15,3 +15,4 @@
 2026-01-06 - Added WCAG criteria and problem tags metadata to backend rules for improved issue isolation (SPEC-008)
 2026-01-06 - Added scan option to generate report artifacts with validation tests (SPEC-002)
 2026-01-06 - Fix runtime report generator namespace usage and add runtime empty-issues coverage (SPEC-010)
+2026-01-06 - Rename scan engine locals and clarify fixed-width line numbering variables to avoid scope collisions (SPEC-001, SPEC-008)

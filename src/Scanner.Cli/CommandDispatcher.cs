@@ -75,8 +75,8 @@ public sealed class CommandDispatcher
             return 1;
         }
 
-        var engine = new ScanEngine(new ProjectDiscovery(), new RuleLoader(), CheckRegistry.Default());
-        var result = engine.Scan(new ScanOptions { Path = path, RulesRoot = rulesRoot });
+        var scanEngine = new ScanEngine(new ProjectDiscovery(), new RuleLoader(), CheckRegistry.Default());
+        var result = scanEngine.Scan(new ScanOptions { Path = path, RulesRoot = rulesRoot });
 
         Directory.CreateDirectory(outputDir);
         var outputPath = Path.Combine(outputDir, "scan.json");

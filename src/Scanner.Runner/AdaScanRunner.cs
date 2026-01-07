@@ -57,8 +57,8 @@ public sealed class AdaScanRunner
 
         try
         {
-            var engine = new ScanEngine(new ProjectDiscovery(), new RuleLoader(), CheckRegistry.Default());
-            var scan = engine.Scan(new ScanOptions { Path = startDir, RulesRoot = rulesRoot });
+            var scanEngine = new ScanEngine(new ProjectDiscovery(), new RuleLoader(), CheckRegistry.Default());
+            var scan = scanEngine.Scan(new ScanOptions { Path = startDir, RulesRoot = rulesRoot });
             RuntimeScanResult? runtimeScan = null;
 
             if (parsed.RuntimeOptions != null)
@@ -92,8 +92,8 @@ public sealed class AdaScanRunner
         {
             if (_runtimeSource != null)
             {
-                var engine = new RuntimeScanEngine(_runtimeSource, new RuleLoader(), CheckRegistry.Default());
-                return engine.ScanAsync(options).GetAwaiter().GetResult();
+                var runtimeEngine = new RuntimeScanEngine(_runtimeSource, new RuleLoader(), CheckRegistry.Default());
+                return runtimeEngine.ScanAsync(options).GetAwaiter().GetResult();
             }
 
             using var httpClient = new HttpClient();
