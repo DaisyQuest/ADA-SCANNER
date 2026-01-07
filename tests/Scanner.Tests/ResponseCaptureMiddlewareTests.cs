@@ -42,6 +42,26 @@ public sealed class ResponseCaptureMiddlewareTests
         Assert.False(channel.Reader.TryRead(out _));
     }
 
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task Middleware_IgnoresMissingContentType(string? contentType)
+    {
+        var options = new ResponseCaptureOptions { MaxBodyBytes = 1024, ChannelCapacity = 1 };
+        var channel = new ResponseCaptureChannel(options);
+        var middleware = new ResponseCaptureMiddleware(async context =>
+        {
+            context.Response.ContentType = contentType;
+            await context.Response.WriteAsync("<html>payload</html>");
+        }, channel, options);
+
+        var context = CreateContext();
+        await middleware.InvokeAsync(context);
+
+        Assert.False(channel.Reader.TryRead(out _));
+    }
+
     [Fact]
     public async Task Middleware_RespectsSizeLimit()
     {
