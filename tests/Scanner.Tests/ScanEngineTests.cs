@@ -67,8 +67,8 @@ public sealed class ScanEngineTests
         Assert.Throws<InvalidDataException>(() => engine.Scan(new ScanOptions { Path = root, RulesRoot = rulesRoot }));
         TestUtilities.WriteFile(rulesRoot, "team/rule.json", "{\"id\":\"alt-1\",\"description\":\"Missing alt\",\"severity\":\"low\",\"checkId\":\"missing-alt-text\"}");
 
-        var engine = new ScanEngine(new ProjectDiscovery(), new RuleLoader(), new CheckRegistry(Array.Empty<ICheck>()));
-        var result = engine.Scan(new ScanOptions { Path = root, RulesRoot = rulesRoot });
+        var emptyRegistryEngine = new ScanEngine(new ProjectDiscovery(), new RuleLoader(), new CheckRegistry(Array.Empty<ICheck>()));
+        var result = emptyRegistryEngine.Scan(new ScanOptions { Path = root, RulesRoot = rulesRoot });
 
         Assert.Empty(result.Issues);
     }
