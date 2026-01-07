@@ -98,8 +98,8 @@ public sealed class AdaScanRunner
 
             using var httpClient = new HttpClient();
             var crawler = new HttpRuntimeCrawler(httpClient);
-            var runtimeEngine = new RuntimeScanEngine(crawler, new RuleLoader(), CheckRegistry.Default());
-            return runtimeEngine.ScanAsync(options).GetAwaiter().GetResult();
+            var httpRuntimeEngine = new RuntimeScanEngine(crawler, new RuleLoader(), CheckRegistry.Default());
+            return httpRuntimeEngine.ScanAsync(options).GetAwaiter().GetResult();
         }
         catch (Exception ex)
         {

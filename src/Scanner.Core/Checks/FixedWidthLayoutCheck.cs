@@ -43,9 +43,9 @@ public sealed class FixedWidthLayoutCheck : ICheck
             var style = AttributeParser.GetAttributeValue(attrs, "style");
             if (TryGetFixedStyleWidth(style, out var propertyName, out var propertyValue))
             {
-                var lineNumber = TextUtilities.GetLineNumber(context.Content, match.Index);
+                var styleLineNumber = TextUtilities.GetLineNumber(context.Content, match.Index);
                 var description = $"Element uses fixed {DescribeProperty(propertyName)} ({propertyName}: {propertyValue}).";
-                yield return new Issue(rule.Id, Id, context.FilePath, lineNumber, description, match.Value);
+                yield return new Issue(rule.Id, Id, context.FilePath, styleLineNumber, description, match.Value);
                 continue;
             }
 
@@ -55,12 +55,12 @@ public sealed class FixedWidthLayoutCheck : ICheck
                 continue;
             }
 
-            var lineNumber = TextUtilities.GetLineNumber(context.Content, match.Index);
+            var widthLineNumber = TextUtilities.GetLineNumber(context.Content, match.Index);
             yield return new Issue(
                 rule.Id,
                 Id,
                 context.FilePath,
-                lineNumber,
+                widthLineNumber,
                 $"Element uses a fixed width attribute (width=\"{widthAttribute}\").",
                 match.Value);
         }
@@ -74,12 +74,12 @@ public sealed class FixedWidthLayoutCheck : ICheck
             var widthValue = AttributeParser.GetAttributeValue(attrs, "Width");
             if (IsFixedWidthValue(widthValue))
             {
-                var lineNumber = TextUtilities.GetLineNumber(context.Content, match.Index);
+                var widthLineNumber = TextUtilities.GetLineNumber(context.Content, match.Index);
                 yield return new Issue(
                     rule.Id,
                     Id,
                     context.FilePath,
-                    lineNumber,
+                    widthLineNumber,
                     $"XAML element uses fixed width (Width=\"{widthValue}\").",
                     match.Value);
                 continue;
@@ -91,12 +91,12 @@ public sealed class FixedWidthLayoutCheck : ICheck
                 continue;
             }
 
-            var lineNumber = TextUtilities.GetLineNumber(context.Content, match.Index);
+            var minWidthLineNumber = TextUtilities.GetLineNumber(context.Content, match.Index);
             yield return new Issue(
                 rule.Id,
                 Id,
                 context.FilePath,
-                lineNumber,
+                minWidthLineNumber,
                 $"XAML element uses fixed minimum width (MinWidth=\"{minWidthValue}\").",
                 match.Value);
         }

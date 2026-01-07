@@ -262,6 +262,81 @@ public sealed class ChecksTests
     }
 
     [Fact]
+    public void FixedWidthLayoutCheck_FlagsInlineStyleWidth()
+    {
+        var check = new FixedWidthLayoutCheck();
+        var content = "<div style=\"width: 200px\"></div>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(FixedWidthLayoutCheck.Id)).ToList();
+
+        Assert.Single(issues);
+        Assert.Equal("Element uses fixed width (width: 200px).", issues[0].Message);
+    }
+
+    [Fact]
+    public void FixedWidthLayoutCheck_FlagsInlineStyleMinWidth()
+    {
+        var check = new FixedWidthLayoutCheck();
+        var content = "<div style=\"min-width: 40rem\"></div>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(FixedWidthLayoutCheck.Id)).ToList();
+
+        Assert.Single(issues);
+        Assert.Equal("Element uses fixed minimum width (min-width: 40rem).", issues[0].Message);
+    }
+
+    [Fact]
+    public void FixedWidthLayoutCheck_FlagsWidthAttribute()
+    {
+        var check = new FixedWidthLayoutCheck();
+        var content = "<table width=\"400\"></table>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(FixedWidthLayoutCheck.Id)).ToList();
+
+        Assert.Single(issues);
+        Assert.Equal("Element uses a fixed width attribute (width=\"400\").", issues[0].Message);
+    }
+
+    [Fact]
+    public void FixedWidthLayoutCheck_SkipsNonFixedMarkupWidths()
+    {
+        var check = new FixedWidthLayoutCheck();
+        var content = "<div width=\"100%\"></div><div width=\"0\"></div><div style=\"width: auto\"></div>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(FixedWidthLayoutCheck.Id)).ToList();
+
+        Assert.Empty(issues);
+    }
+
+    [Fact]
+    public void FixedWidthLayoutCheck_FlagsXamlWidth()
+    {
+        var check = new FixedWidthLayoutCheck();
+        var content = "<Grid Width=\"200\" />";
+        var issues = check.Run(new CheckContext("MainPage.xaml", content, "xaml"), Rule(FixedWidthLayoutCheck.Id)).ToList();
+
+        Assert.Single(issues);
+        Assert.Equal("XAML element uses fixed width (Width=\"200\").", issues[0].Message);
+    }
+
+    [Fact]
+    public void FixedWidthLayoutCheck_FlagsXamlMinWidth()
+    {
+        var check = new FixedWidthLayoutCheck();
+        var content = "<Grid MinWidth=\"250\" />";
+        var issues = check.Run(new CheckContext("MainPage.xaml", content, "xaml"), Rule(FixedWidthLayoutCheck.Id)).ToList();
+
+        Assert.Single(issues);
+        Assert.Equal("XAML element uses fixed minimum width (MinWidth=\"250\").", issues[0].Message);
+    }
+
+    [Fact]
+    public void FixedWidthLayoutCheck_SkipsFlexibleXamlWidths()
+    {
+        var check = new FixedWidthLayoutCheck();
+        var content = "<Grid Width=\"Auto\" MinWidth=\"0\" /><Grid Width=\"2*\" />";
+        var issues = check.Run(new CheckContext("MainPage.xaml", content, "xaml"), Rule(FixedWidthLayoutCheck.Id)).ToList();
+
+        Assert.Empty(issues);
+    }
+
+    [Fact]
     public void UnlabeledButtonCheck_FlagsEmptyButton()
     {
         var check = new UnlabeledButtonCheck();
@@ -297,6 +372,42 @@ public sealed class ChecksTests
     {
         var check = new UnlabeledButtonCheck();
         var content = "<button aria-labelledby=\"missing\"></button>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Single(issues);
+    }
+
+    [Fact]
+    public void UnlabeledButtonCheck_AllowsInputButtonValue()
+    {
+        var check = new UnlabeledButtonCheck();
+        var content = "<input type=\"submit\" value=\"Save\">";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Empty(issues);
+    }
+
+    [Fact]
+    public void UnlabeledButtonCheck_AllowsInputImageAlt()
+    {
+        var check = new UnlabeledButtonCheck();
+        var content = "<input type=\"image\" alt=\"Search\">";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Empty(issues);
+    }
+
+    [Fact]
+    public void UnlabeledButtonCheck_FlagsInputButtonWithoutValue()
+    {
+        var check = new UnlabeledButtonCheck();
+        var content = "<input type=\"submit\">";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Single(issues);
+    }
+
+    [Fact]
     public void HiddenFocusableElementCheck_FlagsHiddenFocusableElement()
     {
         var check = new HiddenFocusableElementCheck();
@@ -357,10 +468,6 @@ public sealed class ChecksTests
     }
 
     [Fact]
-    public void UnlabeledButtonCheck_AllowsInputButtonValue()
-    {
-        var check = new UnlabeledButtonCheck();
-        var content = "<input type=\"submit\" value=\"Save\">";
     public void HiddenFocusableElementCheck_AllowsHiddenElementRemovedFromTabOrder()
     {
         var check = new HiddenFocusableElementCheck();
@@ -371,10 +478,6 @@ public sealed class ChecksTests
     }
 
     [Fact]
-    public void UnlabeledButtonCheck_AllowsInputImageAlt()
-    {
-        var check = new UnlabeledButtonCheck();
-        var content = "<input type=\"image\" alt=\"Search\">";
     public void HiddenFocusableElementCheck_AllowsHiddenDisabledElements()
     {
         var check = new HiddenFocusableElementCheck();
@@ -385,33 +488,6 @@ public sealed class ChecksTests
     }
 
     [Fact]
-    public void UnlabeledButtonCheck_FlagsInputButtonWithoutValue()
-    {
-        var check = new UnlabeledButtonCheck();
-        var content = "<input type=\"submit\">";
-        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
-
-        Assert.Single(issues);
-    }
-
-    [Fact]
-    public void MissingTableHeaderCheck_FlagsTableWithoutHeaders()
-    {
-        var check = new MissingTableHeaderCheck();
-        var content = "<table><tr><td>Value</td></tr></table>";
-        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
-
-        Assert.Single(issues);
-        Assert.Equal("Table missing header cells.", issues[0].Message);
-    }
-
-    [Fact]
-    public void MissingTableHeaderCheck_AllowsTableWithHeaders()
-    {
-        var check = new MissingTableHeaderCheck();
-        var content = "<table><thead><tr><th scope=\"col\">Name</th></tr></thead></table>";
-        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
-
     public void HiddenFocusableElementCheck_AllowsHiddenInputTypeHidden()
     {
         var check = new HiddenFocusableElementCheck();
@@ -472,16 +548,42 @@ public sealed class ChecksTests
     }
 
     [Fact]
-    public void MissingTableHeaderCheck_AllowsPresentationTable()
-    {
-        var check = new MissingTableHeaderCheck();
-        var content = "<table role=\"presentation\"><tr><td>Layout</td></tr></table>";
-        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
     public void HiddenFocusableElementCheck_AllowsHiddenXamlElementWithNegativeTabIndex()
     {
         var check = new HiddenFocusableElementCheck();
         var content = "<StackPanel Visibility=\"Hidden\"><TextBox TabIndex=\"-1\" /></StackPanel>";
         var issues = check.Run(new CheckContext("MainPage.xaml", content, "xaml"), Rule(check.Id)).ToList();
+
+        Assert.Empty(issues);
+    }
+
+    [Fact]
+    public void MissingTableHeaderCheck_FlagsTableWithoutHeaders()
+    {
+        var check = new MissingTableHeaderCheck();
+        var content = "<table><tr><td>Value</td></tr></table>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Single(issues);
+        Assert.Equal("Table missing header cells.", issues[0].Message);
+    }
+
+    [Fact]
+    public void MissingTableHeaderCheck_AllowsTableWithHeaders()
+    {
+        var check = new MissingTableHeaderCheck();
+        var content = "<table><thead><tr><th scope=\"col\">Name</th></tr></thead></table>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Empty(issues);
+    }
+
+    [Fact]
+    public void MissingTableHeaderCheck_AllowsPresentationTable()
+    {
+        var check = new MissingTableHeaderCheck();
+        var content = "<table role=\"presentation\"><tr><td>Layout</td></tr></table>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
 
         Assert.Empty(issues);
     }
