@@ -27,6 +27,23 @@ const postJson = async (url, body) =>
     body: JSON.stringify(body)
   });
 
+const readEvent = (url, eventName) =>
+  new Promise((resolve, reject) => {
+    const http = require("http");
+    const request = http.get(url, (response) => {
+      let data = "";
+      response.on("data", (chunk) => {
+        data += chunk.toString();
+        if (data.includes(`event: ${eventName}`)) {
+          response.destroy();
+          resolve(data);
+        }
+      });
+    });
+
+    request.on("error", reject);
+  });
+
 describe("ListenerServer", () => {
   test("handles capture lifecycle", async () => {
     const rulesRoot = createTempRules();
@@ -63,6 +80,17 @@ describe("ListenerServer", () => {
     const issues = await fetch(`${baseUrl}/issues`);
     const issuesPayload = await issues.json();
     expect(issuesPayload.issues).toHaveLength(1);
+
+    const report = await fetch(`${baseUrl}/report`);
+    const reportPayload = await report.json();
+    expect(reportPayload.summary.issues).toBe(1);
+    expect(reportPayload.byRule).toHaveLength(1);
+
+    const home = await fetch(`${baseUrl}/`);
+    expect(home.status).toBe(200);
+
+    const assets = await fetch(`${baseUrl}/assets/app.js`);
+    expect(assets.status).toBe(200);
 
     const notFound = await fetch(`${baseUrl}/missing`);
     expect(notFound.status).toBe(404);
@@ -129,6 +157,39 @@ describe("ListenerServer", () => {
     const badServer = new ListenerServer({ rulesRoot });
     badServer.server = { close: (callback) => callback(new Error("fail")) };
     await expect(badServer.stop()).rejects.toThrow("fail");
+
+    await server.stop();
+  });
+
+  test("returns not found when UI assets missing", async () => {
+    const rulesRoot = createTempRules();
+    const missingUiRoot = fs.mkdtempSync(path.join(os.tmpdir(), "ada-ui-missing-"));
+    const server = new ListenerServer({ rulesRoot, uiRoot: missingUiRoot });
+    const port = await server.start();
+
+    const response = await fetch(`http://localhost:${port}/`);
+    expect(response.status).toBe(404);
+
+    await server.stop();
+  });
+
+  test("streams capture events over SSE", async () => {
+    const rulesRoot = createTempRules();
+    const server = new ListenerServer({ rulesRoot });
+    const port = await server.start();
+
+    const baseUrl = `http://localhost:${port}`;
+    const eventPromise = readEvent(`${baseUrl}/events`, "capture");
+
+    await postJson(`${baseUrl}/capture`, {
+      url: "http://example",
+      html: "<input />",
+      kind: "html"
+    });
+
+    const data = await eventPromise;
+    expect(data).toContain("event: capture");
+    expect(data).toContain("issues");
 
     await server.stop();
   });

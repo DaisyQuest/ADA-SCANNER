@@ -1,22 +1,34 @@
 const http = require("http");
 const crypto = require("crypto");
+const path = require("path");
+const fs = require("fs");
 const { EventEmitter } = require("events");
 const { RuntimeScanner } = require("../runtime/RuntimeScanner");
+const { ReportBuilder } = require("./ReportBuilder");
 
 // CHANGE: configure allowed origin(s)
 const ALLOWED_ORIGIN = "https://localhost:7203";
 
 class ListenerServer extends EventEmitter {
-  constructor({ port = 0, rulesRoot, scanner = new RuntimeScanner() } = {}) {
+  constructor({
+    port = 0,
+    rulesRoot,
+    scanner = new RuntimeScanner(),
+    reportBuilder = new ReportBuilder(),
+    uiRoot = path.join(__dirname, "ui")
+  } = {}) {
     super();
     this.port = port;
     this.rulesRoot = rulesRoot;
     this.scanner = scanner;
+    this.reportBuilder = reportBuilder;
+    this.uiRoot = uiRoot;
     this.server = null;
     this.documents = [];
     this.issues = [];
     this.payloadHashes = new Set();
     this.issueHashes = new Set();
+    this.eventClients = new Set();
   }
 
   start() {
@@ -59,7 +71,7 @@ class ListenerServer extends EventEmitter {
   addCors(response) {
     response.setHeader("Access-Control-Allow-Origin", ALLOWED_ORIGIN);
     response.setHeader("Vary", "Origin");
-    response.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+    response.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
     response.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
     response.setHeader("Access-Control-Max-Age", "86400");
   }
@@ -80,6 +92,26 @@ class ListenerServer extends EventEmitter {
       return;
     }
 
+    if (method === "GET" && url === "/") {
+      this.writeStaticFile(response, "index.html", "text/html; charset=utf-8");
+      return;
+    }
+
+    if (method === "GET" && url === "/assets/app.js") {
+      this.writeStaticFile(response, path.join("assets", "app.js"), "text/javascript; charset=utf-8");
+      return;
+    }
+
+    if (method === "GET" && url === "/assets/app.css") {
+      this.writeStaticFile(response, path.join("assets", "app.css"), "text/css; charset=utf-8");
+      return;
+    }
+
+    if (method === "GET" && url === "/events") {
+      this.handleEventStream(request, response);
+      return;
+    }
+
     if (method === "GET" && url === "/documents") {
       this.writeJson(response, 200, { documents: this.documents });
       return;
@@ -87,6 +119,14 @@ class ListenerServer extends EventEmitter {
 
     if (method === "GET" && url === "/issues") {
       this.writeJson(response, 200, { issues: this.issues });
+      return;
+    }
+
+    if (method === "GET" && url === "/report") {
+      this.writeJson(response, 200, this.reportBuilder.build({
+        documents: this.documents,
+        issues: this.issues
+      }));
       return;
     }
 
@@ -115,11 +155,22 @@ class ListenerServer extends EventEmitter {
             this.payloadHashes.add(payloadHash);
             this.documents.push(result.document);
             this.addIssues(result.issues);
-            this.emit("capture", result);
+            const report = this.reportBuilder.build({
+              documents: this.documents,
+              issues: this.issues
+            });
+            const capturePayload = {
+              document: result.document,
+              issues: result.issues,
+              report
+            };
+            this.emit("capture", capturePayload);
+            this.broadcastEvent("capture", capturePayload);
 
             this.writeJson(response, 200, {
               document: result.document,
-              issues: result.issues
+              issues: result.issues,
+              report
             });
           })
           .catch((error) => {
@@ -167,6 +218,35 @@ class ListenerServer extends EventEmitter {
     response.end(json);
   }
 
+  writeStaticFile(response, relativePath, contentType) {
+    try {
+      const fullPath = path.join(this.uiRoot, relativePath);
+      const file = fs.readFileSync(fullPath);
+      response.writeHead(200, {
+        "Content-Type": contentType,
+        "Content-Length": file.length
+      });
+      response.end(file);
+    } catch (error) {
+      this.writeJson(response, 404, { error: "Not found." });
+    }
+  }
+
+  handleEventStream(request, response) {
+    this.addCors(response);
+    response.writeHead(200, {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      Connection: "keep-alive"
+    });
+    response.write(`event: connected\ndata: ${JSON.stringify({ status: "ok" })}\n\n`);
+    this.eventClients.add(response);
+
+    request.on("close", () => {
+      this.eventClients.delete(response);
+    });
+  }
+
   createPayloadHash(payload) {
     const hash = crypto.createHash("sha256");
     hash.update(String(payload.url ?? ""));
@@ -201,6 +281,13 @@ class ListenerServer extends EventEmitter {
 
       this.issueHashes.add(key);
       this.issues.push(issue);
+    }
+  }
+
+  broadcastEvent(eventName, payload) {
+    const data = `event: ${eventName}\ndata: ${JSON.stringify(payload)}\n\n`;
+    for (const client of this.eventClients) {
+      client.write(data);
     }
   }
 }

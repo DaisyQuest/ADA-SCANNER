@@ -3,6 +3,7 @@ const { RuleSchemaValidator } = require("./rules/RuleSchemaValidator");
 const { CheckRegistry, createDefaultCheckRegistry } = require("./checks/CheckRegistry");
 const { RuntimeScanner } = require("./runtime/RuntimeScanner");
 const { ListenerServer } = require("./listener/ListenerServer");
+const { ReportBuilder } = require("./listener/ReportBuilder");
 
 module.exports = {
   RuleLoader,
@@ -10,5 +11,6 @@ module.exports = {
   CheckRegistry,
   createDefaultCheckRegistry,
   RuntimeScanner,
-  ListenerServer
+  ListenerServer,
+  ReportBuilder
 };

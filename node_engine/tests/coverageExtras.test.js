@@ -127,5 +127,6 @@ describe("Coverage extras", () => {
   test("engine index exports expected symbols", () => {
     expect(engine.RuntimeScanner).toBeDefined();
     expect(engine.ListenerServer).toBeDefined();
+    expect(engine.ReportBuilder).toBeDefined();
   });
 });

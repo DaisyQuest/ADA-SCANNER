@@ -20,7 +20,12 @@ class RuntimeScanner {
       throw new Error(`Rule validation failed. ${details}`);
     }
 
-    const rules = ruleValidation.teams.flatMap((team) => team.rules);
+    const rules = ruleValidation.teams.flatMap((team) =>
+      team.rules.map((rule) => ({
+        teamName: team.teamName,
+        rule
+      }))
+    );
     const issues = [];
     const seenIssues = new Set();
     const context = {
@@ -29,7 +34,8 @@ class RuntimeScanner {
       kind
     };
 
-    for (const rule of rules) {
+    for (const entry of rules) {
+      const rule = entry.rule;
       const check = this.checkRegistry.find(rule.checkId);
       if (!check) {
         continue;
@@ -50,10 +56,19 @@ class RuntimeScanner {
       }
 
       for (const issue of check.run(context, rule)) {
+        const enrichedIssue = {
+          ...issue,
+          teamName: entry.teamName,
+          ruleDescription: rule.description ?? "",
+          severity: rule.severity ?? "",
+          recommendation: rule.recommendation ?? null,
+          wcagCriteria: rule.wcagCriteria ?? null,
+          problemTags: rule.problemTags ?? null
+        };
         const key = [issue.ruleId, issue.checkId, issue.filePath, issue.line, issue.message].join("::");
         if (!seenIssues.has(key)) {
           seenIssues.add(key);
-          issues.push(issue);
+          issues.push(enrichedIssue);
         }
       }
     }
@@ -64,7 +79,8 @@ class RuntimeScanner {
         body: content,
         contentType
       },
-      issues
+      issues,
+      rules: rules.map(({ teamName, rule }) => ({ ...rule, teamName }))
     };
   }
 }
