@@ -1,0 +1,231 @@
+(() => {
+  const STYLE_ID = "ada-highlight-style";
+  const HIGHLIGHT_CLASS = "ada-highlight";
+  const ISSUE_COUNT_ATTR = "data-ada-issue-count";
+  const ISSUE_MESSAGE_ATTR = "data-ada-issue-message";
+  const ORIGINAL_TITLE_ATTR = "data-ada-original-title";
+
+  const normalizeText = (value) => String(value ?? "").replace(/\s+/g, " ").trim();
+
+  const ensureStyles = (documentRoot) => {
+    if (documentRoot.getElementById(STYLE_ID)) {
+      return;
+    }
+
+    const style = documentRoot.createElement("style");
+    style.id = STYLE_ID;
+    style.textContent = `
+      .${HIGHLIGHT_CLASS} {
+        outline: 3px solid #e11d48 !important;
+        outline-offset: 2px;
+        box-shadow: 0 0 0 4px rgba(225, 29, 72, 0.15);
+        position: relative;
+      }
+      .${HIGHLIGHT_CLASS}::after {
+        content: attr(${ISSUE_COUNT_ATTR});
+        position: absolute;
+        top: -10px;
+        right: -10px;
+        background: #e11d48;
+        color: #fff;
+        border-radius: 999px;
+        padding: 2px 6px;
+        font-size: 11px;
+        font-weight: 700;
+        pointer-events: none;
+      }
+    `;
+    documentRoot.head.appendChild(style);
+  };
+
+  const parseEvidence = (evidence) => {
+    const trimmed = normalizeText(evidence);
+    if (!trimmed.startsWith("<")) {
+      return null;
+    }
+
+    const match = trimmed.match(/^<([a-z0-9-]+)([^>]*)>/i);
+    if (!match) {
+      return null;
+    }
+
+    const tag = match[1];
+    const attrs = match[2] ?? "";
+    const idMatch = attrs.match(/\sid=["']([^"']+)["']/i);
+    const classMatch = attrs.match(/\sclass=["']([^"']+)["']/i);
+    const nameMatch = attrs.match(/\sname=["']([^"']+)["']/i);
+    const ariaLabelMatch = attrs.match(/\saria-label=["']([^"']+)["']/i);
+    const roleMatch = attrs.match(/\srole=["']([^"']+)["']/i);
+    const typeMatch = attrs.match(/\stype=["']([^"']+)["']/i);
+    const hrefMatch = attrs.match(/\shref=["']([^"']+)["']/i);
+
+    return {
+      tag,
+      id: idMatch?.[1] ?? null,
+      classes: classMatch?.[1]?.split(/\s+/).filter(Boolean) ?? [],
+      name: nameMatch?.[1] ?? null,
+      ariaLabel: ariaLabelMatch?.[1] ?? null,
+      role: roleMatch?.[1] ?? null,
+      type: typeMatch?.[1] ?? null,
+      href: hrefMatch?.[1] ?? null
+    };
+  };
+
+  const escapeCssValue = (value) => {
+    if (globalThis.CSS?.escape) {
+      return CSS.escape(value);
+    }
+    return String(value).replace(/[^a-zA-Z0-9_-]/g, "\\$&");
+  };
+
+  const buildSelector = (parsed) => {
+    if (!parsed) return null;
+    if (parsed.id) {
+      return `#${escapeCssValue(parsed.id)}`;
+    }
+
+    const parts = [parsed.tag];
+    if (parsed.classes.length) {
+      parts.push(parsed.classes.map((name) => `.${escapeCssValue(name)}`).join(""));
+    }
+    if (parsed.name) {
+      parts.push(`[name="${escapeCssValue(parsed.name)}"]`);
+    }
+    if (parsed.ariaLabel) {
+      parts.push(`[aria-label="${escapeCssValue(parsed.ariaLabel)}"]`);
+    }
+    if (parsed.role) {
+      parts.push(`[role="${escapeCssValue(parsed.role)}"]`);
+    }
+    if (parsed.type) {
+      parts.push(`[type="${escapeCssValue(parsed.type)}"]`);
+    }
+    if (parsed.href) {
+      parts.push(`[href="${escapeCssValue(parsed.href)}"]`);
+    }
+    const selector = parts.filter(Boolean).join("");
+    return selector.trim() ? selector : null;
+  };
+
+  const findMatchesByEvidence = (documentRoot, evidence) => {
+    const normalizedEvidence = normalizeText(evidence);
+    if (!normalizedEvidence || normalizedEvidence.length > 2000) {
+      return [];
+    }
+
+    const parsed = parseEvidence(normalizedEvidence);
+    const selector = buildSelector(parsed);
+    if (selector) {
+      const matches = Array.from(documentRoot.querySelectorAll(selector));
+      if (matches.length) {
+        return matches;
+      }
+    }
+
+    if (parsed?.tag) {
+      const elements = Array.from(documentRoot.getElementsByTagName(parsed.tag));
+      return elements.filter((element) => normalizeText(element.outerHTML).includes(normalizedEvidence));
+    }
+
+    return [];
+  };
+
+  const resolveTargets = (documentRoot, issue) => {
+    if (!issue) return [];
+    if (issue.selector) {
+      try {
+        return Array.from(documentRoot.querySelectorAll(issue.selector));
+      } catch (error) {
+        return [];
+      }
+    }
+
+    if (issue.evidence) {
+      return findMatchesByEvidence(documentRoot, issue.evidence);
+    }
+
+    return [];
+  };
+
+  const normalizeList = (items) => (Array.isArray(items) ? items : []);
+
+  const filterIssuesForPage = (issues, url) =>
+    normalizeList(issues).filter((issue) => {
+      if (!issue?.filePath) {
+        return true;
+      }
+      return normalizeText(issue.filePath) === normalizeText(url);
+    });
+
+  const createHighlighter = ({ documentRoot }) => {
+    const highlighted = new Set();
+
+    const clearHighlights = () => {
+      for (const element of highlighted) {
+        element.classList.remove(HIGHLIGHT_CLASS);
+        element.removeAttribute(ISSUE_COUNT_ATTR);
+        element.removeAttribute(ISSUE_MESSAGE_ATTR);
+        if (element.hasAttribute(ORIGINAL_TITLE_ATTR)) {
+          element.setAttribute("title", element.getAttribute(ORIGINAL_TITLE_ATTR));
+          element.removeAttribute(ORIGINAL_TITLE_ATTR);
+        } else {
+          element.removeAttribute("title");
+        }
+      }
+      highlighted.clear();
+    };
+
+    const applyHighlights = (issues) => {
+      clearHighlights();
+      const list = normalizeList(issues);
+      if (!list.length) {
+        return;
+      }
+
+      ensureStyles(documentRoot);
+      const elementMap = new Map();
+
+      for (const issue of list) {
+        const targets = resolveTargets(documentRoot, issue);
+        for (const element of targets) {
+          const entries = elementMap.get(element) ?? [];
+          entries.push(issue);
+          elementMap.set(element, entries);
+        }
+      }
+
+      for (const [element, elementIssues] of elementMap.entries()) {
+        const messages = elementIssues
+          .map((issue) => issue.message || issue.ruleId || "Issue")
+          .filter(Boolean);
+        const title = messages.join(" • ");
+        if (element.hasAttribute("title")) {
+          element.setAttribute(ORIGINAL_TITLE_ATTR, element.getAttribute("title"));
+        }
+        element.setAttribute("title", title);
+        element.setAttribute(ISSUE_COUNT_ATTR, String(elementIssues.length));
+        element.setAttribute(ISSUE_MESSAGE_ATTR, title);
+        element.classList.add(HIGHLIGHT_CLASS);
+        highlighted.add(element);
+      }
+    };
+
+    return {
+      applyHighlights,
+      clearHighlights,
+      resolveTargets,
+      filterIssuesForPage
+    };
+  };
+
+  const api = {
+    createHighlighter,
+    filterIssuesForPage
+  };
+
+  globalThis.AdaHighlighter = api;
+
+  if (typeof module !== "undefined") {
+    module.exports = api;
+  }
+})();

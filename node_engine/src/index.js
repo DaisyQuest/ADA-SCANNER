@@ -4,6 +4,7 @@ const { CheckRegistry, createDefaultCheckRegistry } = require("./checks/CheckReg
 const { RuntimeScanner } = require("./runtime/RuntimeScanner");
 const { ListenerServer } = require("./listener/ListenerServer");
 const { ReportBuilder } = require("./listener/ReportBuilder");
+const { HtmlReportBuilder } = require("./listener/HtmlReportBuilder");
 
 module.exports = {
   RuleLoader,
@@ -12,5 +13,6 @@ module.exports = {
   createDefaultCheckRegistry,
   RuntimeScanner,
   ListenerServer,
-  ReportBuilder
+  ReportBuilder,
+  HtmlReportBuilder
 };

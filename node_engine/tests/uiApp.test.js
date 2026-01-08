@@ -101,7 +101,9 @@ describe("Runtime listener UI app", () => {
     expect(app.elements.ruleTable.innerHTML).toContain("rule-1");
     expect(app.elements.ruleTable.innerHTML).toContain("—");
     expect(app.elements.fileTable.innerHTML).toContain("Save JSON");
+    expect(app.elements.fileTable.innerHTML).toContain("Save HTML");
     expect(app.elements.fileTable.innerHTML).toContain("report-file-b.json");
+    expect(app.elements.fileTable.innerHTML).toContain("report-file-b.html");
     expect(app.elements.issueFeed.innerHTML).toContain("Problem");
     expect(app.elements.issueFeed.innerHTML).toContain("line ?");
   });
@@ -232,5 +234,7 @@ describe("Runtime listener UI app", () => {
   test("buildDownloadName falls back for invalid input", () => {
     const app = require("../src/listener/ui/assets/app");
     expect(app.buildDownloadName("###")).toBe("report.json");
+    expect(app.buildDownloadName("###", "html")).toBe("report.html");
+    expect(app.buildDownloadName("file-a", "html")).toBe("report-file-a.html");
   });
 });

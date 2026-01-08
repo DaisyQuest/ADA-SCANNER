@@ -57,6 +57,7 @@
                              documentRoot,
                              location,
                              getConfig,
+                             onReport,
                              debounceMs = DEFAULT_DEBOUNCE_MS
                            }) => {
     let lastHash = null;
@@ -87,6 +88,16 @@
       if (!resp.ok) {
         const text = await resp.text().catch(() => "");
         console.warn("[ADA] capture failed", resp.status, text);
+        return;
+      }
+
+      if (typeof onReport === "function") {
+        try {
+          const responsePayload = await resp.json();
+          onReport(responsePayload);
+        } catch (error) {
+          console.warn("[ADA] unable to parse capture response", error);
+        }
       }
     };
 

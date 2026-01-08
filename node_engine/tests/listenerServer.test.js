@@ -74,6 +74,17 @@ describe("ListenerServer", () => {
     expect(reportPayload.byRule).toHaveLength(1);
     expect(reportPayload.summary.files).toBe(1);
 
+    const reportHtml = await fetch(`${baseUrl}/report?format=html`);
+    const reportHtmlBody = await reportHtml.text();
+    expect(reportHtml.headers.get("content-type")).toContain("text/html");
+    expect(reportHtml.headers.get("content-disposition")).toContain("report.html");
+    expect(reportHtmlBody).toContain("Runtime Accessibility Report");
+
+    const reportHtmlShortcut = await fetch(`${baseUrl}/report/html`);
+    const reportHtmlShortcutBody = await reportHtmlShortcut.text();
+    expect(reportHtmlShortcut.status).toBe(200);
+    expect(reportHtmlShortcutBody).toContain("Runtime Accessibility Report");
+
     const fileIndex = await fetch(`${baseUrl}/report/files`);
     const fileIndexPayload = await fileIndex.json();
     expect(fileIndexPayload.files).toHaveLength(1);
@@ -82,6 +93,12 @@ describe("ListenerServer", () => {
     const fileReportPayload = await fileReport.json();
     expect(fileReportPayload.filePath).toBe("http://example");
     expect(fileReport.headers.get("content-disposition")).toContain("report-");
+
+    const fileReportHtml = await fetch(`${baseUrl}/report/file?path=${encodeURIComponent("http://example")}&format=html`);
+    const fileReportHtmlBody = await fileReportHtml.text();
+    expect(fileReportHtml.headers.get("content-type")).toContain("text/html");
+    expect(fileReportHtml.headers.get("content-disposition")).toContain(".html");
+    expect(fileReportHtmlBody).toContain("File Accessibility Report");
 
     const home = await fetch(`${baseUrl}/`);
     expect(home.status).toBe(200);

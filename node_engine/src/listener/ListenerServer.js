@@ -5,6 +5,7 @@ const fs = require("fs");
 const { EventEmitter } = require("events");
 const { RuntimeScanner } = require("../runtime/RuntimeScanner");
 const { ReportBuilder } = require("./ReportBuilder");
+const { HtmlReportBuilder } = require("./HtmlReportBuilder");
 
 // CHANGE: configure allowed origin(s)
 const ALLOWED_ORIGIN = "https://localhost:7203";
@@ -15,6 +16,7 @@ class ListenerServer extends EventEmitter {
     rulesRoot,
     scanner = new RuntimeScanner(),
     reportBuilder = new ReportBuilder(),
+    htmlReportBuilder = new HtmlReportBuilder(),
     uiRoot = path.join(__dirname, "ui")
   } = {}) {
     super();
@@ -22,6 +24,7 @@ class ListenerServer extends EventEmitter {
     this.rulesRoot = rulesRoot;
     this.scanner = scanner;
     this.reportBuilder = reportBuilder;
+    this.htmlReportBuilder = htmlReportBuilder;
     this.uiRoot = uiRoot;
     this.server = null;
     this.documents = [];
@@ -125,10 +128,27 @@ class ListenerServer extends EventEmitter {
     }
 
     if (method === "GET" && pathname === "/report") {
-      this.writeJson(response, 200, this.reportBuilder.build({
+      const report = this.reportBuilder.build({
         documents: this.documents,
         issues: this.issues
-      }));
+      });
+      const format = requestUrl?.searchParams.get("format");
+      if (format === "html") {
+        const html = this.htmlReportBuilder.buildReport({ report });
+        this.writeHtml(response, 200, html, { "Content-Disposition": "attachment; filename=\"report.html\"" });
+        return;
+      }
+      this.writeJson(response, 200, report);
+      return;
+    }
+
+    if (method === "GET" && pathname === "/report/html") {
+      const report = this.reportBuilder.build({
+        documents: this.documents,
+        issues: this.issues
+      });
+      const html = this.htmlReportBuilder.buildReport({ report });
+      this.writeHtml(response, 200, html, { "Content-Disposition": "attachment; filename=\"report.html\"" });
       return;
     }
 
@@ -144,6 +164,7 @@ class ListenerServer extends EventEmitter {
 
     if (method === "GET" && pathname === "/report/file") {
       const filePath = requestUrl?.searchParams.get("path");
+      const format = requestUrl?.searchParams.get("format");
       if (!filePath) {
         this.writeJson(response, 400, { error: "Query parameter 'path' is required." });
         return;
@@ -160,13 +181,24 @@ class ListenerServer extends EventEmitter {
         return;
       }
 
-      const filename = this.createReportFilename(filePath);
-      this.writeJson(
-        response,
-        200,
-        report,
-        { "Content-Disposition": `attachment; filename="${filename}"` }
-      );
+      if (format === "html") {
+        const html = this.htmlReportBuilder.buildFileReport({ report });
+        const filename = this.createReportFilename(filePath, "html");
+        this.writeHtml(
+          response,
+          200,
+          html,
+          { "Content-Disposition": `attachment; filename="${filename}"` }
+        );
+      } else {
+        const filename = this.createReportFilename(filePath, "json");
+        this.writeJson(
+          response,
+          200,
+          report,
+          { "Content-Disposition": `attachment; filename="${filename}"` }
+        );
+      }
       return;
     }
 
@@ -259,6 +291,17 @@ class ListenerServer extends EventEmitter {
     response.end(json);
   }
 
+  writeHtml(response, statusCode, html, headers = {}) {
+    const body = String(html ?? "");
+    this.addCors(response);
+    response.writeHead(statusCode, {
+      "Content-Type": "text/html; charset=utf-8",
+      "Content-Length": Buffer.byteLength(body),
+      ...headers
+    });
+    response.end(body);
+  }
+
   writeStaticFile(response, relativePath, contentType) {
     try {
       const fullPath = path.join(this.uiRoot, relativePath);
@@ -300,12 +343,13 @@ class ListenerServer extends EventEmitter {
     return hash.digest("hex");
   }
 
-  createReportFilename(filePath) {
+  createReportFilename(filePath, extension = "json") {
     const sanitized = String(filePath)
       .replace(/[^a-z0-9_-]+/gi, "-")
       .replace(/^-+|-+$/g, "")
       .slice(0, 60);
-    return sanitized ? `report-${sanitized}.json` : "report.json";
+    const safeExtension = extension === "html" ? "html" : "json";
+    return sanitized ? `report-${sanitized}.${safeExtension}` : `report.${safeExtension}`;
   }
 
   parseUrl(url) {

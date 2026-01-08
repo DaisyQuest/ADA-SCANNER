@@ -81,6 +81,8 @@ describe("TextUtilities", () => {
     expect(containsAttribute("hidden=\"hidden\"", "hidden", true)).toBe(true);
     expect(containsAttribute("hidden=\"hidden\"", "hidden", false)).toBe(true);
     expect(containsAttribute("", "hidden", true)).toBe(false);
+    expect(containsAttribute(null, "hidden", true)).toBe(false);
+    expect(containsAttribute("hidden", "", false)).toBe(false);
   });
 });
 

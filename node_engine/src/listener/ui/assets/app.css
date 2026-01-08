@@ -66,6 +66,7 @@ body {
   gap: 16px;
   font-size: 14px;
   color: var(--muted);
+  flex-wrap: wrap;
 }
 
 .status-pill {
@@ -180,8 +181,22 @@ body {
   text-decoration: none;
 }
 
+.pill-button--secondary {
+  background: #f8fafc;
+  color: var(--text);
+}
+
 .pill-button:hover {
   background: #e7edff;
+}
+
+.pill-button--secondary:hover {
+  background: #edf1f7;
+}
+
+.status-actions {
+  display: flex;
+  gap: 8px;
 }
 
 .issue-feed {

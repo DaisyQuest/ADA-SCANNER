@@ -324,6 +324,17 @@ describe("ReportBuilder", () => {
     expect(report.issueCount).toBe(1);
   });
 
+  test("buildFileReport returns null document when missing", () => {
+    const builder = new ReportBuilder();
+    const report = builder.buildFileReport({
+      filePath: "file-a.html",
+      documents: [],
+      issues: []
+    });
+
+    expect(report.document).toBeNull();
+  });
+
   test("sortRuleCounts prefers higher counts", () => {
     const builder = new ReportBuilder();
     const ruleCounts = new Map();
@@ -332,6 +343,26 @@ describe("ReportBuilder", () => {
 
     const sorted = builder.sortRuleCounts(ruleCounts);
     expect(sorted[0].ruleId).toBe("rule-b");
+  });
+
+  test("sortRuleCounts uses rule id ordering for ties", () => {
+    const builder = new ReportBuilder();
+    const ruleCounts = new Map();
+    ruleCounts.set("rule-b", { ruleId: "rule-b", count: 1 });
+    ruleCounts.set("rule-a", { ruleId: "rule-a", count: 1 });
+
+    const sorted = builder.sortRuleCounts(ruleCounts);
+    expect(sorted[0].ruleId).toBe("rule-a");
+  });
+
+  test("sortCountMap uses name ordering when counts match", () => {
+    const builder = new ReportBuilder();
+    const counts = new Map();
+    counts.set("team-b", 1);
+    counts.set("team-a", 1);
+
+    const sorted = builder.sortCountMap(counts, "teamName");
+    expect(sorted[0].teamName).toBe("team-a");
   });
 
   test("build skips empty file paths in rule file list", () => {
