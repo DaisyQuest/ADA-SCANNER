@@ -44,11 +44,12 @@ const formatCounts = (items, label) => {
   return items.map((entry) => `${entry[label]} (${entry.count})`).join(", ");
 };
 
-const buildDownloadName = (filePath) => {
+const buildDownloadName = (filePath, extension = "json") => {
   const safe = String(filePath)
     .replace(/[^a-z0-9_-]+/gi, "-")
     .replace(/^-+|-+$/g, "");
-  return safe ? `report-${safe}.json` : "report.json";
+  const normalizedExtension = extension === "html" ? "html" : "json";
+  return safe ? `report-${safe}.${normalizedExtension}` : `report.${normalizedExtension}`;
 };
 
 const renderRules = () => {
@@ -84,14 +85,19 @@ const renderFiles = () => {
       const topRules = file.rules.slice(0, 3).map((rule) => `${rule.ruleId} (${rule.count})`).join(", ");
       const severities = formatCounts(file.severities ?? [], "severity");
       const downloadUrl = `/report/file?path=${encodeURIComponent(file.filePath)}`;
+      const downloadHtmlUrl = `/report/file?path=${encodeURIComponent(file.filePath)}&format=html`;
       const downloadName = buildDownloadName(file.filePath);
+      const downloadHtmlName = buildDownloadName(file.filePath, "html");
       return `
         <tr>
           <td>${file.filePath}</td>
           <td>${file.issueCount}</td>
           <td>${topRules || "—"}</td>
           <td>${severities}</td>
-          <td><a class="pill-button" href="${downloadUrl}" download="${downloadName}">Save JSON</a></td>
+          <td>
+            <a class="pill-button" href="${downloadUrl}" download="${downloadName}">Save JSON</a>
+            <a class="pill-button pill-button--secondary" href="${downloadHtmlUrl}" download="${downloadHtmlName}">Save HTML</a>
+          </td>
         </tr>
       `;
     })

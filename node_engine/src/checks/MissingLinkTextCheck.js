@@ -2,12 +2,12 @@ const { getAttributeValue } = require("./AttributeParser");
 const { getLineNumber } = require("./TextUtilities");
 const { collectElementIds, hasAriaLabel, hasValidAriaLabelledBy, hasTitle, hasTextContent } = require("./AccessibleNameUtilities");
 
-const linkRegex = /<a(?<attrs>[^>]*)>(?<body>[\s\S]*?)<\/a>/gi;
-const imageRegex = /<img(?<attrs>[^>]*)>/gi;
+const linkRegex = /<a([^>]*)>([\s\S]*?)<\/a>/gi;
+const imageRegex = /<img([^>]*)>/gi;
 
 const hasImageAltText = (body) => {
   for (const match of body.matchAll(imageRegex)) {
-    const alt = getAttributeValue(match.groups?.attrs ?? "", "alt");
+    const alt = getAttributeValue(match[1], "alt");
     if (alt && alt.trim()) {
       return true;
     }
@@ -24,8 +24,8 @@ const MissingLinkTextCheck = {
     const elementIds = collectElementIds(context.content);
 
     for (const match of context.content.matchAll(linkRegex)) {
-      const attrs = match.groups?.attrs ?? "";
-      const body = match.groups?.body ?? "";
+      const attrs = match[1];
+      const body = match[2];
 
       const ariaLabel = getAttributeValue(attrs, "aria-label");
       const labelledBy = getAttributeValue(attrs, "aria-labelledby");

@@ -9,6 +9,7 @@ const {
   createForwarder,
   getDefaultConfig
 } = require("../extension/forwarder");
+const { createHighlighter, filterIssuesForPage } = require("../extension/highlighter");
 const { registerBackground, toggleExtension, setEnabledState, updateBadge } = require("../extension/background");
 const { createContentScript } = require("../extension/contentScript");
 
@@ -43,7 +44,7 @@ describe("Extension forwarder utilities", () => {
 
   test("creates forwarder that posts updates", async () => {
     const calls = [];
-    const fetchFn = jest.fn().mockResolvedValue({ ok: true });
+    const fetchFn = jest.fn().mockResolvedValue({ ok: true, json: jest.fn().mockResolvedValue({}) });
     const getConfig = jest.fn().mockResolvedValue({ serverUrl: DEFAULT_SERVER_URL });
 
     document.body.innerHTML = "<div>Test</div>";
@@ -95,7 +96,7 @@ describe("Extension forwarder utilities", () => {
 
   test("does not resend identical HTML and clears scheduled timers", async () => {
     jest.useFakeTimers();
-    const fetchFn = jest.fn().mockResolvedValue({ ok: true });
+    const fetchFn = jest.fn().mockResolvedValue({ ok: true, json: jest.fn().mockResolvedValue({}) });
     const getConfig = jest.fn().mockResolvedValue({ serverUrl: DEFAULT_SERVER_URL });
 
     document.body.innerHTML = "<div>Stable</div>";
@@ -126,6 +127,50 @@ describe("Extension forwarder utilities", () => {
 
     const config = await getDefaultConfig(storageApi);
     expect(config.serverUrl).toBe(DEFAULT_SERVER_URL);
+  });
+
+  test("invokes onReport callback when response contains JSON", async () => {
+    const report = { issues: [{ message: "Issue" }] };
+    const fetchFn = jest.fn().mockResolvedValue({
+      ok: true,
+      json: jest.fn().mockResolvedValue(report)
+    });
+    const getConfig = jest.fn().mockResolvedValue({ serverUrl: DEFAULT_SERVER_URL });
+    const onReport = jest.fn();
+
+    document.body.innerHTML = "<div>Test</div>";
+    const forwarder = createForwarder({
+      fetchFn,
+      documentRoot: document,
+      location: window.location,
+      getConfig,
+      onReport
+    });
+
+    await forwarder.send();
+    expect(onReport).toHaveBeenCalledWith(report);
+  });
+
+  test("warns when capture response JSON parsing fails", async () => {
+    const warnSpy = jest.spyOn(console, "warn").mockImplementation(() => {});
+    const fetchFn = jest.fn().mockResolvedValue({
+      ok: true,
+      json: jest.fn().mockRejectedValue(new Error("bad json"))
+    });
+    const getConfig = jest.fn().mockResolvedValue({ serverUrl: DEFAULT_SERVER_URL });
+
+    document.body.innerHTML = "<div>Test</div>";
+    const forwarder = createForwarder({
+      fetchFn,
+      documentRoot: document,
+      location: window.location,
+      getConfig,
+      onReport: jest.fn()
+    });
+
+    await forwarder.send();
+    expect(warnSpy).toHaveBeenCalled();
+    warnSpy.mockRestore();
   });
 });
 
@@ -175,6 +220,13 @@ describe("Extension background", () => {
     expect(chromeApi.action.setBadgeText).toHaveBeenCalled();
   });
 
+  test("ignores tab messaging errors when toggling", async () => {
+    const chromeApi = createChrome();
+    chromeApi.tabs.sendMessage = jest.fn(() => Promise.reject(new Error("no content script")));
+    await setEnabledState(chromeApi, true, 1);
+    expect(chromeApi.storage.local.set).toHaveBeenCalledWith({ enabled: true });
+  });
+
   test("registers background listeners", () => {
     const chromeApi = createChrome();
     registerBackground(chromeApi);
@@ -216,7 +268,7 @@ describe("Extension background", () => {
 describe("Extension content script", () => {
   test("starts and stops based on toggle", async () => {
     jest.useFakeTimers();
-    const fetchFn = jest.fn().mockResolvedValue({ ok: true });
+    const fetchFn = jest.fn().mockResolvedValue({ ok: true, json: jest.fn().mockResolvedValue({}) });
     const messageListeners = [];
     const observers = [];
     const originalObserver = window.MutationObserver;
@@ -240,6 +292,10 @@ describe("Extension content script", () => {
       }
     };
 
+    globalThis.AdaHighlighter = {
+      createHighlighter: jest.fn(() => ({ applyHighlights: jest.fn(), clearHighlights: jest.fn() })),
+      filterIssuesForPage: jest.fn((issues) => issues ?? [])
+    };
     const script = createContentScript({ chromeApi, documentRoot: document, windowObj: window, fetchFn });
 
     expect(script.getObserver()).toBeNull();
@@ -269,6 +325,10 @@ describe("Extension content script", () => {
       })),
       getDefaultConfig: jest.fn(() => Promise.resolve({ serverUrl: DEFAULT_SERVER_URL }))
     };
+    globalThis.AdaHighlighter = {
+      createHighlighter: jest.fn(() => ({ applyHighlights: jest.fn(), clearHighlights: jest.fn() })),
+      filterIssuesForPage: jest.fn((issues) => issues ?? [])
+    };
 
     createContentScript({ chromeApi, documentRoot: document, windowObj: window, fetchFn: jest.fn() });
     await new Promise((resolve) => setTimeout(resolve, 0));
@@ -292,22 +352,55 @@ describe("Extension content script", () => {
       }
     };
 
+    globalThis.AdaHighlighter = {
+      createHighlighter: jest.fn(() => ({ applyHighlights: jest.fn(), clearHighlights: jest.fn() })),
+      filterIssuesForPage: jest.fn((issues) => issues ?? [])
+    };
     const script = createContentScript({ chromeApi, documentRoot: document, windowObj: window, fetchFn: jest.fn() });
     messageListeners[0]({ type: "noop" });
     expect(script.getObserver()).toBeNull();
   });
 
   test("auto-starts when enabled in storage", () => {
-    const fetchFn = jest.fn().mockResolvedValue({ ok: true });
+    const fetchFn = jest.fn().mockResolvedValue({ ok: true, json: jest.fn().mockResolvedValue({}) });
     const chromeApi = {
       runtime: { onMessage: { addListener: jest.fn() } },
       storage: { local: { get: (defaults, callback) => callback({ enabled: true, serverUrl: DEFAULT_SERVER_URL }) } }
+    };
+    globalThis.AdaHighlighter = {
+      createHighlighter: jest.fn(() => ({ applyHighlights: jest.fn(), clearHighlights: jest.fn() })),
+      filterIssuesForPage: jest.fn((issues) => issues ?? [])
     };
 
     const script = createContentScript({ chromeApi, documentRoot: document, windowObj: window, fetchFn });
     expect(script.getObserver()).not.toBeNull();
     script.stop();
     expect(script.getObserver()).toBeNull();
+  });
+
+  test("applies highlights when report payload arrives", () => {
+    jest.resetModules();
+    const applyHighlights = jest.fn();
+    globalThis.AdaHighlighter = {
+      createHighlighter: jest.fn(() => ({ applyHighlights, clearHighlights: jest.fn() })),
+      filterIssuesForPage: jest.fn((issues) => issues)
+    };
+    globalThis.AdaForwarder = {
+      createForwarder: jest.fn((options) => {
+        options.onReport({ issues: [{ message: "Issue" }] });
+        return { schedule: jest.fn(), send: jest.fn(() => Promise.resolve()) };
+      }),
+      getDefaultConfig: jest.fn(() => Promise.resolve({ serverUrl: DEFAULT_SERVER_URL }))
+    };
+
+    const chromeApi = {
+      runtime: { onMessage: { addListener: jest.fn() } },
+      storage: { local: { get: (defaults, callback) => callback({ enabled: false, serverUrl: DEFAULT_SERVER_URL }) } }
+    };
+
+    const { createContentScript: reloadedCreateContentScript } = require("../extension/contentScript");
+    reloadedCreateContentScript({ chromeApi, documentRoot: document, windowObj: window, fetchFn: jest.fn() });
+    expect(applyHighlights).toHaveBeenCalledWith([{ message: "Issue" }]);
   });
 
   test("auto-registers content script when chrome global is present", () => {
@@ -318,6 +411,10 @@ describe("Extension content script", () => {
     };
     const mockFetch = jest.fn().mockResolvedValue({ ok: true });
     global.window.fetch = mockFetch;
+    globalThis.AdaHighlighter = {
+      createHighlighter: jest.fn(() => ({ applyHighlights: jest.fn(), clearHighlights: jest.fn() })),
+      filterIssuesForPage: jest.fn((issues) => issues ?? [])
+    };
     require("../extension/contentScript");
     delete global.chrome;
   });
@@ -326,6 +423,24 @@ describe("Extension content script", () => {
     jest.resetModules();
     const errorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
     delete globalThis.AdaForwarder;
+    delete globalThis.AdaHighlighter;
+
+    jest.isolateModules(() => {
+      require("../extension/contentScript");
+    });
+
+    expect(errorSpy).toHaveBeenCalled();
+    errorSpy.mockRestore();
+  });
+
+  test("exits early when highlighter is missing", () => {
+    jest.resetModules();
+    const errorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+    globalThis.AdaForwarder = {
+      createForwarder: jest.fn(() => ({ schedule: jest.fn(), send: jest.fn(() => Promise.resolve()) })),
+      getDefaultConfig: jest.fn(() => Promise.resolve({ serverUrl: DEFAULT_SERVER_URL }))
+    };
+    delete globalThis.AdaHighlighter;
 
     jest.isolateModules(() => {
       require("../extension/contentScript");
@@ -342,6 +457,10 @@ describe("Extension content script", () => {
       createForwarder: jest.fn(() => ({ schedule: jest.fn(), send: jest.fn(() => Promise.resolve()) })),
       getDefaultConfig: jest.fn(() => Promise.resolve({ serverUrl: DEFAULT_SERVER_URL }))
     };
+    globalThis.AdaHighlighter = {
+      createHighlighter: jest.fn(() => ({ applyHighlights: jest.fn(), clearHighlights: jest.fn() })),
+      filterIssuesForPage: jest.fn((issues) => issues ?? [])
+    };
     global.chrome = {
       runtime: { onMessage: { addListener: jest.fn() } },
       storage: { local: { get: jest.fn((defaults, callback) => callback({ enabled: false })) } }
@@ -357,5 +476,114 @@ describe("Extension content script", () => {
 
     delete global.chrome;
     logSpy.mockRestore();
+  });
+});
+
+describe("Extension highlighter", () => {
+  test("applies and clears highlights using selectors", () => {
+    document.body.innerHTML = "<button id=\"save\" title=\"Original\">Save</button>";
+    const highlighter = createHighlighter({ documentRoot: document });
+
+    highlighter.applyHighlights([{ selector: "#save", message: "Missing label" }]);
+    const button = document.getElementById("save");
+    expect(button.classList.contains("ada-highlight")).toBe(true);
+    expect(button.getAttribute("data-ada-issue-count")).toBe("1");
+    expect(button.getAttribute("title")).toContain("Missing label");
+
+    highlighter.clearHighlights();
+    expect(button.classList.contains("ada-highlight")).toBe(false);
+    expect(button.getAttribute("title")).toBe("Original");
+  });
+
+  test("applies highlights based on evidence and filters by page URL", () => {
+    document.body.innerHTML = "<input id=\"email\" type=\"email\" />";
+    const highlighter = createHighlighter({ documentRoot: document });
+    const issues = [
+      { evidence: "<input id=\"email\" type=\"email\" />", message: "Missing label", filePath: window.location.href },
+      { message: "Other", filePath: "http://other" },
+      { selector: "#email", message: "No file path issue" }
+    ];
+
+    const filtered = filterIssuesForPage(issues, window.location.href);
+    expect(filtered).toHaveLength(2);
+    highlighter.applyHighlights(filtered);
+
+    const input = document.getElementById("email");
+    expect(input.classList.contains("ada-highlight")).toBe(true);
+  });
+
+  test("handles invalid selectors, long evidence, and missing titles", () => {
+    document.body.innerHTML = "<div class=\"card\"></div>";
+    const highlighter = createHighlighter({ documentRoot: document });
+
+    highlighter.applyHighlights([
+      { selector: "div[", message: "Bad selector" },
+      { evidence: "x".repeat(2500), message: "Too long" }
+    ]);
+
+    const card = document.querySelector(".card");
+    expect(card.classList.contains("ada-highlight")).toBe(false);
+
+    highlighter.applyHighlights([{ evidence: "<div class=\"card\"></div>", message: "Card issue" }]);
+    expect(card.classList.contains("ada-highlight")).toBe(true);
+
+    highlighter.clearHighlights();
+    expect(card.hasAttribute("title")).toBe(false);
+  });
+
+  test("uses CSS.escape when available", () => {
+    const originalCss = globalThis.CSS;
+    globalThis.CSS = { escape: (value) => value };
+    document.body.innerHTML = "<span id=\"status\"></span>";
+    const highlighter = createHighlighter({ documentRoot: document });
+    highlighter.applyHighlights([{ evidence: "<span id=\"status\"></span>", message: "Issue" }]);
+    const target = document.getElementById("status");
+    expect(target.classList.contains("ada-highlight")).toBe(true);
+    globalThis.CSS = originalCss;
+  });
+
+  test("falls back when CSS.escape is unavailable and skips empty highlights", () => {
+    const originalCss = globalThis.CSS;
+    globalThis.CSS = undefined;
+    document.body.innerHTML = "<span id=\"status:1\"></span>";
+    const highlighter = createHighlighter({ documentRoot: document });
+
+    highlighter.applyHighlights([]);
+    const target = document.getElementById("status:1");
+    expect(target.classList.contains("ada-highlight")).toBe(false);
+
+    highlighter.applyHighlights([{ evidence: "<span id=\"status:1\"></span>", message: "Issue" }]);
+    expect(target.classList.contains("ada-highlight")).toBe(true);
+    globalThis.CSS = originalCss;
+  });
+
+  test("resolves evidence attributes and ignores non-html evidence", () => {
+    document.body.innerHTML = `
+      <a href="/home" aria-label="Home" role="link">Home</a>
+      <input name="email" type="email" />
+    `;
+    const highlighter = createHighlighter({ documentRoot: document });
+
+    const linkTargets = highlighter.resolveTargets(document, {
+      evidence: "<a href=\"/home\" aria-label=\"Home\" role=\"link\">Home</a>"
+    });
+    const inputTargets = highlighter.resolveTargets(document, {
+      evidence: "<input name=\"email\" type=\"email\" />"
+    });
+    const emptyTargets = highlighter.resolveTargets(document, { evidence: "plain text" });
+
+    expect(linkTargets).toHaveLength(1);
+    expect(inputTargets).toHaveLength(1);
+    expect(emptyTargets).toHaveLength(0);
+    expect(highlighter.resolveTargets(document, null)).toEqual([]);
+  });
+
+  test("returns empty targets for invalid or unmatched evidence", () => {
+    document.body.innerHTML = "<div></div>";
+    const highlighter = createHighlighter({ documentRoot: document });
+
+    expect(highlighter.resolveTargets(document, { evidence: "<section></section>" })).toEqual([]);
+    expect(highlighter.resolveTargets(document, { evidence: "<>" })).toEqual([]);
+    expect(highlighter.resolveTargets(document, {})).toEqual([]);
   });
 });

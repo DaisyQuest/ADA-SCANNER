@@ -30,3 +30,4 @@
 2026-01-08 - Enhanced runtime reporting, UI exports, and expanded backend rules with exhaustive tests (SPEC-010, SPEC-008, SPEC-013)
 
 2026-01-08 - Selected team BACKEND; added empty heading check to node engine with tests. (SPEC-008, SPEC-013)
+2026-01-08 - Added HTML runtime reports and in-page issue highlighting for runtime captures with expanded tests. (SPEC-010, SPEC-019)

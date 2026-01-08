@@ -4,10 +4,17 @@
     return;
   }
 
+  if (!globalThis.AdaHighlighter) {
+    console.error("[ADA] AdaHighlighter not found. Is highlighter.js loaded first?");
+    return;
+  }
+
   const { createForwarder, getDefaultConfig } = globalThis.AdaForwarder;
+  const { createHighlighter, filterIssuesForPage } = globalThis.AdaHighlighter;
 
   const createContentScript = ({ chromeApi, documentRoot, windowObj, fetchFn }) => {
     let observer = null;
+    const highlighter = createHighlighter({ documentRoot });
 
     const getConfig = async () => {
       const config = await getDefaultConfig(chromeApi.storage.local);
@@ -19,7 +26,11 @@
       fetchFn,
       documentRoot,
       location: windowObj.location,
-      getConfig
+      getConfig,
+      onReport: (payload) => {
+        const issues = filterIssuesForPage(payload?.issues, windowObj.location.href);
+        highlighter.applyHighlights(issues);
+      }
     });
 
     const start = () => {
@@ -56,6 +67,7 @@
       }
       observer.disconnect();
       observer = null;
+      highlighter.clearHighlights();
       console.log("[ADA] stopped");
     };
 

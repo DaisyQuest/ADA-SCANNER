@@ -1,13 +1,13 @@
-const labelForRegex = /<label[^>]*for="(?<id>[^"]+)"[^>]*>/gi;
+const labelForRegex = /<label[^>]*for="([^"]+)"[^>]*>/gi;
 const labelRangeRegex = /<label[^>]*>.*?<\/label>/gsi;
-const idRegex = /id\s*=\s*"(?<id>[^"]+)"/gi;
+const idRegex = /id\s*=\s*"([^"]+)"/gi;
 const tagRegex = /<[^>]+>/g;
 
 const collectLabelForIds = (content) => {
   const ids = new Set();
   for (const match of content.matchAll(labelForRegex)) {
-    const id = match.groups?.id;
-    if (id?.trim()) {
+    const id = match[1];
+    if (id && id.trim()) {
       ids.add(id.toLowerCase());
     }
   }
@@ -27,8 +27,8 @@ const collectLabelRanges = (content) => {
 const collectElementIds = (content) => {
   const ids = new Set();
   for (const match of content.matchAll(idRegex)) {
-    const id = match.groups?.id;
-    if (id?.trim()) {
+    const id = match[1];
+    if (id && id.trim()) {
       ids.add(id.toLowerCase());
     }
   }

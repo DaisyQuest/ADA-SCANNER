@@ -128,5 +128,6 @@ describe("Coverage extras", () => {
     expect(engine.RuntimeScanner).toBeDefined();
     expect(engine.ListenerServer).toBeDefined();
     expect(engine.ReportBuilder).toBeDefined();
+    expect(engine.HtmlReportBuilder).toBeDefined();
   });
 });
