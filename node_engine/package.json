@@ -1,0 +1,14 @@
+{
+  "name": "ada-scanner-node-engine",
+  "version": "0.1.0",
+  "description": "Node-based runtime scanning engine for ADA WCAG 2.0 AA checks.",
+  "main": "src/index.js",
+  "type": "commonjs",
+  "scripts": {
+    "test": "jest --coverage"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^29.7.0"
+  }
+}
