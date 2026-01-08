@@ -54,6 +54,21 @@ public sealed class RuntimeCaptureListener : IRuntimeDocumentSource
 
                 var context = await contextTask.ConfigureAwait(false);
                 Log(captureOptions, $"Runtime capture request received: {context.Request.HttpMethod} {context.Request.RawUrl}.");
+                if (IsPreflightRequest(context.Request))
+                {
+                    if (!IsValidPreflightPath(context.Request, path, out var preflightStatus, out var preflightMessage))
+                    {
+                        Log(captureOptions, $"Runtime capture request rejected: {preflightStatus} {preflightMessage}");
+                        await WriteResponseAsync(context.Response, preflightStatus, preflightMessage, sampled: false, capturedUrl: null)
+                            .ConfigureAwait(false);
+                        continue;
+                    }
+
+                    Log(captureOptions, "Runtime capture preflight accepted.");
+                    await WritePreflightResponseAsync(context.Response).ConfigureAwait(false);
+                    continue;
+                }
+
                 if (!IsValidRequest(context.Request, path, captureOptions.AccessToken, out var errorStatus, out var errorMessage))
                 {
                     Log(captureOptions, $"Runtime capture request rejected: {errorStatus} {errorMessage}");
@@ -126,6 +141,25 @@ public sealed class RuntimeCaptureListener : IRuntimeDocumentSource
         return $"http://{resolvedHost}:{port}/";
     }
 
+    private static bool IsValidPreflightPath(
+        HttpListenerRequest request,
+        string path,
+        out HttpStatusCode status,
+        out string message)
+    {
+        var requestPath = request.Url?.AbsolutePath ?? string.Empty;
+        if (!requestPath.Equals(path, StringComparison.OrdinalIgnoreCase))
+        {
+            status = HttpStatusCode.NotFound;
+            message = "Unknown capture path.";
+            return false;
+        }
+
+        status = HttpStatusCode.NoContent;
+        message = string.Empty;
+        return true;
+    }
+
     private static bool IsValidRequest(
         HttpListenerRequest request,
         string path,
@@ -167,6 +201,11 @@ public sealed class RuntimeCaptureListener : IRuntimeDocumentSource
     private static bool HttpMethodsMatch(HttpListenerRequest request, string method)
     {
         return request.HttpMethod.Equals(method, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsPreflightRequest(HttpListenerRequest request)
+    {
+        return HttpMethodsMatch(request, "OPTIONS");
     }
 
     private static void Log(RuntimeCaptureOptions options, string message)
@@ -229,6 +268,7 @@ public sealed class RuntimeCaptureListener : IRuntimeDocumentSource
         bool sampled,
         string? capturedUrl)
     {
+        ApplyCorsHeaders(response);
         response.StatusCode = (int)statusCode;
         response.ContentType = "application/json";
 
@@ -244,6 +284,22 @@ public sealed class RuntimeCaptureListener : IRuntimeDocumentSource
         response.ContentLength64 = buffer.Length;
         await response.OutputStream.WriteAsync(buffer).ConfigureAwait(false);
         response.OutputStream.Close();
+    }
+
+    private static Task WritePreflightResponseAsync(HttpListenerResponse response)
+    {
+        ApplyCorsHeaders(response);
+        response.StatusCode = (int)HttpStatusCode.NoContent;
+        response.ContentLength64 = 0;
+        response.OutputStream.Close();
+        return Task.CompletedTask;
+    }
+
+    private static void ApplyCorsHeaders(HttpListenerResponse response)
+    {
+        response.Headers["Access-Control-Allow-Origin"] = "*";
+        response.Headers["Access-Control-Allow-Methods"] = "POST, OPTIONS";
+        response.Headers["Access-Control-Allow-Headers"] = "Content-Type, X-Ada-Scanner-Token";
     }
 
     private sealed class RuntimeCapturePayload

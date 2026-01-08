@@ -1,4 +1,5 @@
 using System.Net;
+using System.Linq;
 using System.Text;
 using System.Text.Json;
 using Scanner.Core.Runtime;
@@ -63,6 +64,7 @@ public sealed class RuntimeCaptureListenerTests
             new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json"));
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        AssertCorsHeaders(response);
         var hasDocument = await moveTask;
 
         Assert.True(hasDocument);
@@ -103,6 +105,7 @@ public sealed class RuntimeCaptureListenerTests
             new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json"));
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        AssertCorsHeaders(response);
         Assert.True(await moveTask);
         Assert.False(await enumerator.MoveNextAsync());
 
@@ -142,6 +145,7 @@ public sealed class RuntimeCaptureListenerTests
             new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json"));
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        AssertCorsHeaders(response);
         var hasDocument = await moveTask;
 
         Assert.True(hasDocument);
@@ -177,6 +181,7 @@ public sealed class RuntimeCaptureListenerTests
             new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json"));
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        AssertCorsHeaders(response);
         var hasDocument = await moveTask.WaitAsync(TimeSpan.FromSeconds(2));
 
         Assert.False(hasDocument);
@@ -207,6 +212,7 @@ public sealed class RuntimeCaptureListenerTests
         var response = await client.GetAsync($"http://127.0.0.1:{port}/capture");
 
         Assert.Equal(HttpStatusCode.MethodNotAllowed, response.StatusCode);
+        AssertCorsHeaders(response);
         var hasDocument = await moveTask.WaitAsync(TimeSpan.FromSeconds(2));
 
         Assert.False(hasDocument);
@@ -242,6 +248,7 @@ public sealed class RuntimeCaptureListenerTests
             new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json"));
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        AssertCorsHeaders(response);
 
         var request = new HttpRequestMessage(HttpMethod.Post, $"http://127.0.0.1:{port}/capture")
         {
@@ -251,6 +258,7 @@ public sealed class RuntimeCaptureListenerTests
         var authorizedResponse = await client.SendAsync(request);
 
         Assert.Equal(HttpStatusCode.OK, authorizedResponse.StatusCode);
+        AssertCorsHeaders(authorizedResponse);
         var hasDocument = await moveTask;
 
         Assert.True(hasDocument);
@@ -289,6 +297,7 @@ public sealed class RuntimeCaptureListenerTests
         using var document = JsonDocument.Parse(responseJson);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        AssertCorsHeaders(response);
         Assert.False(document.RootElement.GetProperty("sampled").GetBoolean());
 
         var hasDocument = await moveTask.WaitAsync(TimeSpan.FromSeconds(2));
@@ -327,6 +336,7 @@ public sealed class RuntimeCaptureListenerTests
         using var document = JsonDocument.Parse(responseJson);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        AssertCorsHeaders(response);
         Assert.True(document.RootElement.GetProperty("sampled").GetBoolean());
 
         var hasDocument = await moveTask;
@@ -360,6 +370,7 @@ public sealed class RuntimeCaptureListenerTests
             new StringContent("not-json", Encoding.UTF8, "application/json"));
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        AssertCorsHeaders(response);
 
         var hasDocument = await moveTask.WaitAsync(TimeSpan.FromSeconds(2));
         Assert.False(hasDocument);
@@ -394,6 +405,7 @@ public sealed class RuntimeCaptureListenerTests
             new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json"));
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        AssertCorsHeaders(response);
 
         var hasDocument = await moveTask.WaitAsync(TimeSpan.FromSeconds(2));
         Assert.False(hasDocument);
@@ -412,5 +424,44 @@ public sealed class RuntimeCaptureListenerTests
         {
             return _value;
         }
+    }
+
+    [Fact]
+    public async Task CaptureListener_AllowsPreflightRequests()
+    {
+        var port = TestUtilities.GetAvailablePort();
+        var options = new RuntimeScanOptions
+        {
+            CaptureOptions = new RuntimeCaptureOptions
+            {
+                Port = port,
+                MaxDocuments = 1,
+                IdleTimeout = TimeSpan.FromMilliseconds(200)
+            },
+            SampleRate = 1.0,
+            Random = new Random(0)
+        };
+
+        var listener = new RuntimeCaptureListener();
+        await using var enumerator = listener.GetDocumentsAsync(options).GetAsyncEnumerator();
+        var moveTask = enumerator.MoveNextAsync().AsTask();
+        await Task.Delay(50);
+
+        using var client = new HttpClient();
+        var request = new HttpRequestMessage(HttpMethod.Options, $"http://127.0.0.1:{port}/capture");
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        AssertCorsHeaders(response);
+
+        var hasDocument = await moveTask.WaitAsync(TimeSpan.FromSeconds(2));
+        Assert.False(hasDocument);
+    }
+
+    private static void AssertCorsHeaders(HttpResponseMessage response)
+    {
+        Assert.Equal("*", response.Headers.GetValues("Access-Control-Allow-Origin").Single());
+        Assert.Equal("POST, OPTIONS", response.Headers.GetValues("Access-Control-Allow-Methods").Single());
+        Assert.Equal("Content-Type, X-Ada-Scanner-Token", response.Headers.GetValues("Access-Control-Allow-Headers").Single());
     }
 }
