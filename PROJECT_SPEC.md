@@ -67,3 +67,6 @@ All requirements are listed as uniquely identified, verbose statements. Each `SP
 
 - SPEC-018: Provide guidance for safe commits without conflicts, including branch usage, folder ownership, and merge coordination.
   - Rationale: Prevents multi-team conflicts.
+
+- SPEC-019: Support runtime scanning of HTML captured from an arbitrary browser window via a localhost listener and manual capture snippet, without browser automation.
+  - Rationale: Enables scanning of dynamic or authenticated pages that are already open in a browser.

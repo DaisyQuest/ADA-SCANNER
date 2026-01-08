@@ -84,4 +84,9 @@ public sealed class RuntimeScanOptions
     /// Gets the optional form configuration store used for auto-submission.
     /// </summary>
     public RuntimeFormConfigurationStore? FormConfigurationStore { get; init; }
+
+    /// <summary>
+    /// Gets the optional capture options for browser-posted HTML documents.
+    /// </summary>
+    public RuntimeCaptureOptions? CaptureOptions { get; init; }
 }

@@ -2,6 +2,15 @@ namespace Scanner.Tests;
 
 public static class TestUtilities
 {
+    public static int GetAvailablePort()
+    {
+        var listener = new System.Net.Sockets.TcpListener(System.Net.IPAddress.Loopback, 0);
+        listener.Start();
+        var port = ((System.Net.IPEndPoint)listener.LocalEndpoint).Port;
+        listener.Stop();
+        return port;
+    }
+
     public static string CreateTempDirectory()
     {
         var path = Path.Combine(Path.GetTempPath(), "ada-scanner", Guid.NewGuid().ToString("N"));

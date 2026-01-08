@@ -20,3 +20,4 @@ All checklist items mirror `PROJECT_SPEC.md` identifiers. Items are checked **on
 - [ ] SPEC-016 Directory layout documented with all team rule folders listed.
 - [ ] SPEC-017 Team selection rules documented and followed.
 - [ ] SPEC-018 Safe commit workflow documented and followed.
+- [ ] SPEC-019 Runtime scanning accepts browser-captured HTML via localhost listener without automation.
