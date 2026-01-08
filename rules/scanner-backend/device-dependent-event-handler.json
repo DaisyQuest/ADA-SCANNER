@@ -1,0 +1,10 @@
+{
+  "id": "device-dependent-event-001",
+  "description": "Ensure mouse-specific event handlers have keyboard equivalents.",
+  "severity": "medium",
+  "checkId": "device-dependent-event-handler",
+  "appliesTo": "html, htm, cshtml, razor",
+  "recommendation": "Add keyboard and focus event handlers alongside mouse-specific handlers.",
+  "wcagCriteria": "2.1.1",
+  "problemTags": "input"
+}

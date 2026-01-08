@@ -13,6 +13,13 @@ const { MissingPageTitleCheck } = require("../src/checks/MissingPageTitleCheck")
 const { MissingTableHeaderCheck } = require("../src/checks/MissingTableHeaderCheck");
 const { MissingAltTextCheck } = require("../src/checks/MissingAltTextCheck");
 const { MissingLinkTextCheck, hasImageAltText } = require("../src/checks/MissingLinkTextCheck");
+const { EmptyFormLabelCheck } = require("../src/checks/EmptyFormLabelCheck");
+const { OrphanedFormLabelCheck } = require("../src/checks/OrphanedFormLabelCheck");
+const { EmptyLinkCheck, isLink } = require("../src/checks/EmptyLinkCheck");
+const { MissingHeadingStructureCheck } = require("../src/checks/MissingHeadingStructureCheck");
+const { DeviceDependentEventHandlerCheck, containsAny } = require("../src/checks/DeviceDependentEventHandlerCheck");
+const { RedundantTitleTextCheck, normalize, textMatches } = require("../src/checks/RedundantTitleTextCheck");
+const { LayoutTableCheck } = require("../src/checks/LayoutTableCheck");
 const { MissingIframeTitleCheck } = require("../src/checks/MissingIframeTitleCheck");
 const { MissingFieldsetLegendCheck } = require("../src/checks/MissingFieldsetLegendCheck");
 const {
@@ -245,6 +252,142 @@ describe("MissingSkipLinkCheck", () => {
       "html"
     );
     expect(MissingSkipLinkCheck.run(titleLabel, rule)).toHaveLength(0);
+  });
+});
+
+describe("EmptyFormLabelCheck", () => {
+  test("detects labels without readable content", () => {
+    const emptyLabel = createContext('<label for="name"></label><input id="name" />', "html");
+    expect(EmptyFormLabelCheck.run(emptyLabel, rule)).toHaveLength(1);
+
+    const textLabel = createContext('<label for="name">Name</label><input id="name" />', "html");
+    expect(EmptyFormLabelCheck.run(textLabel, rule)).toHaveLength(0);
+
+    const ariaLabel = createContext('<label aria-label="Name" for="name"></label><input id="name" />', "html");
+    expect(EmptyFormLabelCheck.run(ariaLabel, rule)).toHaveLength(0);
+
+    const labelledBy = createContext(
+      '<span id="label">Name</span><label aria-labelledby="label" for="name"></label><input id="name" />',
+      "html"
+    );
+    expect(EmptyFormLabelCheck.run(labelledBy, rule)).toHaveLength(0);
+
+    const titled = createContext('<label title="Name" for="name"></label><input id="name" />', "html");
+    expect(EmptyFormLabelCheck.run(titled, rule)).toHaveLength(0);
+  });
+});
+
+describe("OrphanedFormLabelCheck", () => {
+  test("detects labels that reference missing controls", () => {
+    const missing = createContext('<label for="missing">Name</label>', "html");
+    expect(OrphanedFormLabelCheck.run(missing, rule)).toHaveLength(1);
+
+    const matching = createContext('<label for="name">Name</label><input id="name" />', "html");
+    expect(OrphanedFormLabelCheck.run(matching, rule)).toHaveLength(0);
+
+    const blank = createContext('<label for=" "></label>', "html");
+    expect(OrphanedFormLabelCheck.run(blank, rule)).toHaveLength(0);
+  });
+});
+
+describe("EmptyLinkCheck", () => {
+  test("detects links with no accessible name", () => {
+    const emptyLink = createContext('<a href="/home"></a>', "html");
+    expect(EmptyLinkCheck.run(emptyLink, rule)).toHaveLength(1);
+
+    const textLink = createContext('<a href="/home">Home</a>', "html");
+    expect(EmptyLinkCheck.run(textLink, rule)).toHaveLength(0);
+
+    const labelled = createContext('<a href="/home" aria-label="Home"></a>', "html");
+    expect(EmptyLinkCheck.run(labelled, rule)).toHaveLength(0);
+
+    const labelledBy = createContext('<span id="home">Home</span><a href="/home" aria-labelledby="home"></a>', "html");
+    expect(EmptyLinkCheck.run(labelledBy, rule)).toHaveLength(0);
+
+    const titled = createContext('<a href="/home" title="Home"></a>', "html");
+    expect(EmptyLinkCheck.run(titled, rule)).toHaveLength(0);
+
+    const notLink = createContext("<a></a>", "html");
+    expect(EmptyLinkCheck.run(notLink, rule)).toHaveLength(0);
+  });
+
+  test("helper identifies link attributes", () => {
+    expect(isLink('href="/home"')).toBe(true);
+    expect(isLink('role="link"')).toBe(true);
+    expect(isLink("")).toBe(false);
+  });
+});
+
+describe("MissingHeadingStructureCheck", () => {
+  test("detects missing headings", () => {
+    const missing = createContext("<main></main>", "html");
+    expect(MissingHeadingStructureCheck.run(missing, rule)).toHaveLength(1);
+
+    const present = createContext("<main><h2>Title</h2></main>", "html");
+    expect(MissingHeadingStructureCheck.run(present, rule)).toHaveLength(0);
+  });
+});
+
+describe("DeviceDependentEventHandlerCheck", () => {
+  test("detects mouse handlers without keyboard equivalents", () => {
+    const clickOnly = createContext('<div onclick="go()"></div>', "html");
+    expect(DeviceDependentEventHandlerCheck.run(clickOnly, rule)).toHaveLength(1);
+
+    const clickWithKey = createContext('<div onclick="go()" onkeydown="go()"></div>', "html");
+    expect(DeviceDependentEventHandlerCheck.run(clickWithKey, rule)).toHaveLength(0);
+
+    const hoverOnly = createContext('<div onmouseover="show()"></div>', "html");
+    expect(DeviceDependentEventHandlerCheck.run(hoverOnly, rule)).toHaveLength(1);
+
+    const hoverWithFocus = createContext('<div onmouseover="show()" onfocus="show()"></div>', "html");
+    expect(DeviceDependentEventHandlerCheck.run(hoverWithFocus, rule)).toHaveLength(0);
+
+    const noHandlers = createContext("<div></div>", "html");
+    expect(DeviceDependentEventHandlerCheck.run(noHandlers, rule)).toHaveLength(0);
+  });
+
+  test("helper detects configured attributes", () => {
+    expect(containsAny('onclick="go()"', ["onclick"])).toBe(true);
+    expect(containsAny("", ["onclick"])).toBe(false);
+  });
+});
+
+describe("RedundantTitleTextCheck", () => {
+  test("detects duplicate title text", () => {
+    const duplicateAria = createContext('<span title="Info" aria-label="Info"></span>', "html");
+    expect(RedundantTitleTextCheck.run(duplicateAria, rule)).toHaveLength(1);
+
+    const duplicateText = createContext('<button title="Save">Save</button>', "html");
+    expect(RedundantTitleTextCheck.run(duplicateText, rule)).toHaveLength(1);
+
+    const distinct = createContext('<button title="Save changes">Save</button>', "html");
+    expect(RedundantTitleTextCheck.run(distinct, rule)).toHaveLength(0);
+
+    const emptyTitle = createContext('<span title=" "></span>', "html");
+    expect(RedundantTitleTextCheck.run(emptyTitle, rule)).toHaveLength(0);
+  });
+
+  test("helper normalization and matching", () => {
+    expect(normalize("  Hello   World ")).toBe("Hello World");
+    expect(textMatches("Hello", "")).toBe(false);
+    expect(textMatches("Hello", "Hello")).toBe(true);
+    expect(textMatches("Hello", "hello")).toBe(true);
+  });
+});
+
+describe("LayoutTableCheck", () => {
+  test("detects layout tables without headers or caption", () => {
+    const layout = createContext("<table><tr><td>Cell</td></tr></table>", "html");
+    expect(LayoutTableCheck.run(layout, rule)).toHaveLength(1);
+
+    const withHeaders = createContext("<table><tr><th>Header</th></tr></table>", "html");
+    expect(LayoutTableCheck.run(withHeaders, rule)).toHaveLength(0);
+
+    const withCaption = createContext("<table><caption>Data</caption><tr><td>Cell</td></tr></table>", "html");
+    expect(LayoutTableCheck.run(withCaption, rule)).toHaveLength(0);
+
+    const presentation = createContext('<table role="presentation"><tr><td>Cell</td></tr></table>', "html");
+    expect(LayoutTableCheck.run(presentation, rule)).toHaveLength(0);
   });
 });
 

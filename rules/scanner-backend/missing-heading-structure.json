@@ -1,0 +1,10 @@
+{
+  "id": "heading-structure-001",
+  "description": "Ensure documents include heading elements to convey structure.",
+  "severity": "low",
+  "checkId": "missing-heading-structure",
+  "appliesTo": "html, htm, cshtml, razor",
+  "recommendation": "Add meaningful heading elements (h1-h6) to structure the content.",
+  "wcagCriteria": "1.3.1",
+  "problemTags": "headings"
+}

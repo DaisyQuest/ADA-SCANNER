@@ -54,4 +54,16 @@ describe("RuleSchemaValidator", () => {
 
     expect(errors).toEqual([]);
   });
+
+  test("accepts newly supported check ids", () => {
+    const validator = new RuleSchemaValidator();
+    const errors = validator.validate({
+      id: "rule-3",
+      description: "desc",
+      severity: "medium",
+      checkId: "empty-link"
+    });
+
+    expect(errors).toEqual([]);
+  });
 });

@@ -16,6 +16,13 @@ const { MissingLinkTextCheck } = require("./MissingLinkTextCheck");
 const { MissingIframeTitleCheck } = require("./MissingIframeTitleCheck");
 const { MissingFieldsetLegendCheck } = require("./MissingFieldsetLegendCheck");
 const { MissingSkipLinkCheck } = require("./MissingSkipLinkCheck");
+const { EmptyFormLabelCheck } = require("./EmptyFormLabelCheck");
+const { OrphanedFormLabelCheck } = require("./OrphanedFormLabelCheck");
+const { EmptyLinkCheck } = require("./EmptyLinkCheck");
+const { MissingHeadingStructureCheck } = require("./MissingHeadingStructureCheck");
+const { DeviceDependentEventHandlerCheck } = require("./DeviceDependentEventHandlerCheck");
+const { RedundantTitleTextCheck } = require("./RedundantTitleTextCheck");
+const { LayoutTableCheck } = require("./LayoutTableCheck");
 
 class CheckRegistry {
   constructor(checks = []) {
@@ -59,7 +66,14 @@ const createDefaultCheckRegistry = () =>
     MissingLinkTextCheck,
     MissingIframeTitleCheck,
     MissingFieldsetLegendCheck,
-    MissingSkipLinkCheck
+    MissingSkipLinkCheck,
+    EmptyFormLabelCheck,
+    OrphanedFormLabelCheck,
+    EmptyLinkCheck,
+    MissingHeadingStructureCheck,
+    DeviceDependentEventHandlerCheck,
+    RedundantTitleTextCheck,
+    LayoutTableCheck
   ]);
 
 module.exports = { CheckRegistry, createDefaultCheckRegistry };

@@ -1,0 +1,10 @@
+{
+  "id": "redundant-title-001",
+  "description": "Ensure title attributes do not duplicate existing accessible text.",
+  "severity": "low",
+  "checkId": "redundant-title-text",
+  "appliesTo": "html, htm, cshtml, razor",
+  "recommendation": "Remove redundant title attributes or keep them distinct from visible text.",
+  "wcagCriteria": "2.4.4",
+  "problemTags": "titles"
+}

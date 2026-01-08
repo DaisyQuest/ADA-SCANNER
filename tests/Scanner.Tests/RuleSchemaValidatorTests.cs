@@ -67,6 +67,17 @@ public sealed class RuleSchemaValidatorTests
     }
 
     [Fact]
+    public void Validate_AllowsNewAccessibilityChecks()
+    {
+        var rule = new RuleDefinition("rule-2", "Links", "medium", "empty-link");
+        var validator = new RuleSchemaValidator();
+
+        var errors = validator.Validate(rule);
+
+        Assert.Empty(errors);
+    }
+
+    [Fact]
     public void Validate_RejectsInvalidWcagCriteria()
     {
         var rule = new RuleDefinition(

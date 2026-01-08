@@ -17,7 +17,14 @@ const AllowedChecks = new Set([
   "missing-link-text",
   "missing-iframe-title",
   "missing-fieldset-legend",
-  "missing-skip-link"
+  "missing-skip-link",
+  "empty-form-label",
+  "orphaned-form-label",
+  "empty-link",
+  "missing-heading-structure",
+  "device-dependent-event-handler",
+  "redundant-title-text",
+  "layout-table"
 ]);
 const AllowedAppliesTo = new Set(["xaml", "cshtml", "razor", "html", "htm", "css"]);
 
