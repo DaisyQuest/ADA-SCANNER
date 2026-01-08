@@ -197,6 +197,51 @@ public sealed class RunAdaScanTests
     }
 
     [Fact]
+    public void Run_FailsWithUsageWhenRuntimeCapturePortInvalid()
+    {
+        var output = new StringWriter();
+        var error = new StringWriter();
+        var runner = new AdaScanRunner(output, error);
+
+        var code = runner.Run(new[] { "--runtime-capture-port", "70000" });
+
+        Assert.Equal(1, code);
+        Assert.Contains("Invalid runtime capture port", error.ToString(), StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Run_FailsWhenRuntimeCaptureSettingsMissingPort()
+    {
+        var output = new StringWriter();
+        var error = new StringWriter();
+        var runner = new AdaScanRunner(output, error);
+
+        var code = runner.Run(new[] { "--runtime-capture-max-docs", "2" });
+
+        Assert.Equal(1, code);
+        Assert.Contains("Runtime capture port is required", error.ToString(), StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Run_FailsWhenRuntimeCaptureCombinedWithRuntimeUrl()
+    {
+        var output = new StringWriter();
+        var error = new StringWriter();
+        var runner = new AdaScanRunner(output, error);
+
+        var code = runner.Run(new[]
+        {
+            "--runtime-url",
+            "http://example.test",
+            "--runtime-capture-port",
+            "45892"
+        });
+
+        Assert.Equal(1, code);
+        Assert.Contains("Runtime capture cannot be combined", error.ToString(), StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void Run_AllowsRuntimeOptionsAndWritesCombinedReport()
     {
         var root = TestUtilities.CreateTempDirectory();
@@ -225,6 +270,42 @@ public sealed class RunAdaScanTests
                 "http://example.test/page",
                 "--auth-header",
                 "Authorization: Bearer token"
+            });
+
+            Assert.Equal(0, code);
+            var reportJson = File.ReadAllText(Path.Combine(outputDir, "report.json"));
+            Assert.Contains("runtimeScan", reportJson, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            Directory.SetCurrentDirectory(original);
+        }
+    }
+
+    [Fact]
+    public void Run_AllowsRuntimeCaptureOptionsWithoutUrls()
+    {
+        var root = TestUtilities.CreateTempDirectory();
+        TestUtilities.WriteFile(root, "index.html", "<img src=\"hero.png\">");
+        TestUtilities.WriteFile(root, "rules/team/rule.json", "{\"id\":\"alt-1\",\"description\":\"Missing alt\",\"severity\":\"low\",\"checkId\":\"missing-alt-text\"}");
+        var outputDir = Path.Combine(root, "custom-output");
+
+        var runtimeSource = new StubRuntimeSource(Array.Empty<RuntimeHtmlDocument>());
+
+        var original = Directory.GetCurrentDirectory();
+        Directory.SetCurrentDirectory(root);
+        try
+        {
+            var output = new StringWriter();
+            var error = new StringWriter();
+            var runner = new AdaScanRunner(output, error, runtimeSource);
+
+            var code = runner.Run(new[]
+            {
+                root,
+                outputDir,
+                "--runtime-capture-port",
+                "45892"
             });
 
             Assert.Equal(0, code);

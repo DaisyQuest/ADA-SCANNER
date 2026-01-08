@@ -64,6 +64,10 @@ public sealed class AdaScanRunner
             if (parsed.RuntimeOptions != null)
             {
                 parsed.RuntimeOptions.RulesRoot = rulesRoot;
+                if (parsed.RuntimeOptions.CaptureOptions != null)
+                {
+                    parsed.RuntimeOptions.CaptureOptions.Log = message => _output.WriteLine(message);
+                }
                 runtimeScan = RunRuntimeScan(parsed.RuntimeOptions);
             }
 
@@ -94,6 +98,13 @@ public sealed class AdaScanRunner
             {
                 var runtimeEngine = new RuntimeScanEngine(_runtimeSource, new RuleLoader(), CheckRegistry.Default());
                 return runtimeEngine.ScanAsync(options).GetAwaiter().GetResult();
+            }
+
+            if (options.CaptureOptions != null)
+            {
+                var captureSource = new RuntimeCaptureListener();
+                var captureEngine = new RuntimeScanEngine(captureSource, new RuleLoader(), CheckRegistry.Default());
+                return captureEngine.ScanAsync(options).GetAwaiter().GetResult();
             }
 
             using var httpClient = new HttpClient();
@@ -171,6 +182,11 @@ public sealed class AdaScanRunner
             var allowedStatusCodes = new List<int>();
             var excludedStatusCodes = new List<int>();
             string? formConfigPath = null;
+            int? capturePort = null;
+            string? capturePath = null;
+            string? captureToken = null;
+            int? captureMaxDocuments = null;
+            int? captureIdleSeconds = null;
 
             for (var i = 0; i < args.Length; i++)
             {
@@ -320,6 +336,61 @@ public sealed class AdaScanRunner
 
                         formConfigPath = value;
                         break;
+                    case "--runtime-capture-port":
+                        if (!int.TryParse(value, out var capturePortValue) || capturePortValue <= 0 || capturePortValue > 65535)
+                        {
+                            error.WriteLine($"Invalid runtime capture port: {value}");
+                            WriteUsage(error);
+                            parsed = new RunnerArguments();
+                            return false;
+                        }
+
+                        capturePort = capturePortValue;
+                        break;
+                    case "--runtime-capture-path":
+                        if (string.IsNullOrWhiteSpace(value))
+                        {
+                            error.WriteLine("Runtime capture path cannot be empty.");
+                            WriteUsage(error);
+                            parsed = new RunnerArguments();
+                            return false;
+                        }
+
+                        capturePath = value;
+                        break;
+                    case "--runtime-capture-token":
+                        if (string.IsNullOrWhiteSpace(value))
+                        {
+                            error.WriteLine("Runtime capture token cannot be empty.");
+                            WriteUsage(error);
+                            parsed = new RunnerArguments();
+                            return false;
+                        }
+
+                        captureToken = value;
+                        break;
+                    case "--runtime-capture-max-docs":
+                        if (!int.TryParse(value, out var captureMax) || captureMax <= 0)
+                        {
+                            error.WriteLine($"Invalid runtime capture max docs: {value}");
+                            WriteUsage(error);
+                            parsed = new RunnerArguments();
+                            return false;
+                        }
+
+                        captureMaxDocuments = captureMax;
+                        break;
+                    case "--runtime-capture-idle-seconds":
+                        if (!int.TryParse(value, out var captureIdle) || captureIdle <= 0)
+                        {
+                            error.WriteLine($"Invalid runtime capture idle seconds: {value}");
+                            WriteUsage(error);
+                            parsed = new RunnerArguments();
+                            return false;
+                        }
+
+                        captureIdleSeconds = captureIdle;
+                        break;
                     default:
                         error.WriteLine($"Unknown argument: {arg}");
                         WriteUsage(error);
@@ -336,15 +407,49 @@ public sealed class AdaScanRunner
                 return false;
             }
 
+            var hasCaptureSettings = !string.IsNullOrWhiteSpace(capturePath)
+                || !string.IsNullOrWhiteSpace(captureToken)
+                || captureMaxDocuments.HasValue
+                || captureIdleSeconds.HasValue;
+
+            if (!capturePort.HasValue && hasCaptureSettings)
+            {
+                error.WriteLine("Runtime capture port is required when capture settings are provided.");
+                WriteUsage(error);
+                parsed = new RunnerArguments();
+                return false;
+            }
+
+            if (capturePort.HasValue && seedUrls.Count > 0)
+            {
+                error.WriteLine("Runtime capture cannot be combined with runtime URLs.");
+                WriteUsage(error);
+                parsed = new RunnerArguments();
+                return false;
+            }
+
             var formStore = !string.IsNullOrWhiteSpace(formConfigPath)
                 ? RuntimeFormConfigurationStore.Load(formConfigPath)
                 : null;
+
+            RuntimeCaptureOptions? captureOptions = null;
+            if (capturePort.HasValue)
+            {
+                captureOptions = new RuntimeCaptureOptions
+                {
+                    Port = capturePort.Value,
+                    Path = capturePath ?? "/capture",
+                    AccessToken = captureToken,
+                    MaxDocuments = captureMaxDocuments ?? 1,
+                    IdleTimeout = TimeSpan.FromSeconds(captureIdleSeconds ?? 120)
+                };
+            }
 
             parsed = new RunnerArguments
             {
                 StartDirectory = positionals.ElementAtOrDefault(0),
                 OutputDirectory = positionals.ElementAtOrDefault(1),
-                RuntimeOptions = seedUrls.Count == 0
+                RuntimeOptions = seedUrls.Count == 0 && captureOptions == null
                     ? null
                     : new RuntimeScanOptions
                     {
@@ -361,7 +466,8 @@ public sealed class AdaScanRunner
                         ExcludedContentTypes = excludedContentTypes,
                         SampleRate = sampleRate ?? 1.0,
                         FormConfigPath = formConfigPath,
-                        FormConfigurationStore = formStore
+                        FormConfigurationStore = formStore,
+                        CaptureOptions = captureOptions
                     }
             };
 
@@ -395,6 +501,11 @@ public sealed class AdaScanRunner
             error.WriteLine("  --runtime-max-body-bytes <n>   Maximum bytes captured per response.");
             error.WriteLine("  --runtime-sample-rate <0-1>    Sample rate for runtime documents.");
             error.WriteLine("  --runtime-form-config <path>   Path to runtime form configuration JSON.");
+            error.WriteLine("  --runtime-capture-port <n>     Localhost port for browser capture mode.");
+            error.WriteLine("  --runtime-capture-path <path>  Path for browser capture posts (default /capture).");
+            error.WriteLine("  --runtime-capture-token <val>  Token required in X-Ada-Scanner-Token header.");
+            error.WriteLine("  --runtime-capture-max-docs <n> Number of documents to capture before stopping.");
+            error.WriteLine("  --runtime-capture-idle-seconds <n> Idle timeout in seconds before stopping.");
         }
     }
 }

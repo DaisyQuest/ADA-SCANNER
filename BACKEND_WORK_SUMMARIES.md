@@ -17,3 +17,8 @@
 2026-01-06 - Fix runtime report generator namespace usage and add runtime empty-issues coverage (SPEC-010)
 2026-01-06 - Rename scan engine locals and clarify fixed-width line numbering variables to avoid scope collisions (SPEC-001, SPEC-008)
 2026-01-07 - Fix ASP.NET Core middleware build and add missing content-type test coverage (SPEC-013)
+2026-01-08 - Added runtime capture listener and CLI options for browser HTML snapshots with tests (SPEC-019, SPEC-013)
+2026-01-08 - Added Chromium extension export for runtime capture with tests (SPEC-019, SPEC-013)
+2026-01-08 - Added CLI runtime capture wiring to start listener and validate options with tests (SPEC-019, SPEC-013)
+2026-01-08 - Start runtime capture listener before static scan and cover CLI capture validation paths (SPEC-019, SPEC-013)
+2026-01-08 - Added verbose logging for runtime capture listener and extension output with tests (SPEC-019, SPEC-013)
