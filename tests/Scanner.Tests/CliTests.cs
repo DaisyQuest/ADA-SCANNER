@@ -216,6 +216,83 @@ public sealed class CliTests
         Assert.Equal(1, code);
         Assert.Contains(console.Errors, message => message.Contains("--report-base", StringComparison.OrdinalIgnoreCase));
     }
+
+    [Fact]
+    public void CommandDispatcher_ExportChromiumExtension_WritesBundle()
+    {
+        var root = TestUtilities.CreateTempDirectory();
+
+        var dispatcher = new CommandDispatcher();
+        var console = new TestConsole();
+        var output = Path.Combine(root, "extension");
+        var code = dispatcher.Dispatch(new[]
+        {
+            "export",
+            "chromium-extension",
+            "--out",
+            output,
+            "--capture-url",
+            "http://127.0.0.1:45892/capture"
+        }, console);
+
+        Assert.Equal(0, code);
+        Assert.True(File.Exists(Path.Combine(output, "manifest.json")));
+        Assert.True(File.Exists(Path.Combine(output, "background.js")));
+        Assert.Contains(console.Outputs, message => message.Contains("Chromium extension written", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void CommandDispatcher_ExportChromiumExtension_MissingOutput_ReturnsError()
+    {
+        var dispatcher = new CommandDispatcher();
+        var console = new TestConsole();
+        var code = dispatcher.Dispatch(new[]
+        {
+            "export",
+            "chromium-extension",
+            "--capture-url",
+            "http://127.0.0.1:45892/capture"
+        }, console);
+
+        Assert.Equal(1, code);
+        Assert.Contains(console.Errors, message => message.Contains("--out", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void CommandDispatcher_ExportChromiumExtension_MissingCaptureUrl_ReturnsError()
+    {
+        var dispatcher = new CommandDispatcher();
+        var console = new TestConsole();
+        var code = dispatcher.Dispatch(new[]
+        {
+            "export",
+            "chromium-extension",
+            "--out",
+            "extension"
+        }, console);
+
+        Assert.Equal(1, code);
+        Assert.Contains(console.Errors, message => message.Contains("--capture-url", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void CommandDispatcher_ExportChromiumExtension_InvalidCaptureUrl_ReturnsError()
+    {
+        var dispatcher = new CommandDispatcher();
+        var console = new TestConsole();
+        var code = dispatcher.Dispatch(new[]
+        {
+            "export",
+            "chromium-extension",
+            "--out",
+            "extension",
+            "--capture-url",
+            "not-a-url"
+        }, console);
+
+        Assert.Equal(1, code);
+        Assert.Contains(console.Errors, message => message.Contains("Capture URL must be absolute", StringComparison.OrdinalIgnoreCase));
+    }
 }
 
 public sealed class TestConsole : IConsole
