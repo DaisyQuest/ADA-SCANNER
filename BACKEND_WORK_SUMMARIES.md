@@ -23,3 +23,4 @@
 2026-01-08 - Start runtime capture listener before static scan and cover CLI capture validation paths (SPEC-019, SPEC-013)
 2026-01-08 - Added verbose logging for runtime capture listener and extension output with tests (SPEC-019, SPEC-013)
 2026-01-08 - Add CORS/preflight handling for runtime capture listener responses (SPEC-019)
+2026-01-08 - Add Node runtime scanner, listener, and extension with full tests (SPEC-008, SPEC-009, SPEC-013, SPEC-019)
