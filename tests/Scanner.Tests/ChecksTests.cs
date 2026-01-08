@@ -109,6 +109,296 @@ public sealed class ChecksTests
     }
 
     [Fact]
+    public void EmptyFormLabelCheck_FlagsLabelWithoutContent()
+    {
+        var check = new EmptyFormLabelCheck();
+        var content = "<label for=\"name\"></label><input id=\"name\" type=\"text\">";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Single(issues);
+    }
+
+    [Fact]
+    public void EmptyFormLabelCheck_AllowsLabelWithText()
+    {
+        var check = new EmptyFormLabelCheck();
+        var content = "<label for=\"name\">Name</label><input id=\"name\" type=\"text\">";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Empty(issues);
+    }
+
+    [Fact]
+    public void EmptyFormLabelCheck_AllowsLabelWithAriaLabel()
+    {
+        var check = new EmptyFormLabelCheck();
+        var content = "<label for=\"name\" aria-label=\"Name\"></label><input id=\"name\" type=\"text\">";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Empty(issues);
+    }
+
+    [Fact]
+    public void EmptyFormLabelCheck_AllowsLabelWithAriaLabelledBy()
+    {
+        var check = new EmptyFormLabelCheck();
+        var content = "<span id=\"label\">Name</span><label for=\"name\" aria-labelledby=\"label\"></label><input id=\"name\" type=\"text\">";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Empty(issues);
+    }
+
+    [Fact]
+    public void EmptyFormLabelCheck_AllowsLabelWithTitle()
+    {
+        var check = new EmptyFormLabelCheck();
+        var content = "<label for=\"name\" title=\"Name\"></label><input id=\"name\" type=\"text\">";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Empty(issues);
+    }
+
+    [Fact]
+    public void OrphanedFormLabelCheck_FlagsMissingControl()
+    {
+        var check = new OrphanedFormLabelCheck();
+        var content = "<label for=\"missing\">Name</label>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Single(issues);
+    }
+
+    [Fact]
+    public void OrphanedFormLabelCheck_AllowsMatchingControl()
+    {
+        var check = new OrphanedFormLabelCheck();
+        var content = "<label for=\"name\">Name</label><input id=\"name\" type=\"text\">";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Empty(issues);
+    }
+
+    [Fact]
+    public void OrphanedFormLabelCheck_SkipsBlankForValues()
+    {
+        var check = new OrphanedFormLabelCheck();
+        var content = "<label for=\" \">Name</label>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Empty(issues);
+    }
+
+    [Fact]
+    public void EmptyLinkCheck_FlagsAnchorWithoutText()
+    {
+        var check = new EmptyLinkCheck();
+        var content = "<a href=\"/home\"></a>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Single(issues);
+    }
+
+    [Fact]
+    public void EmptyLinkCheck_AllowsLinkWithText()
+    {
+        var check = new EmptyLinkCheck();
+        var content = "<a href=\"/home\">Home</a>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Empty(issues);
+    }
+
+    [Fact]
+    public void EmptyLinkCheck_AllowsLinkWithAriaLabel()
+    {
+        var check = new EmptyLinkCheck();
+        var content = "<a href=\"/home\" aria-label=\"Home\"></a>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Empty(issues);
+    }
+
+    [Fact]
+    public void EmptyLinkCheck_AllowsLinkWithAriaLabelledBy()
+    {
+        var check = new EmptyLinkCheck();
+        var content = "<span id=\"home\">Home</span><a href=\"/home\" aria-labelledby=\"home\"></a>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Empty(issues);
+    }
+
+    [Fact]
+    public void EmptyLinkCheck_AllowsLinkWithTitle()
+    {
+        var check = new EmptyLinkCheck();
+        var content = "<a href=\"/home\" title=\"Home\"></a>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Empty(issues);
+    }
+
+    [Fact]
+    public void EmptyLinkCheck_SkipsAnchorsWithoutLinkBehavior()
+    {
+        var check = new EmptyLinkCheck();
+        var content = "<a></a>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Empty(issues);
+    }
+
+    [Fact]
+    public void EmptyLinkCheck_FlagsRoleLinkWithoutText()
+    {
+        var check = new EmptyLinkCheck();
+        var content = "<a role=\"link\"></a>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Single(issues);
+    }
+
+    [Fact]
+    public void MissingHeadingStructureCheck_FlagsMissingHeadings()
+    {
+        var check = new MissingHeadingStructureCheck();
+        var content = "<main><p>Content</p></main>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Single(issues);
+    }
+
+    [Fact]
+    public void MissingHeadingStructureCheck_AllowsHeadings()
+    {
+        var check = new MissingHeadingStructureCheck();
+        var content = "<main><h2>Section</h2></main>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Empty(issues);
+    }
+
+    [Fact]
+    public void DeviceDependentEventHandlerCheck_FlagsMouseClickWithoutKeyboard()
+    {
+        var check = new DeviceDependentEventHandlerCheck();
+        var content = "<div onclick=\"go()\"></div>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Single(issues);
+    }
+
+    [Fact]
+    public void DeviceDependentEventHandlerCheck_AllowsMouseClickWithKeyboard()
+    {
+        var check = new DeviceDependentEventHandlerCheck();
+        var content = "<div onclick=\"go()\" onkeydown=\"go()\"></div>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Empty(issues);
+    }
+
+    [Fact]
+    public void DeviceDependentEventHandlerCheck_FlagsMouseHoverWithoutFocus()
+    {
+        var check = new DeviceDependentEventHandlerCheck();
+        var content = "<div onmouseover=\"show()\"></div>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Single(issues);
+    }
+
+    [Fact]
+    public void DeviceDependentEventHandlerCheck_AllowsMouseHoverWithFocus()
+    {
+        var check = new DeviceDependentEventHandlerCheck();
+        var content = "<div onmouseover=\"show()\" onfocus=\"show()\"></div>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Empty(issues);
+    }
+
+    [Fact]
+    public void RedundantTitleTextCheck_FlagsTitleMatchingAriaLabel()
+    {
+        var check = new RedundantTitleTextCheck();
+        var content = "<span title=\"Info\" aria-label=\"Info\"></span>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Single(issues);
+    }
+
+    [Fact]
+    public void RedundantTitleTextCheck_FlagsTitleMatchingTextContent()
+    {
+        var check = new RedundantTitleTextCheck();
+        var content = "<button title=\"Save\">Save</button>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Single(issues);
+    }
+
+    [Fact]
+    public void RedundantTitleTextCheck_AllowsDistinctTitle()
+    {
+        var check = new RedundantTitleTextCheck();
+        var content = "<button title=\"Save changes\">Save</button>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Empty(issues);
+    }
+
+    [Fact]
+    public void RedundantTitleTextCheck_SkipsWhitespaceTitle()
+    {
+        var check = new RedundantTitleTextCheck();
+        var content = "<span title=\" \">Info</span>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Empty(issues);
+    }
+
+    [Fact]
+    public void LayoutTableCheck_FlagsTableWithoutHeadersOrCaption()
+    {
+        var check = new LayoutTableCheck();
+        var content = "<table><tr><td>Cell</td></tr></table>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Single(issues);
+    }
+
+    [Fact]
+    public void LayoutTableCheck_AllowsTableWithHeaders()
+    {
+        var check = new LayoutTableCheck();
+        var content = "<table><tr><th>Header</th></tr></table>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Empty(issues);
+    }
+
+    [Fact]
+    public void LayoutTableCheck_AllowsTableWithCaption()
+    {
+        var check = new LayoutTableCheck();
+        var content = "<table><caption>Data</caption><tr><td>Cell</td></tr></table>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Empty(issues);
+    }
+
+    [Fact]
+    public void LayoutTableCheck_SkipsPresentationRole()
+    {
+        var check = new LayoutTableCheck();
+        var content = "<table role=\"presentation\"><tr><td>Layout</td></tr></table>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Empty(issues);
+    }
+
+    [Fact]
     public void MissingAltTextCheck_FlagsImage()
     {
         var check = new MissingAltTextCheck();

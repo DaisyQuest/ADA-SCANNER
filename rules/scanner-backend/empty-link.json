@@ -1,0 +1,10 @@
+{
+  "id": "link-empty-001",
+  "description": "Ensure links have accessible names.",
+  "severity": "medium",
+  "checkId": "empty-link",
+  "appliesTo": "html, htm, cshtml, razor",
+  "recommendation": "Provide visible link text or an accessible name via aria-label or aria-labelledby.",
+  "wcagCriteria": "2.4.4",
+  "problemTags": "links"
+}

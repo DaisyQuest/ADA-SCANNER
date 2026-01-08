@@ -17,7 +17,12 @@ public sealed class RuleSchemaValidator
     private static readonly HashSet<string> AllowedChecks = new(StringComparer.OrdinalIgnoreCase)
     {
         "absolute-positioning",
+        "device-dependent-event-handler",
+        "empty-form-label",
+        "empty-link",
         "fixed-width-layout",
+        "layout-table",
+        "missing-heading-structure",
         "missing-label",
         "missing-document-language",
         "unlabeled-button",
@@ -29,6 +34,8 @@ public sealed class RuleSchemaValidator
         "hidden-navigation",
         "hidden-focusable",
         "insufficient-contrast",
+        "orphaned-form-label",
+        "redundant-title-text",
         "xaml-missing-name"
     };
 

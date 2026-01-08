@@ -25,3 +25,5 @@
 2026-01-08 - Add CORS/preflight handling for runtime capture listener responses (SPEC-019)
 2026-01-08 - Add Node runtime scanner, listener, and extension with full tests (SPEC-008, SPEC-009, SPEC-013, SPEC-019)
 2026-01-08 - Added runtime listener reporting dashboard and SSE updates in node_engine with expanded tests (SPEC-010, SPEC-019, SPEC-013)
+2026-01-08 - Add checks and rules for form labels, links, headings, device events, redundant titles, and layout tables with tests (SPEC-008, SPEC-013)
+2026-01-08 - Add node_engine checks for labels, links, headings, device events, redundant titles, and layout tables with tests (SPEC-008, SPEC-013)

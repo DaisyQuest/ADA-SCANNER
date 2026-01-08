@@ -34,9 +34,14 @@ public sealed class CheckRegistry
     public static CheckRegistry Default() => new(new ICheck[]
     {
         new AbsolutePositioningCheck(),
+        new DeviceDependentEventHandlerCheck(),
+        new EmptyFormLabelCheck(),
+        new EmptyLinkCheck(),
         new FixedWidthLayoutCheck(),
+        new LayoutTableCheck(),
         new MissingLabelCheck(),
         new MissingDocumentLanguageCheck(),
+        new MissingHeadingStructureCheck(),
         new UnlabeledButtonCheck(),
         new MissingPageTitleCheck(),
         new MissingTableHeaderCheck(),
@@ -46,6 +51,8 @@ public sealed class CheckRegistry
         new HiddenNavigationCheck(),
         new HiddenFocusableElementCheck(),
         new InsufficientContrastCheck(),
+        new OrphanedFormLabelCheck(),
+        new RedundantTitleTextCheck(),
         new XamlMissingNameCheck()
     });
 }

@@ -1,0 +1,10 @@
+{
+  "id": "form-label-empty-001",
+  "description": "Ensure form labels include readable text content.",
+  "severity": "medium",
+  "checkId": "empty-form-label",
+  "appliesTo": "html, htm, cshtml, razor",
+  "recommendation": "Add visible text or an accessible name to the label element.",
+  "wcagCriteria": "1.3.1",
+  "problemTags": "form-labels"
+}
