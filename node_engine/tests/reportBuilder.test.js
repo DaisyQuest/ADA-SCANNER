@@ -33,7 +33,7 @@ describe("ReportBuilder", () => {
       ]
     });
 
-    expect(report.summary).toEqual({ documents: 2, issues: 3 });
+    expect(report.summary).toEqual({ documents: 2, issues: 3, files: 2 });
     expect(report.byRule).toEqual([
       {
         ruleId: "rule-a",
@@ -61,12 +61,27 @@ describe("ReportBuilder", () => {
         rules: [
           { ruleId: "rule-a", count: 1 },
           { ruleId: "rule-b", count: 1 }
+        ],
+        teams: [
+          { teamName: "team-a", count: 1 },
+          { teamName: "team-b", count: 1 }
+        ],
+        severities: [
+          { severity: "high", count: 1 },
+          { severity: "low", count: 1 }
+        ],
+        checks: [
+          { checkId: "check-1", count: 1 },
+          { checkId: "check-2", count: 1 }
         ]
       },
       {
         filePath: "file-b.html",
         issueCount: 1,
-        rules: [{ ruleId: "rule-a", count: 1 }]
+        rules: [{ ruleId: "rule-a", count: 1 }],
+        teams: [{ teamName: "team-a", count: 1 }],
+        severities: [{ severity: "high", count: 1 }],
+        checks: [{ checkId: "check-1", count: 1 }]
       }
     ]);
     expect(report.byTeam).toEqual([
@@ -96,9 +111,261 @@ describe("ReportBuilder", () => {
       ]
     });
 
-    expect(report.summary).toEqual({ documents: 0, issues: 1 });
+    expect(report.summary).toEqual({ documents: 0, issues: 1, files: 1 });
     expect(report.byRule[0].ruleId).toBe("unknown");
     expect(report.byTeam[0].teamName).toBe("unassigned");
     expect(report.byFile[0].filePath).toBe("unknown");
+  });
+
+  test("builds empty report by default", () => {
+    const builder = new ReportBuilder();
+    const report = builder.build();
+
+    expect(report.summary).toEqual({ documents: 0, issues: 0, files: 0 });
+    expect(report.byRule).toEqual([]);
+    expect(report.byFile).toEqual([]);
+    expect(report.byTeam).toEqual([]);
+  });
+
+  test("builds detailed file reports", () => {
+    const builder = new ReportBuilder();
+    const report = builder.buildFileReport({
+      filePath: "file-a.html",
+      documents: [{ url: "file-a.html", contentType: "text/html" }],
+      issues: [
+        {
+          ruleId: "rule-a",
+          severity: "high",
+          teamName: "team-a",
+          filePath: "file-a.html",
+          checkId: "check-1",
+          line: 10
+        },
+        {
+          ruleId: "rule-b",
+          severity: "low",
+          teamName: "team-b",
+          filePath: "file-a.html",
+          checkId: "check-2",
+          line: 3
+        }
+      ]
+    });
+
+    expect(report.issueCount).toBe(2);
+    expect(report.document).toEqual({ url: "file-a.html", contentType: "text/html" });
+    expect(report.byRule).toEqual([
+      { ruleId: "rule-a", count: 1 },
+      { ruleId: "rule-b", count: 1 }
+    ]);
+    expect(report.byTeam).toEqual([
+      { teamName: "team-a", count: 1 },
+      { teamName: "team-b", count: 1 }
+    ]);
+    expect(report.bySeverity).toEqual([
+      { severity: "high", count: 1 },
+      { severity: "low", count: 1 }
+    ]);
+    expect(report.byCheck).toEqual([
+      { checkId: "check-1", count: 1 },
+      { checkId: "check-2", count: 1 }
+    ]);
+    expect(report.issues.map((issue) => issue.line)).toEqual([3, 10]);
+  });
+
+  test("buildFileSummaries returns file index entries", () => {
+    const builder = new ReportBuilder();
+    const summaries = builder.buildFileSummaries({
+      documents: [{ url: "file-a.html" }],
+      issues: [{ ruleId: "rule-a", filePath: "file-a.html" }]
+    });
+
+    expect(summaries).toEqual([
+      {
+        filePath: "file-a.html",
+        issueCount: 1,
+        rules: [{ ruleId: "rule-a", count: 1 }],
+        teams: [{ teamName: "unassigned", count: 1 }],
+        severities: [{ severity: "unspecified", count: 1 }],
+        checks: [{ checkId: "unknown", count: 1 }]
+      }
+    ]);
+  });
+
+  test("buildFileSummaries defaults to empty arrays", () => {
+    const builder = new ReportBuilder();
+    const summaries = builder.buildFileSummaries();
+    expect(summaries).toEqual([]);
+  });
+
+  test("sorts tie counts by name", () => {
+    const builder = new ReportBuilder();
+    const report = builder.build({
+      documents: [],
+      issues: [
+        { ruleId: "rule-b", filePath: "b.html", teamName: "team-b" },
+        { ruleId: "rule-a", filePath: "a.html", teamName: "team-a" }
+      ]
+    });
+
+    expect(report.byFile[0].filePath).toBe("a.html");
+    expect(report.byFile[1].filePath).toBe("b.html");
+  });
+
+  test("prioritizes higher counts in detailed file report", () => {
+    const builder = new ReportBuilder();
+    const report = builder.buildFileReport({
+      filePath: "file-a.html",
+      documents: [],
+      issues: [
+        { ruleId: "rule-b", teamName: "team-b", filePath: "file-a.html" },
+        { ruleId: "rule-b", teamName: "team-b", filePath: "file-a.html" },
+        { ruleId: "rule-a", teamName: "team-a", filePath: "file-a.html" }
+      ]
+    });
+
+    expect(report.byRule).toEqual([
+      { ruleId: "rule-b", count: 2 },
+      { ruleId: "rule-a", count: 1 }
+    ]);
+    expect(report.byTeam).toEqual([
+      { teamName: "team-b", count: 2 },
+      { teamName: "team-a", count: 1 }
+    ]);
+  });
+
+  test("sortByCount falls back to issueCount and name", () => {
+    const builder = new ReportBuilder();
+    const map = new Map();
+    map.set("rule", { ruleId: "rule-a", count: 2 });
+    map.set("file", { filePath: "b.html", issueCount: 0 });
+    map.set("team", { teamName: "team-a", issueCount: 0 });
+    map.set("empty", {});
+
+    const result = builder.sortByCount(map, (entry) => ({
+      name: entry.ruleId ?? entry.filePath ?? entry.teamName ?? ""
+    }));
+
+    expect(result[0].name).toBe("rule-a");
+    expect(result.some((entry) => entry.name === "")).toBe(true);
+  });
+
+  test("buildFileReport fills in defaults for missing fields", () => {
+    const builder = new ReportBuilder();
+    const report = builder.buildFileReport({
+      filePath: "unknown",
+      documents: [],
+      issues: [{ filePath: "unknown" }]
+    });
+
+    expect(report.byRule).toEqual([{ ruleId: "unknown", count: 1 }]);
+    expect(report.byTeam).toEqual([{ teamName: "unassigned", count: 1 }]);
+    expect(report.bySeverity).toEqual([{ severity: "unspecified", count: 1 }]);
+    expect(report.byCheck).toEqual([{ checkId: "unknown", count: 1 }]);
+  });
+
+  test("sorts issues by rule id when lines match", () => {
+    const builder = new ReportBuilder();
+    const report = builder.buildFileReport({
+      filePath: "file-a.html",
+      documents: [],
+      issues: [
+        { ruleId: "rule-b", filePath: "file-a.html", line: 5 },
+        { ruleId: "rule-a", filePath: "file-a.html", line: 5 }
+      ]
+    });
+
+    expect(report.issues.map((issue) => issue.ruleId)).toEqual(["rule-a", "rule-b"]);
+  });
+
+  test("falls back to empty rule id when sorting", () => {
+    const builder = new ReportBuilder();
+    const report = builder.buildFileReport({
+      filePath: "file-a.html",
+      documents: [],
+      issues: [
+        { filePath: "file-a.html", line: 5 },
+        { ruleId: "rule-b", filePath: "file-a.html", line: 5 }
+      ]
+    });
+
+    expect(report.issues[0].ruleId ?? "").toBe("");
+  });
+
+  test("defaults missing document content type", () => {
+    const builder = new ReportBuilder();
+    const report = builder.buildFileReport({
+      filePath: "file-a.html",
+      documents: [{ url: "file-a.html" }],
+      issues: [{ ruleId: "rule-a", filePath: "file-a.html" }]
+    });
+
+    expect(report.document).toEqual({ url: "file-a.html", contentType: null });
+  });
+
+  test("sortByCount uses name ordering when counts match", () => {
+    const builder = new ReportBuilder();
+    const map = new Map();
+    map.set("b", { ruleId: "b", count: 1 });
+    map.set("a", { ruleId: "a", count: 1 });
+
+    const result = builder.sortByCount(map, (entry) => entry.ruleId);
+    expect(result).toEqual(["a", "b"]);
+  });
+
+  test("buildFileReport defaults file path when omitted", () => {
+    const builder = new ReportBuilder();
+    const report = builder.buildFileReport({
+      documents: [],
+      issues: [{}]
+    });
+
+    expect(report.filePath).toBe("unknown");
+    expect(report.issueCount).toBe(1);
+  });
+
+  test("sortRuleCounts prefers higher counts", () => {
+    const builder = new ReportBuilder();
+    const ruleCounts = new Map();
+    ruleCounts.set("rule-a", { ruleId: "rule-a", count: 1 });
+    ruleCounts.set("rule-b", { ruleId: "rule-b", count: 2 });
+
+    const sorted = builder.sortRuleCounts(ruleCounts);
+    expect(sorted[0].ruleId).toBe("rule-b");
+  });
+
+  test("build skips empty file paths in rule file list", () => {
+    const builder = new ReportBuilder();
+    const report = builder.build({
+      documents: [],
+      issues: [
+        { ruleId: "rule-a", filePath: "", checkId: "check-1" },
+        { ruleId: "rule-a", filePath: "file-a", checkId: "check-1" }
+      ]
+    });
+
+    expect(report.byRule[0].files).toEqual(["file-a"]);
+  });
+
+  test("buildFileReport treats null paths as unknown", () => {
+    const builder = new ReportBuilder();
+    const report = builder.buildFileReport({
+      filePath: null,
+      documents: [{ url: "unknown" }],
+      issues: [{ filePath: null, ruleId: null }]
+    });
+
+    expect(report.filePath).toBe("unknown");
+    expect(report.byRule[0].ruleId).toBe("unknown");
+  });
+
+  test("sortByCount handles nullish counts and names", () => {
+    const builder = new ReportBuilder();
+    const map = new Map();
+    map.set("null-count", { ruleId: null, count: null });
+    map.set("issue-count", { filePath: "file-a", issueCount: 1 });
+
+    const result = builder.sortByCount(map, (entry) => entry.ruleId ?? entry.filePath ?? "");
+    expect(result).toEqual(["file-a", ""]);
   });
 });

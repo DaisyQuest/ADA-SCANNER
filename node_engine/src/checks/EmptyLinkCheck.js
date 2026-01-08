@@ -16,7 +16,7 @@ const isLink = (attributes) => {
   }
 
   const role = getAttributeValue(attributes, "role");
-  return role && role.toLowerCase() === "link";
+  return Boolean(role && role.toLowerCase() === "link");
 };
 
 const EmptyLinkCheck = {

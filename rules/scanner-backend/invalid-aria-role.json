@@ -1,0 +1,10 @@
+{
+  "id": "aria-role-001",
+  "description": "Ensure ARIA roles are valid and supported.",
+  "severity": "high",
+  "checkId": "invalid-aria-role",
+  "appliesTo": "html, htm, cshtml, razor",
+  "recommendation": "Use valid ARIA roles that map to the intended semantics.",
+  "wcagCriteria": "4.1.2",
+  "problemTags": "aria-role, semantics"
+}

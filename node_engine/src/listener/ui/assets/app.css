@@ -167,6 +167,23 @@ body {
   border-top: 1px solid var(--border);
 }
 
+.pill-button {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: #f1f5ff;
+  color: var(--primary);
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.pill-button:hover {
+  background: #e7edff;
+}
+
 .issue-feed {
   display: flex;
   flex-direction: column;

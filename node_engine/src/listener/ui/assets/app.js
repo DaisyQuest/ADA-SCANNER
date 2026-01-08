@@ -11,6 +11,7 @@ const elements = {
   issueCount: document.getElementById("issueCount"),
   ruleCount: document.getElementById("ruleCount"),
   teamCount: document.getElementById("teamCount"),
+  fileCount: document.getElementById("fileCount"),
   ruleTable: document.getElementById("ruleTable"),
   fileTable: document.getElementById("fileTable"),
   issueFeed: document.getElementById("issueFeed")
@@ -33,6 +34,21 @@ const renderSummary = () => {
   elements.issueCount.textContent = report ? report.summary.issues : 0;
   elements.ruleCount.textContent = report ? report.byRule.length : 0;
   elements.teamCount.textContent = report ? report.byTeam.length : 0;
+  elements.fileCount.textContent = report ? report.summary.files : 0;
+};
+
+const formatCounts = (items, label) => {
+  if (!items.length) {
+    return "—";
+  }
+  return items.map((entry) => `${entry[label]} (${entry.count})`).join(", ");
+};
+
+const buildDownloadName = (filePath) => {
+  const safe = String(filePath)
+    .replace(/[^a-z0-9_-]+/gi, "-")
+    .replace(/^-+|-+$/g, "");
+  return safe ? `report-${safe}.json` : "report.json";
 };
 
 const renderRules = () => {
@@ -66,11 +82,16 @@ const renderFiles = () => {
   elements.fileTable.innerHTML = state.report.byFile
     .map((file) => {
       const topRules = file.rules.slice(0, 3).map((rule) => `${rule.ruleId} (${rule.count})`).join(", ");
+      const severities = formatCounts(file.severities ?? [], "severity");
+      const downloadUrl = `/report/file?path=${encodeURIComponent(file.filePath)}`;
+      const downloadName = buildDownloadName(file.filePath);
       return `
         <tr>
           <td>${file.filePath}</td>
           <td>${file.issueCount}</td>
           <td>${topRules || "—"}</td>
+          <td>${severities}</td>
+          <td><a class="pill-button" href="${downloadUrl}" download="${downloadName}">Save JSON</a></td>
         </tr>
       `;
     })
@@ -141,10 +162,39 @@ const connectStream = () => {
   });
 };
 
-loadInitialData()
-  .then(() => {
-    connectStream();
-  })
-  .catch(() => {
-    setConnectionStatus(false);
-  });
+const bootstrap = () => {
+  loadInitialData()
+    .then(() => {
+      connectStream();
+    })
+    .catch(() => {
+      setConnectionStatus(false);
+    });
+};
+
+const shouldAutoBootstrap = typeof module === "undefined"
+  || (typeof window !== "undefined" && window.__ADA_SCANNER_FORCE_BOOTSTRAP__ === true);
+
+if (shouldAutoBootstrap) {
+  bootstrap();
+}
+
+if (typeof module !== "undefined") {
+  module.exports = {
+    state,
+    elements,
+    formatTime,
+    updateTimestamp,
+    setConnectionStatus,
+    renderSummary,
+    renderRules,
+    renderFiles,
+    renderIssues,
+    renderAll,
+    formatCounts,
+    buildDownloadName,
+    loadInitialData,
+    connectStream,
+    bootstrap
+  };
+}

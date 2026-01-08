@@ -140,6 +140,20 @@ describe("RuleLoader", () => {
     expect(result.errors).toContain("Unknown property 'unknown'.");
   });
 
+  test("parseJsonRule normalizes blank optional values", () => {
+    const result = parseJsonRule(
+      JSON.stringify({
+        id: "rule",
+        description: "desc",
+        severity: "low",
+        checkId: "missing-label",
+        appliesTo: " "
+      }),
+      "rule.json"
+    );
+    expect(result.rule.appliesTo).toBeNull();
+  });
+
   test("parseSimpleYamlRule skips comments and invalid lines", () => {
     const result = parseSimpleYamlRule(["# comment", "badline", "id: rule", "description: desc", "severity: low", "checkId: missing-label"], "rule.yml");
     expect(result.rule.id).toBe("rule");
@@ -148,6 +162,60 @@ describe("RuleLoader", () => {
   test("throws when rules root is invalid", () => {
     const loader = new RuleLoader();
     expect(() => loader.loadRules("")).toThrow("Rules root is required.");
+    expect(() => loader.loadRules("/no/such/dir")).toThrow("Rules directory not found");
+    expect(() => loader.validateRules("")).toThrow("Rules root is required.");
     expect(() => loader.validateRules("/no/such/dir")).toThrow("Rules directory not found");
+  });
+
+  test("loads yaml rule via loadRule", () => {
+    const tempDir = createTempDir();
+    const filePath = path.join(tempDir, "team-a", "rule.yaml");
+    writeFile(filePath, "id: rule-a\ndescription: desc\nseverity: low\ncheckId: missing-label");
+
+    const loader = new RuleLoader();
+    const rule = loader.loadRule(filePath);
+    expect(rule.id).toBe("rule-a");
+    expect(rule.checkId).toBe("missing-label");
+  });
+
+  test("throws on invalid yaml when loading a single rule", () => {
+    const tempDir = createTempDir();
+    const filePath = path.join(tempDir, "team-a", "rule.yaml");
+    writeFile(filePath, "id: rule-a");
+
+    const loader = new RuleLoader();
+    expect(() => loader.loadRule(filePath)).toThrow();
+  });
+
+  test("validateRules skips non-directory entries", () => {
+    const tempDir = createTempDir();
+    writeFile(path.join(tempDir, "not-a-dir"), "ignored");
+
+    const loader = new RuleLoader();
+    const result = loader.validateRules(tempDir);
+    expect(result.errors).toHaveLength(0);
+  });
+
+  test("loadRules skips non-directory entries", () => {
+    const tempDir = createTempDir();
+    writeFile(path.join(tempDir, "not-a-dir"), "ignored");
+    writeFile(
+      path.join(tempDir, "team-a", "rule.json"),
+      JSON.stringify({ id: "rule", description: "desc", severity: "low", checkId: "missing-label" })
+    );
+
+    const loader = new RuleLoader();
+    const teams = loader.loadRules(tempDir);
+    expect(teams).toHaveLength(1);
+  });
+
+  test("loadRuleFile captures errors for unsupported formats", () => {
+    const tempDir = createTempDir();
+    const filePath = path.join(tempDir, "team-a", "rule.txt");
+    writeFile(filePath, "ignored");
+
+    const loader = new RuleLoader();
+    const result = loader.loadRuleFile(filePath, true);
+    expect(result.hasParseError).toBe(true);
   });
 });

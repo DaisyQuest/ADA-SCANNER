@@ -25,7 +25,12 @@ describe("Extension forwarder utilities", () => {
       html,
       title: "Title",
       contentType: "text/html",
-      kind: "html"
+      kind: "html",
+      Url: "http://example",
+      Html: html,
+      Title: "Title",
+      ContentType: "text/html",
+      StatusCode: 200
     });
 
     const hashA = createHash("abc");
@@ -62,6 +67,30 @@ describe("Extension forwarder utilities", () => {
     const call = fetchFn.mock.calls[0];
     calls.push(call[0]);
     expect(calls[0]).toBe(DEFAULT_SERVER_URL);
+  });
+
+  test("logs when capture fails", async () => {
+    const warnSpy = jest.spyOn(console, "warn").mockImplementation(() => {});
+    const fetchFn = jest.fn().mockResolvedValue({
+      ok: false,
+      status: 500,
+      text: jest.fn().mockResolvedValue("fail")
+    });
+    const getConfig = jest.fn().mockResolvedValue({ serverUrl: DEFAULT_SERVER_URL });
+
+    document.body.innerHTML = "<div>Test</div>";
+    const forwarder = createForwarder({
+      fetchFn,
+      documentRoot: document,
+      location: window.location,
+      getConfig,
+      debounceMs: 1
+    });
+
+    await forwarder.send();
+    expect(fetchFn).toHaveBeenCalledTimes(1);
+    expect(warnSpy).toHaveBeenCalled();
+    warnSpy.mockRestore();
   });
 
   test("does not resend identical HTML and clears scheduled timers", async () => {
@@ -176,6 +205,12 @@ describe("Extension background", () => {
     require("../extension/background");
     delete global.chrome;
   });
+
+  test("does not auto-register when chrome is missing", () => {
+    jest.resetModules();
+    delete global.chrome;
+    expect(() => require("../extension/background")).not.toThrow();
+  });
 });
 
 describe("Extension content script", () => {
@@ -216,8 +251,50 @@ describe("Extension content script", () => {
 
     messageListeners[0]({ type: "toggle", enabled: false });
     expect(script.getObserver()).toBeNull();
+    script.stop();
     window.MutationObserver = originalObserver;
     jest.useRealTimers();
+  });
+
+  test("logs when initial send fails", async () => {
+    const errorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+    const chromeApi = {
+      runtime: { onMessage: { addListener: jest.fn() } },
+      storage: { local: { get: (defaults, callback) => callback({ enabled: true, serverUrl: DEFAULT_SERVER_URL }) } }
+    };
+    globalThis.AdaForwarder = {
+      createForwarder: jest.fn(() => ({
+        schedule: jest.fn(),
+        send: jest.fn(() => Promise.reject(new Error("fail")))
+      })),
+      getDefaultConfig: jest.fn(() => Promise.resolve({ serverUrl: DEFAULT_SERVER_URL }))
+    };
+
+    createContentScript({ chromeApi, documentRoot: document, windowObj: window, fetchFn: jest.fn() });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(errorSpy).toHaveBeenCalled();
+    errorSpy.mockRestore();
+  });
+
+  test("ignores non-toggle messages", () => {
+    const messageListeners = [];
+    const chromeApi = {
+      runtime: {
+        onMessage: {
+          addListener: (listener) => messageListeners.push(listener)
+        }
+      },
+      storage: {
+        local: {
+          get: (defaults, callback) => callback({ enabled: false, serverUrl: DEFAULT_SERVER_URL })
+        }
+      }
+    };
+
+    const script = createContentScript({ chromeApi, documentRoot: document, windowObj: window, fetchFn: jest.fn() });
+    messageListeners[0]({ type: "noop" });
+    expect(script.getObserver()).toBeNull();
   });
 
   test("auto-starts when enabled in storage", () => {
@@ -243,5 +320,42 @@ describe("Extension content script", () => {
     global.window.fetch = mockFetch;
     require("../extension/contentScript");
     delete global.chrome;
+  });
+
+  test("exits early when forwarder is missing", () => {
+    jest.resetModules();
+    const errorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+    delete globalThis.AdaForwarder;
+
+    jest.isolateModules(() => {
+      require("../extension/contentScript");
+    });
+
+    expect(errorSpy).toHaveBeenCalled();
+    errorSpy.mockRestore();
+  });
+
+  test("bootstraps when chrome is available", () => {
+    jest.resetModules();
+    const logSpy = jest.spyOn(console, "log").mockImplementation(() => {});
+    globalThis.AdaForwarder = {
+      createForwarder: jest.fn(() => ({ schedule: jest.fn(), send: jest.fn(() => Promise.resolve()) })),
+      getDefaultConfig: jest.fn(() => Promise.resolve({ serverUrl: DEFAULT_SERVER_URL }))
+    };
+    global.chrome = {
+      runtime: { onMessage: { addListener: jest.fn() } },
+      storage: { local: { get: jest.fn((defaults, callback) => callback({ enabled: false })) } }
+    };
+    window.fetch = jest.fn(() => Promise.resolve({ ok: true }));
+
+    jest.isolateModules(() => {
+      require("../extension/contentScript");
+    });
+
+    expect(global.chrome.runtime.onMessage.addListener).toHaveBeenCalled();
+    expect(globalThis.AdaForwarder.createForwarder).toHaveBeenCalled();
+
+    delete global.chrome;
+    logSpy.mockRestore();
   });
 });

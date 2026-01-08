@@ -1,4 +1,4 @@
-import { DEFAULT_SERVER_URL } from "./forwarder.js";
+const DEFAULT_SERVER_URL = "http://127.0.0.1:45892/capture";
 
 const updateBadge = (chromeApi, enabled, tabId) => {
   const text = enabled ? "ON" : "OFF";
@@ -51,4 +51,6 @@ if (typeof chrome !== "undefined" && chrome?.action) {
   registerBackground(chrome);
 }
 
-export { registerBackground, toggleExtension, setEnabledState, updateBadge };
+if (typeof module !== "undefined") {
+  module.exports = { registerBackground, toggleExtension, setEnabledState, updateBadge, DEFAULT_SERVER_URL };
+}

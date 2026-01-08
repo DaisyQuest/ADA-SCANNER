@@ -1,0 +1,10 @@
+{
+  "id": "frame-title-001",
+  "description": "Ensure iframes have a descriptive title attribute.",
+  "severity": "medium",
+  "checkId": "missing-iframe-title",
+  "appliesTo": "html, htm, cshtml, razor",
+  "recommendation": "Provide a unique title attribute for each <iframe> to describe its content.",
+  "wcagCriteria": "4.1.2",
+  "problemTags": "iframe-title, embedded-content"
+}

@@ -1,0 +1,10 @@
+{
+  "id": "skip-link-001",
+  "description": "Ensure pages include a skip link to bypass repeated navigation.",
+  "severity": "medium",
+  "checkId": "missing-skip-link",
+  "appliesTo": "html, htm, cshtml, razor",
+  "recommendation": "Add a visually-hidden skip link that targets the main content region.",
+  "wcagCriteria": "2.4.1",
+  "problemTags": "skip-link, bypass-blocks"
+}

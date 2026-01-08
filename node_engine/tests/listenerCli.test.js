@@ -20,6 +20,36 @@ describe("Listener CLI", () => {
       env: { ADA_RULES_ROOT: "/env/rules", PORT: "not-a-number" }
     });
     expect(fallbackOptions).toEqual({ rulesRoot: "/alternate", port: null });
+
+    const missingPort = resolveListenerOptions({
+      argv: ["--rules-root", "/tmp/rules", "--port"],
+      env: {}
+    });
+    expect(missingPort).toEqual({ rulesRoot: "/tmp/rules", port: null });
+
+    const invalidPort = resolveListenerOptions({
+      argv: ["--rules-root", "/tmp/rules", "--port", "nope"],
+      env: {}
+    });
+    expect(invalidPort).toEqual({ rulesRoot: "/tmp/rules", port: null });
+
+    const missingRulesRoot = resolveListenerOptions({
+      argv: ["--rules-root"],
+      env: {}
+    });
+    expect(missingRulesRoot).toEqual({ rulesRoot: "", port: null });
+
+    const emptyEnvRoot = resolveListenerOptions({
+      argv: ["--unknown"],
+      env: { RULES_ROOT: "", ADA_RULES_ROOT: "/fallback", PORT: "" }
+    });
+    expect(emptyEnvRoot).toEqual({ rulesRoot: "", port: null });
+
+    const adaFallback = resolveListenerOptions({
+      argv: [],
+      env: { ADA_RULES_ROOT: "/fallback", PORT: "0" }
+    });
+    expect(adaFallback).toEqual({ rulesRoot: "/fallback", port: 0 });
   });
 
   test("returns a non-started result when rules root missing", async () => {
@@ -45,5 +75,50 @@ describe("Listener CLI", () => {
     expect(result.started).toBe(true);
     expect(result.port).toBe(1234);
     expect(logger.log).toHaveBeenCalledWith("Listener server running on port 1234.");
+  });
+
+  test("defaults port to zero when not provided", async () => {
+    const logger = { error: jest.fn(), log: jest.fn() };
+    const start = jest.fn().mockResolvedValue(4567);
+    const ListenerServerClass = jest.fn().mockImplementation(() => ({ start }));
+
+    const result = await startListener({
+      argv: ["--rules-root", "/tmp/rules"],
+      env: {},
+      logger,
+      ListenerServerClass
+    });
+
+    expect(ListenerServerClass).toHaveBeenCalledWith({ rulesRoot: "/tmp/rules", port: 0 });
+    expect(result.port).toBe(4567);
+  });
+
+  test("uses process defaults when args are omitted", async () => {
+    const logger = { error: jest.fn(), log: jest.fn() };
+    const start = jest.fn().mockResolvedValue(7890);
+    const ListenerServerClass = jest.fn().mockImplementation(() => ({ start }));
+    const originalRulesRoot = process.env.RULES_ROOT;
+    process.env.RULES_ROOT = "/env/rules";
+
+    const result = await startListener({ logger, ListenerServerClass });
+
+    expect(result.started).toBe(true);
+    expect(ListenerServerClass).toHaveBeenCalledWith({ rulesRoot: "/env/rules", port: 0 });
+
+    process.env.RULES_ROOT = originalRulesRoot;
+  });
+
+  test("uses default logger and server class when no args provided", async () => {
+    const errorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+    const originalRulesRoot = process.env.RULES_ROOT;
+    process.env.RULES_ROOT = "";
+
+    const result = await startListener();
+
+    expect(result).toEqual({ started: false });
+    expect(errorSpy).toHaveBeenCalledWith("Rules root is required.");
+
+    process.env.RULES_ROOT = originalRulesRoot;
+    errorSpy.mockRestore();
   });
 });

@@ -1,0 +1,10 @@
+{
+  "id": "focus-hidden-001",
+  "description": "Ensure focusable elements are not visually hidden without an alternative.",
+  "severity": "high",
+  "checkId": "hidden-focusable",
+  "appliesTo": "html, htm, cshtml, razor",
+  "recommendation": "Avoid hiding focusable elements with display:none or visibility:hidden unless they are removed from tab order.",
+  "wcagCriteria": "2.4.7",
+  "problemTags": "focus-visible, hidden-elements"
+}

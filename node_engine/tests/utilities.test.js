@@ -33,6 +33,8 @@ describe("AccessibleNameUtilities", () => {
   test("collects label ids and element ids", () => {
     expect(collectLabelForIds(markup)).toEqual(new Set(["name"]));
     expect(collectElementIds(markup)).toEqual(new Set(["name"]));
+    expect(collectLabelForIds('<label for=""></label>')).toEqual(new Set());
+    expect(collectElementIds('<div id=""></div>')).toEqual(new Set());
   });
 
   test("detects label ranges and membership", () => {
@@ -53,6 +55,7 @@ describe("AccessibleNameUtilities", () => {
     expect(hasValidAriaLabelledBy("label-one", ids)).toBe(true);
     expect(hasValidAriaLabelledBy("missing", ids)).toBe(false);
     expect(hasValidAriaLabelledBy("", ids)).toBe(false);
+    expect(hasValidAriaLabelledBy("label-one missing", ids)).toBe(true);
   });
 
   test("validates label for id and text content", () => {
@@ -70,6 +73,7 @@ describe("TextUtilities", () => {
     expect(getLineNumber(content, 0)).toBe(1);
     expect(getLineNumber(content, 6)).toBe(2);
     expect(getLineNumber(content, content.length)).toBe(3);
+    expect(getLineNumber(content, 5)).toBe(2);
   });
 
   test("detects attributes with optional boolean syntax", () => {
@@ -85,11 +89,16 @@ describe("StyleUtilities", () => {
     const style = "width: 10px; width: 20px;";
     expect(getLastPropertyValue(style, "width")).toBe("20px");
     expect(getLastPropertyValue(style, "height")).toBeNull();
+    expect(getLastPropertyValue("", "width")).toBeNull();
+    expect(getLastPropertyValue("width 10px", "width")).toBeNull();
+    expect(getLastPropertyValue("width:", "width")).toBeNull();
+    expect(getLastPropertyValue("width: 10px", "")).toBeNull();
   });
 
   test("identifies fixed lengths", () => {
     expect(isFixedLength("10px")).toBe(true);
     expect(isFixedLength("0px")).toBe(false);
+    expect(isFixedLength("-1px")).toBe(false);
     expect(isFixedLength("50%")) .toBe(false);
     expect(isFixedLength("auto")).toBe(false);
     expect(isFixedLength("abc")).toBe(false);
