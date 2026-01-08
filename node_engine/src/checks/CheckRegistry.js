@@ -19,6 +19,7 @@ const { MissingSkipLinkCheck } = require("./MissingSkipLinkCheck");
 const { EmptyFormLabelCheck } = require("./EmptyFormLabelCheck");
 const { OrphanedFormLabelCheck } = require("./OrphanedFormLabelCheck");
 const { EmptyLinkCheck } = require("./EmptyLinkCheck");
+const { EmptyHeadingCheck } = require("./EmptyHeadingCheck");
 const { MissingHeadingStructureCheck } = require("./MissingHeadingStructureCheck");
 const { DeviceDependentEventHandlerCheck } = require("./DeviceDependentEventHandlerCheck");
 const { RedundantTitleTextCheck } = require("./RedundantTitleTextCheck");
@@ -70,6 +71,7 @@ const createDefaultCheckRegistry = () =>
     EmptyFormLabelCheck,
     OrphanedFormLabelCheck,
     EmptyLinkCheck,
+    EmptyHeadingCheck,
     MissingHeadingStructureCheck,
     DeviceDependentEventHandlerCheck,
     RedundantTitleTextCheck,

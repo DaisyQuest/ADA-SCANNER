@@ -21,6 +21,7 @@ const AllowedChecks = new Set([
   "empty-form-label",
   "orphaned-form-label",
   "empty-link",
+  "empty-heading",
   "missing-heading-structure",
   "device-dependent-event-handler",
   "redundant-title-text",
