@@ -1,0 +1,147 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px 32px;
+  background: #0f172a;
+  color: #fff;
+}
+
+.page-header h1 {
+  margin: 0 0 4px;
+  font-size: 24px;
+}
+
+.muted {
+  color: #94a3b8;
+  margin: 0;
+}
+
+.status {
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: #334155;
+  color: #e2e8f0;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.status.connected {
+  background: #16a34a;
+  color: #fff;
+}
+
+.summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 16px;
+  padding: 24px 32px 0;
+}
+
+.summary-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.08);
+}
+
+.summary-label {
+  font-size: 12px;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.summary-value {
+  font-size: 28px;
+  font-weight: 700;
+  margin-top: 6px;
+}
+
+.panel {
+  margin: 24px 32px;
+  background: #fff;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.08);
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.data-table th,
+.data-table td {
+  text-align: left;
+  padding: 12px 8px;
+  border-bottom: 1px solid #e2e8f0;
+  font-size: 14px;
+}
+
+.data-table th {
+  font-size: 12px;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+.pill-button {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #2563eb;
+  color: #fff;
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 600;
+  margin-right: 6px;
+}
+
+.pill-button--secondary {
+  background: #e2e8f0;
+  color: #1e293b;
+}
+
+.issue-feed {
+  display: grid;
+  gap: 12px;
+}
+
+.issue-item {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+
+.issue-title {
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.issue-meta {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.badge {
+  margin-left: 6px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: #1d4ed8;
+  color: #fff;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}

@@ -2,8 +2,47 @@
   const DEFAULT_SERVER_URL = "http://127.0.0.1:45892/capture";
   const DEFAULT_DEBOUNCE_MS = 500;
 
-  const normalizeHtml = (documentRoot) =>
-      documentRoot?.documentElement?.outerHTML ?? "";
+  const HIGHLIGHT_CLASS = "ada-highlight";
+  const HIGHLIGHT_STYLE_ID = "ada-highlight-style";
+  const HIGHLIGHT_ATTRIBUTES = [
+    "data-ada-issue-count",
+    "data-ada-issue-message",
+    "data-ada-original-title"
+  ];
+
+  const stripHighlights = (rootElement) => {
+    if (!rootElement) {
+      return;
+    }
+
+    const style = rootElement.querySelector(`#${HIGHLIGHT_STYLE_ID}`);
+    if (style) {
+      style.remove();
+    }
+
+    const highlighted = rootElement.querySelectorAll(`.${HIGHLIGHT_CLASS}`);
+    highlighted.forEach((element) => {
+      element.classList.remove(HIGHLIGHT_CLASS);
+      const originalTitle = element.getAttribute("data-ada-original-title");
+      if (originalTitle) {
+        element.setAttribute("title", originalTitle);
+      } else {
+        element.removeAttribute("title");
+      }
+      HIGHLIGHT_ATTRIBUTES.forEach((attr) => element.removeAttribute(attr));
+    });
+  };
+
+  const normalizeHtml = (documentRoot) => {
+    const root = documentRoot?.documentElement;
+    if (!root) {
+      return "";
+    }
+
+    const clone = root.cloneNode(true);
+    stripHighlights(clone);
+    return clone.outerHTML ?? "";
+  };
 
   // IMPORTANT:
   // - Node listener requires lowercase `url` and `html`
@@ -123,6 +162,7 @@
     DEFAULT_SERVER_URL,
     DEFAULT_DEBOUNCE_MS,
     normalizeHtml,
+    stripHighlights,
     createPayload,
     createHash,
     shouldForwardUpdate,

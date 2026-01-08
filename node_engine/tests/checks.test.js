@@ -46,13 +46,16 @@ const {
 const {
   InsufficientContrastCheck,
   parseCssColor,
+  extractCssColorToken,
   parseXmlAttribute,
   resolveStaticColor,
   extractCssVarFallback,
   extractXamlFallback,
   normalizeColorValue,
-  getCandidates
+  getCandidates,
+  blendColors
 } = require("../src/checks/InsufficientContrastCheck");
+const { parseColor } = require("../src/checks/ColorContrastAnalyzer");
 const { XamlMissingNameCheck } = require("../src/checks/XamlMissingNameCheck");
 
 const createContext = (content, kind = "html") => ({
@@ -594,6 +597,8 @@ describe("InsufficientContrastCheck", () => {
   test("detects low contrast in HTML, CSS, and XAML", () => {
     expect(parseCssColor("color: #111", "color")).toBe("#111");
     expect(parseCssColor("color", "color")).toBeNull();
+    expect(parseCssColor("background: url(x) #abc", ["background", "background-color"])).toBe("#abc");
+    expect(extractCssColorToken("url(x) rgba(1, 2, 3, 0.5)")).toBe("rgba(1, 2, 3, 0.5)");
     expect(parseXmlAttribute('Foreground=" #fff "', "Foreground")).toBe("#fff");
     expect(parseXmlAttribute("", "Foreground")).toBeNull();
     expect(normalizeColorValue("#fff !important")).toBe("#fff");
@@ -605,6 +610,10 @@ describe("InsufficientContrastCheck", () => {
     expect(resolveStaticColor("var(--primary, #fff)")).toBe("#fff");
     expect(resolveStaticColor("{Binding FallbackValue=#fff}")).toBe("#fff");
     expect(resolveStaticColor("")) .toBeNull();
+    expect(parseColor("hsl(0, 0%, 0%)")).toEqual({ r: 0, g: 0, b: 0, a: 1 });
+    expect(parseColor("red")).toEqual({ r: 1, g: 0, b: 0, a: 1 });
+    expect(blendColors({ r: 1, g: 1, b: 1, a: 0.5 }, { r: 0, g: 0, b: 0, a: 1 }))
+      .toEqual({ r: 0.5, g: 0.5, b: 0.5, a: 1 });
 
     const htmlContext = createContext('<div style="color:#777; background-color:#888"></div>', "html");
     expect(InsufficientContrastCheck.run(htmlContext, rule)).toHaveLength(1);
@@ -620,6 +629,15 @@ describe("InsufficientContrastCheck", () => {
 
     const xamlMissing = createContext('<TextBlock Foreground="#777" />', "xaml");
     expect(InsufficientContrastCheck.run(xamlMissing, rule)).toHaveLength(0);
+
+    const rgbContext = createContext('<div style="color: rgb(10, 10, 10); background: rgb(30, 30, 30)"></div>', "html");
+    expect(InsufficientContrastCheck.run(rgbContext, rule)).toHaveLength(1);
+
+    const hslContext = createContext('<div style="color: hsl(0, 0%, 10%); background-color: hsl(0, 0%, 30%)"></div>', "html");
+    expect(InsufficientContrastCheck.run(hslContext, rule)).toHaveLength(1);
+
+    const xamlAlpha = createContext('<TextBlock Foreground="#80FFFFFF" Background="#80FFFFFF" />', "xaml");
+    expect(InsufficientContrastCheck.run(xamlAlpha, rule)).toHaveLength(1);
 
     expect(getCandidates(htmlContext)).toHaveLength(1);
   });

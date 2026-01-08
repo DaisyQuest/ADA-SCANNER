@@ -5,6 +5,9 @@ const { RuntimeScanner } = require("./runtime/RuntimeScanner");
 const { ListenerServer } = require("./listener/ListenerServer");
 const { ReportBuilder } = require("./listener/ReportBuilder");
 const { HtmlReportBuilder } = require("./listener/HtmlReportBuilder");
+const { StaticAnalyzer } = require("./static/StaticAnalyzer");
+const { StaticAnalysisServer } = require("./static/StaticAnalysisServer");
+const { StaticReportBuilder } = require("./static/StaticReportBuilder");
 
 module.exports = {
   RuleLoader,
@@ -14,5 +17,8 @@ module.exports = {
   RuntimeScanner,
   ListenerServer,
   ReportBuilder,
-  HtmlReportBuilder
+  HtmlReportBuilder,
+  StaticAnalyzer,
+  StaticAnalysisServer,
+  StaticReportBuilder
 };

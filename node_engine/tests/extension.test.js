@@ -3,6 +3,7 @@
 const {
   DEFAULT_SERVER_URL,
   normalizeHtml,
+  stripHighlights,
   createPayload,
   createHash,
   shouldForwardUpdate,
@@ -19,6 +20,23 @@ describe("Extension forwarder utilities", () => {
     const html = normalizeHtml(document);
     expect(html).toContain("<html>");
     expect(normalizeHtml(null)).toBe("");
+
+    document.head.innerHTML = '<style id="ada-highlight-style">.ada-highlight{}</style>';
+    document.body.innerHTML = '<div class="ada-highlight" data-ada-issue-count="1" title="Issue">Hi</div>';
+    const clone = document.documentElement.cloneNode(true);
+    stripHighlights(clone);
+    expect(clone.querySelector(".ada-highlight")).toBeNull();
+    expect(clone.querySelector("#ada-highlight-style")).toBeNull();
+    expect(clone.querySelector("[title]")).toBeNull();
+
+    document.body.innerHTML = '<div class="ada-highlight" data-ada-original-title="Original" title="Issue">Hi</div>';
+    const cloneWithTitle = document.documentElement.cloneNode(true);
+    stripHighlights(cloneWithTitle);
+    expect(cloneWithTitle.querySelector("[title]")?.getAttribute("title")).toBe("Original");
+
+    expect(stripHighlights(null)).toBeUndefined();
+    const strippedHtml = normalizeHtml(document);
+    expect(strippedHtml).not.toContain("ada-highlight");
 
     const payload = createPayload({ url: "http://example", html, title: "Title" });
     expect(payload).toEqual({
@@ -218,6 +236,13 @@ describe("Extension background", () => {
 
     await toggleExtension(chromeApi, { id: 1 });
     expect(chromeApi.action.setBadgeText).toHaveBeenCalled();
+  });
+
+  test("ignores sendMessage failures when toggling", async () => {
+    const chromeApi = createChrome();
+    chromeApi.tabs.sendMessage.mockRejectedValue(new Error("missing"));
+    await setEnabledState(chromeApi, true, 5);
+    expect(chromeApi.tabs.sendMessage).toHaveBeenCalledWith(5, { type: "toggle", enabled: true });
   });
 
   test("ignores tab messaging errors when toggling", async () => {
@@ -493,6 +518,14 @@ describe("Extension highlighter", () => {
     highlighter.clearHighlights();
     expect(button.classList.contains("ada-highlight")).toBe(false);
     expect(button.getAttribute("title")).toBe("Original");
+  });
+
+  test("reuses existing highlight styles", () => {
+    document.head.innerHTML = "<style id=\"ada-highlight-style\"></style>";
+    document.body.innerHTML = "<button id=\"save\">Save</button>";
+    const highlighter = createHighlighter({ documentRoot: document });
+    highlighter.applyHighlights([{ selector: "#save", message: "Missing label" }]);
+    expect(document.querySelectorAll("#ada-highlight-style")).toHaveLength(1);
   });
 
   test("applies highlights based on evidence and filters by page URL", () => {

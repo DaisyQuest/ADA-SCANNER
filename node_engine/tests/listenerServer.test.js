@@ -38,6 +38,7 @@ describe("ListenerServer", () => {
 
     const health = await fetch(`${baseUrl}/health`);
     expect(health.status).toBe(200);
+    expect(health.headers.get("access-control-allow-origin")).toBe("https://localhost:7203");
 
     const badPayload = await postJson(`${baseUrl}/capture`, { url: "http://example" });
     expect(badPayload.status).toBe(400);
@@ -111,6 +112,47 @@ describe("ListenerServer", () => {
 
     const notFound = await fetch(`${baseUrl}/missing`);
     expect(notFound.status).toBe(404);
+
+    await server.stop();
+  });
+
+  test("enforces allowed origins and ignores self capture", async () => {
+    const rulesRoot = createTempRules();
+    const server = new ListenerServer({ rulesRoot, allowedOrigins: ["http://allowed.test"] });
+    const port = await server.start();
+    const baseUrl = `http://localhost:${port}`;
+
+    const denied = await fetch(`${baseUrl}/capture`, {
+      method: "POST",
+      headers: {
+        Origin: "http://denied.test",
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ url: "http://example", html: "<input />", kind: "html" })
+    });
+    expect(denied.status).toBe(403);
+
+    const allowed = await fetch(`${baseUrl}/capture`, {
+      method: "POST",
+      headers: {
+        Origin: "http://allowed.test",
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ url: "http://example", html: "<input />", kind: "html" })
+    });
+    expect(allowed.status).toBe(200);
+    expect(allowed.headers.get("access-control-allow-origin")).toBe("http://allowed.test");
+
+    const selfCapture = await fetch(`${baseUrl}/capture`, {
+      method: "POST",
+      headers: {
+        Origin: "http://allowed.test",
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ url: baseUrl, html: "<input />", kind: "html" })
+    });
+    const selfPayload = await selfCapture.json();
+    expect(selfPayload.ignored).toBe(true);
 
     await server.stop();
   });
@@ -266,5 +308,36 @@ describe("ListenerServer", () => {
 
     const key = server.createIssueKey({});
     expect(key).toContain("::");
+  });
+
+  test("matches wildcard origins and allows any when configured", () => {
+    const rulesRoot = createTempRules();
+    const server = new ListenerServer({ rulesRoot, allowedOrigins: ["https://*.example.com"] });
+    const allowedRequest = { headers: { origin: "https://app.example.com" } };
+    const deniedRequest = { headers: { origin: "https://example.com" } };
+    expect(server.resolveAllowedOrigin(allowedRequest)).toBe("https://app.example.com");
+    expect(server.resolveAllowedOrigin(deniedRequest)).toBeNull();
+
+    const allowAnyServer = new ListenerServer({ rulesRoot, allowedOrigins: "*" });
+    expect(allowAnyServer.resolveAllowedOrigin({ headers: {} })).toBe("*");
+    expect(allowAnyServer.isOriginAllowed({ headers: { origin: "https://anywhere.test" } })).toBe(true);
+  });
+
+  test("normalizes comma-delimited allowed origins", () => {
+    const rulesRoot = createTempRules();
+    const server = new ListenerServer({ rulesRoot, allowedOrigins: "http://one, http://two" });
+    expect(server.allowedOrigins.exact.has("http://one")).toBe(true);
+    expect(server.allowedOrigins.exact.has("http://two")).toBe(true);
+    expect(server.resolveAllowedOrigin({ headers: {} })).toBeNull();
+    expect(server.resolveAllowedOrigin({ headers: { origin: "http://one" } })).toBe("http://one");
+  });
+
+  test("handles self-capture checks without host or invalid URLs", () => {
+    const rulesRoot = createTempRules();
+    const server = new ListenerServer({ rulesRoot });
+
+    expect(server.getServerOrigin({ headers: {} })).toBeNull();
+    expect(server.isSelfCapture("http://example", { headers: {} })).toBe(false);
+    expect(server.isSelfCapture("not a url", { headers: { host: "localhost" } })).toBe(false);
   });
 });

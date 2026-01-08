@@ -31,3 +31,6 @@
 
 2026-01-08 - Selected team BACKEND; added empty heading check to node engine with tests. (SPEC-008, SPEC-013)
 2026-01-08 - Added HTML runtime reports and in-page issue highlighting for runtime captures with expanded tests. (SPEC-010, SPEC-019)
+2026-01-08 - Improved contrast parsing, configurable CORS, highlight stability, and static analysis UI foundation with expanded tests. (SPEC-001, SPEC-004, SPEC-010, SPEC-013, SPEC-019)
+
+2026-01-08 - Added static analysis support for XAML and Razor file extensions with tests. (SPEC-004)
