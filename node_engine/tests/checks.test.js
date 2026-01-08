@@ -16,6 +16,7 @@ const { MissingLinkTextCheck, hasImageAltText } = require("../src/checks/Missing
 const { EmptyFormLabelCheck } = require("../src/checks/EmptyFormLabelCheck");
 const { OrphanedFormLabelCheck } = require("../src/checks/OrphanedFormLabelCheck");
 const { EmptyLinkCheck, isLink } = require("../src/checks/EmptyLinkCheck");
+const { EmptyHeadingCheck, hasImageAltText: hasHeadingImageAltText } = require("../src/checks/EmptyHeadingCheck");
 const { MissingHeadingStructureCheck } = require("../src/checks/MissingHeadingStructureCheck");
 const { DeviceDependentEventHandlerCheck, containsAny } = require("../src/checks/DeviceDependentEventHandlerCheck");
 const { RedundantTitleTextCheck, normalize, textMatches } = require("../src/checks/RedundantTitleTextCheck");
@@ -324,6 +325,33 @@ describe("EmptyLinkCheck", () => {
     expect(isLink('href="/home"')).toBe(true);
     expect(isLink('role="link"')).toBe(true);
     expect(isLink("")).toBe(false);
+  });
+});
+
+describe("EmptyHeadingCheck", () => {
+  test("detects empty headings", () => {
+    const empty = createContext("<h1></h1>", "html");
+    expect(EmptyHeadingCheck.run(empty, rule)).toHaveLength(1);
+
+    const whitespace = createContext("<h2>   </h2>", "html");
+    expect(EmptyHeadingCheck.run(whitespace, rule)).toHaveLength(1);
+  });
+
+  test("skips headings with text or image alt text", () => {
+    const text = createContext("<h3>Title</h3>", "html");
+    expect(EmptyHeadingCheck.run(text, rule)).toHaveLength(0);
+
+    const withImageAlt = createContext('<h4><img src="logo.png" alt="Logo"></h4>', "html");
+    expect(EmptyHeadingCheck.run(withImageAlt, rule)).toHaveLength(0);
+
+    const withImageNoAlt = createContext('<h5><img src="logo.png"></h5>', "html");
+    expect(EmptyHeadingCheck.run(withImageNoAlt, rule)).toHaveLength(1);
+  });
+
+  test("helper detects image alt text", () => {
+    expect(hasHeadingImageAltText('<img alt="Logo" />')).toBe(true);
+    expect(hasHeadingImageAltText('<img alt=" " />')).toBe(false);
+    expect(hasHeadingImageAltText("")).toBe(false);
   });
 });
 

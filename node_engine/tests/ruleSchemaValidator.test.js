@@ -61,7 +61,7 @@ describe("RuleSchemaValidator", () => {
       id: "rule-3",
       description: "desc",
       severity: "medium",
-      checkId: "empty-link"
+      checkId: "empty-heading"
     });
 
     expect(errors).toEqual([]);
