@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Static ADA Analysis</title>
+    <link rel="stylesheet" href="/assets/app.css" />
+  </head>
+  <body>
+    <header class="page-header">
+      <div>
+        <h1>Static ADA Analysis</h1>
+        <p class="muted">WCAG 2.0 AA coverage snapshot</p>
+      </div>
+      <div class="status" id="connectionStatus">Loading…</div>
+    </header>
+
+    <section class="summary">
+      <div class="summary-card">
+        <div class="summary-label">Files scanned</div>
+        <div class="summary-value" id="fileCount">0</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-label">Issues found</div>
+        <div class="summary-value" id="issueCount">0</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-label">Rules triggered</div>
+        <div class="summary-value" id="ruleCount">0</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-label">Last updated</div>
+        <div class="summary-value" id="lastUpdated">—</div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Files</h2>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>File</th>
+            <th>Issues</th>
+            <th>Top rules</th>
+            <th>Downloads</th>
+          </tr>
+        </thead>
+        <tbody id="fileTable"></tbody>
+      </table>
+    </section>
+
+    <section class="panel">
+      <h2>Recent issues</h2>
+      <div id="issueFeed" class="issue-feed"></div>
+    </section>
+
+    <script src="/assets/app.js"></script>
+  </body>
+</html>

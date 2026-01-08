@@ -1,11 +1,40 @@
 const { getLineNumber } = require("./TextUtilities");
-const { tryParseHex, contrastRatio } = require("./ColorContrastAnalyzer");
+const { parseColor, contrastRatio, clamp01 } = require("./ColorContrastAnalyzer");
 
 const styleRegex = /style="(?<style>[^"]+)"/gi;
 const xamlElementRegex = /<(?<tag>[\w:.-]+)(?<attrs>[^>]*?)>/gi;
 const cssBlockRegex = /(?<selector>[^\{]+)\{(?<body>[^}]+)\}/gis;
 
-const parseCssColor = (style, property) => {
+const extractCssColorToken = (value) => {
+  const normalized = value.trim();
+  if (!normalized) {
+    return null;
+  }
+
+  const tokens = normalized
+    .split(/\s+(?![^()]*\))/)
+    .map((token) => token.trim())
+    .filter(Boolean);
+
+  for (const token of tokens) {
+    if (/^url\(/i.test(token)) {
+      continue;
+    }
+
+    if (
+      token.startsWith("#") ||
+      /^rgba?\(/i.test(token) ||
+      /^hsla?\(/i.test(token) ||
+      /^[a-z]+$/i.test(token)
+    ) {
+      return token;
+    }
+  }
+
+  return null;
+};
+
+const parseCssColor = (style, properties) => {
   const parts = style.split(";").filter(Boolean);
   for (const part of parts) {
     const kv = part.split(":", 2).map((segment) => segment.trim());
@@ -13,8 +42,9 @@ const parseCssColor = (style, property) => {
       continue;
     }
 
-    if (kv[0].toLowerCase() === property.toLowerCase()) {
-      return kv[1];
+    const propertyList = Array.isArray(properties) ? properties : [properties];
+    if (propertyList.some((property) => kv[0].toLowerCase() === property.toLowerCase())) {
+      return extractCssColorToken(kv[1]) ?? kv[1];
     }
   }
 
@@ -113,7 +143,7 @@ const getCandidates = (context) => {
       .map((match) => {
         const body = match.groups.body;
         const foreground = parseCssColor(body, "color");
-        const background = parseCssColor(body, "background-color");
+        const background = parseCssColor(body, ["background-color", "background"]);
         if (!foreground || !background) {
           return null;
         }
@@ -132,7 +162,7 @@ const getCandidates = (context) => {
     .map((match) => {
       const style = match.groups.style;
       const foreground = parseCssColor(style, "color");
-      const background = parseCssColor(style, "background-color");
+      const background = parseCssColor(style, ["background-color", "background"]);
       if (!foreground || !background) {
         return null;
       }
@@ -160,13 +190,21 @@ const InsufficientContrastCheck = {
         continue;
       }
 
-      const fg = tryParseHex(foreground);
-      const bg = tryParseHex(background);
+      const alphaPosition = context.kind.toLowerCase() === "xaml" ? "start" : "end";
+      const fg = parseColor(foreground, { alphaPosition });
+      const bg = parseColor(background, { alphaPosition });
       if (!fg || !bg) {
         continue;
       }
 
-      const ratio = contrastRatio(fg, bg);
+      const resolvedBackground = bg.a < 1
+        ? blendColors(bg, { r: 1, g: 1, b: 1, a: 1 })
+        : bg;
+      const resolvedForeground = fg.a < 1
+        ? blendColors(fg, resolvedBackground)
+        : fg;
+
+      const ratio = contrastRatio(resolvedForeground, resolvedBackground);
       if (ratio >= 4.5) {
         continue;
       }
@@ -186,13 +224,26 @@ const InsufficientContrastCheck = {
   }
 };
 
+const blendColors = (foreground, background) => {
+  const alpha = clamp01(foreground.a ?? 1);
+  const inverse = 1 - alpha;
+  return {
+    r: clamp01(foreground.r * alpha + background.r * inverse),
+    g: clamp01(foreground.g * alpha + background.g * inverse),
+    b: clamp01(foreground.b * alpha + background.b * inverse),
+    a: 1
+  };
+};
+
 module.exports = {
   InsufficientContrastCheck,
   parseCssColor,
+  extractCssColorToken,
   parseXmlAttribute,
   resolveStaticColor,
   extractCssVarFallback,
   extractXamlFallback,
   normalizeColorValue,
-  getCandidates
+  getCandidates,
+  blendColors
 };

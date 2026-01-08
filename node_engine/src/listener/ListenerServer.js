@@ -7,8 +7,7 @@ const { RuntimeScanner } = require("../runtime/RuntimeScanner");
 const { ReportBuilder } = require("./ReportBuilder");
 const { HtmlReportBuilder } = require("./HtmlReportBuilder");
 
-// CHANGE: configure allowed origin(s)
-const ALLOWED_ORIGIN = "https://localhost:7203";
+const DEFAULT_ALLOWED_ORIGINS = ["https://localhost:7203"];
 
 class ListenerServer extends EventEmitter {
   constructor({
@@ -17,7 +16,9 @@ class ListenerServer extends EventEmitter {
     scanner = new RuntimeScanner(),
     reportBuilder = new ReportBuilder(),
     htmlReportBuilder = new HtmlReportBuilder(),
-    uiRoot = path.join(__dirname, "ui")
+    uiRoot = path.join(__dirname, "ui"),
+    allowedOrigins = DEFAULT_ALLOWED_ORIGINS,
+    ignoreSelfCapture = true
   } = {}) {
     super();
     this.port = port;
@@ -26,6 +27,8 @@ class ListenerServer extends EventEmitter {
     this.reportBuilder = reportBuilder;
     this.htmlReportBuilder = htmlReportBuilder;
     this.uiRoot = uiRoot;
+    this.allowedOrigins = this.normalizeAllowedOrigins(allowedOrigins);
+    this.ignoreSelfCapture = ignoreSelfCapture;
     this.server = null;
     this.documents = [];
     this.issues = [];
@@ -71,9 +74,12 @@ class ListenerServer extends EventEmitter {
   }
 
   // CHANGE: central CORS helper
-  addCors(response) {
-    response.setHeader("Access-Control-Allow-Origin", ALLOWED_ORIGIN);
-    response.setHeader("Vary", "Origin");
+  addCors(response, request) {
+    const allowedOrigin = this.resolveAllowedOrigin(request);
+    if (allowedOrigin) {
+      response.setHeader("Access-Control-Allow-Origin", allowedOrigin);
+      response.setHeader("Vary", "Origin");
+    }
     response.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
     response.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
     response.setHeader("Access-Control-Max-Age", "86400");
@@ -86,14 +92,14 @@ class ListenerServer extends EventEmitter {
 
     // CHANGE: handle preflight
     if (method === "OPTIONS" && pathname === "/capture") {
-      this.addCors(response);
+      this.addCors(response, request);
       response.statusCode = 204;
       response.end();
       return;
     }
 
     if (method === "GET" && pathname === "/health") {
-      this.writeJson(response, 200, { status: "ok" });
+      this.writeJson(response, 200, { status: "ok" }, request);
       return;
     }
 
@@ -118,12 +124,12 @@ class ListenerServer extends EventEmitter {
     }
 
     if (method === "GET" && pathname === "/documents") {
-      this.writeJson(response, 200, { documents: this.documents });
+      this.writeJson(response, 200, { documents: this.documents }, request);
       return;
     }
 
     if (method === "GET" && pathname === "/issues") {
-      this.writeJson(response, 200, { issues: this.issues });
+      this.writeJson(response, 200, { issues: this.issues }, request);
       return;
     }
 
@@ -135,10 +141,12 @@ class ListenerServer extends EventEmitter {
       const format = requestUrl?.searchParams.get("format");
       if (format === "html") {
         const html = this.htmlReportBuilder.buildReport({ report });
-        this.writeHtml(response, 200, html, { "Content-Disposition": "attachment; filename=\"report.html\"" });
+        this.writeHtml(response, 200, html, request, {
+          "Content-Disposition": "attachment; filename=\"report.html\""
+        });
         return;
       }
-      this.writeJson(response, 200, report);
+      this.writeJson(response, 200, report, request);
       return;
     }
 
@@ -148,7 +156,9 @@ class ListenerServer extends EventEmitter {
         issues: this.issues
       });
       const html = this.htmlReportBuilder.buildReport({ report });
-      this.writeHtml(response, 200, html, { "Content-Disposition": "attachment; filename=\"report.html\"" });
+      this.writeHtml(response, 200, html, request, {
+        "Content-Disposition": "attachment; filename=\"report.html\""
+      });
       return;
     }
 
@@ -158,7 +168,7 @@ class ListenerServer extends EventEmitter {
           documents: this.documents,
           issues: this.issues
         })
-      });
+      }, request);
       return;
     }
 
@@ -166,7 +176,7 @@ class ListenerServer extends EventEmitter {
       const filePath = requestUrl?.searchParams.get("path");
       const format = requestUrl?.searchParams.get("format");
       if (!filePath) {
-        this.writeJson(response, 400, { error: "Query parameter 'path' is required." });
+        this.writeJson(response, 400, { error: "Query parameter 'path' is required." }, request);
         return;
       }
 
@@ -177,7 +187,7 @@ class ListenerServer extends EventEmitter {
       });
 
       if (!report.document && report.issueCount === 0) {
-        this.writeJson(response, 404, { error: "Report not found for requested file." });
+        this.writeJson(response, 404, { error: "Report not found for requested file." }, request);
         return;
       }
 
@@ -188,6 +198,7 @@ class ListenerServer extends EventEmitter {
           response,
           200,
           html,
+          request,
           { "Content-Disposition": `attachment; filename="${filename}"` }
         );
       } else {
@@ -196,6 +207,7 @@ class ListenerServer extends EventEmitter {
           response,
           200,
           report,
+          request,
           { "Content-Disposition": `attachment; filename="${filename}"` }
         );
       }
@@ -203,16 +215,26 @@ class ListenerServer extends EventEmitter {
     }
 
     if (method === "POST" && pathname === "/capture") {
+      if (!this.isOriginAllowed(request)) {
+        this.writeJson(response, 403, { error: "Origin not allowed." }, request);
+        return;
+      }
+
       this.readBody(request)
           .then((payload) => {
             if (!payload?.url || !payload?.html) {
-              this.writeJson(response, 400, { error: "Payload must include url and html." });
+              this.writeJson(response, 400, { error: "Payload must include url and html." }, request);
+              return;
+            }
+
+            if (this.ignoreSelfCapture && this.isSelfCapture(payload.url, request)) {
+              this.writeJson(response, 200, { ignored: true, reason: "self-capture" }, request);
               return;
             }
 
             const payloadHash = this.createPayloadHash(payload);
             if (this.payloadHashes.has(payloadHash)) {
-              this.writeJson(response, 200, { duplicate: true });
+              this.writeJson(response, 200, { duplicate: true }, request);
               return;
             }
 
@@ -243,15 +265,15 @@ class ListenerServer extends EventEmitter {
               document: result.document,
               issues: result.issues,
               report
-            });
+            }, request);
           })
           .catch((error) => {
-            this.writeJson(response, 500, { error: error.message });
+            this.writeJson(response, 500, { error: error.message }, request);
           });
       return;
     }
 
-    this.writeJson(response, 404, { error: "Not found." });
+    this.writeJson(response, 404, { error: "Not found." }, request);
   }
 
   readBody(request) {
@@ -277,11 +299,11 @@ class ListenerServer extends EventEmitter {
     });
   }
 
-  writeJson(response, statusCode, payload, headers = {}) {
+  writeJson(response, statusCode, payload, request, headers = {}) {
     const json = JSON.stringify(payload);
 
     // CHANGE: ensure CORS headers are always present
-    this.addCors(response);
+    this.addCors(response, request);
 
     response.writeHead(statusCode, {
       "Content-Type": "application/json",
@@ -291,9 +313,9 @@ class ListenerServer extends EventEmitter {
     response.end(json);
   }
 
-  writeHtml(response, statusCode, html, headers = {}) {
+  writeHtml(response, statusCode, html, request, headers = {}) {
     const body = String(html ?? "");
-    this.addCors(response);
+    this.addCors(response, request);
     response.writeHead(statusCode, {
       "Content-Type": "text/html; charset=utf-8",
       "Content-Length": Buffer.byteLength(body),
@@ -317,7 +339,7 @@ class ListenerServer extends EventEmitter {
   }
 
   handleEventStream(request, response) {
-    this.addCors(response);
+    this.addCors(response, request);
     response.writeHead(200, {
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache",
@@ -357,6 +379,96 @@ class ListenerServer extends EventEmitter {
       return new URL(url, "http://localhost");
     } catch (error) {
       return null;
+    }
+  }
+
+  normalizeAllowedOrigins(allowedOrigins) {
+    if (allowedOrigins === "*") {
+      return { allowAny: true, exact: new Set(), patterns: [] };
+    }
+
+    const list = Array.isArray(allowedOrigins)
+      ? allowedOrigins
+      : String(allowedOrigins ?? "")
+        .split(",")
+        .map((value) => value.trim())
+        .filter(Boolean);
+
+    const allowAny = list.includes("*");
+    const exact = new Set(list.filter((origin) => !origin.includes("*")));
+    const patterns = list
+      .filter((origin) => origin.includes("*") && origin !== "*")
+      .map((origin) => {
+        const escaped = origin.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*");
+        return new RegExp(`^${escaped}$`, "i");
+      });
+
+    return { allowAny, exact, patterns };
+  }
+
+  resolveAllowedOrigin(request) {
+    const origin = request?.headers?.origin;
+    if (!origin) {
+      if (this.allowedOrigins.allowAny) {
+        return "*";
+      }
+
+      if (this.allowedOrigins.exact.size === 1) {
+        return Array.from(this.allowedOrigins.exact)[0];
+      }
+
+      return null;
+    }
+
+    if (this.allowedOrigins.allowAny) {
+      return origin;
+    }
+
+    if (this.allowedOrigins.exact.has(origin)) {
+      return origin;
+    }
+
+    if (this.allowedOrigins.patterns.some((pattern) => pattern.test(origin))) {
+      return origin;
+    }
+
+    return null;
+  }
+
+  isOriginAllowed(request) {
+    if (this.allowedOrigins.allowAny) {
+      return true;
+    }
+
+    const origin = request?.headers?.origin;
+    if (!origin) {
+      return true;
+    }
+
+    return !!this.resolveAllowedOrigin(request);
+  }
+
+  getServerOrigin(request) {
+    const host = request?.headers?.host;
+    if (!host) {
+      return null;
+    }
+
+    const proto = request?.connection?.encrypted ? "https" : "http";
+    return `${proto}://${host}`;
+  }
+
+  isSelfCapture(payloadUrl, request) {
+    const origin = this.getServerOrigin(request);
+    if (!origin) {
+      return false;
+    }
+
+    try {
+      const parsedPayload = new URL(payloadUrl);
+      return parsedPayload.origin === origin;
+    } catch (error) {
+      return false;
     }
   }
 

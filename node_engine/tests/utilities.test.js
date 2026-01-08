@@ -12,7 +12,7 @@ const {
 } = require("../src/checks/AccessibleNameUtilities");
 const { getLineNumber, containsAttribute } = require("../src/checks/TextUtilities");
 const { getLastPropertyValue, isFixedLength } = require("../src/checks/StyleUtilities");
-const { tryParseHex, contrastRatio } = require("../src/checks/ColorContrastAnalyzer");
+const { parseHexColor, parseColor, contrastRatio } = require("../src/checks/ColorContrastAnalyzer");
 
 describe("AttributeParser", () => {
   test("extracts attribute values case-insensitively", () => {
@@ -109,12 +109,42 @@ describe("StyleUtilities", () => {
 
 describe("ColorContrastAnalyzer", () => {
   test("parses hex colors", () => {
-    expect(tryParseHex("#fff")).toEqual({ r: 1, g: 1, b: 1 });
-    expect(tryParseHex("#0f08")).toEqual({ r: 1, g: 0, b: 0.5333333333333333 });
-    expect(tryParseHex("#001122")).toEqual({ r: 0, g: 17 / 255, b: 34 / 255 });
-    expect(tryParseHex("#ff001122")).toEqual({ r: 0, g: 17 / 255, b: 34 / 255 });
-    expect(tryParseHex("")).toBeNull();
-    expect(tryParseHex("zzzz")).toBeNull();
+    expect(parseHexColor("#fff")).toEqual({ r: 1, g: 1, b: 1, a: 1 });
+    expect(parseHexColor("#0f08")).toEqual({ r: 0, g: 1, b: 0, a: 0.5333333333333333 });
+    expect(parseHexColor("#001122")).toEqual({ r: 0, g: 17 / 255, b: 34 / 255, a: 1 });
+    expect(parseHexColor("#ff001122", { alphaPosition: "start" })).toEqual({ r: 0, g: 17 / 255, b: 34 / 255, a: 1 });
+    expect(parseHexColor("#001122ff", { alphaPosition: "end" })).toEqual({ r: 0, g: 17 / 255, b: 34 / 255, a: 1 });
+    expect(parseHexColor("abc")).toEqual({ r: 0xaa / 255, g: 0xbb / 255, b: 0xcc / 255, a: 1 });
+    expect(parseHexColor("")).toBeNull();
+    expect(parseHexColor("zzzz")).toBeNull();
+  });
+
+  test("parses rgb and hsl colors", () => {
+    expect(parseColor("rgb(255, 0, 0)")).toEqual({ r: 1, g: 0, b: 0, a: 1 });
+    expect(parseColor("rgb(100%, 0%, 0%)")).toEqual({ r: 1, g: 0, b: 0, a: 1 });
+    expect(parseColor("rgba(0, 0, 0, 50%)")).toEqual({ r: 0, g: 0, b: 0, a: 0.5 });
+    expect(parseColor("rgba(0, 0, 0, 2)")).toEqual({ r: 0, g: 0, b: 0, a: 1 });
+    expect(parseColor("hsl(120, 100%, 25%)")).toEqual({ r: 0, g: 0.5, b: 0, a: 1 });
+    expect(parseColor("hsla(0, 0%, 0%, 0.25)")).toEqual({ r: 0, g: 0, b: 0, a: 0.25 });
+    expect(parseColor("hsl(30, 100%, 50%)")).not.toBeNull();
+    expect(parseColor("hsl(90, 100%, 50%)")).not.toBeNull();
+    expect(parseColor("hsl(150, 100%, 50%)")).not.toBeNull();
+    expect(parseColor("hsl(210, 100%, 50%)")).not.toBeNull();
+    expect(parseColor("hsl(270, 100%, 50%)")).not.toBeNull();
+    expect(parseColor("hsl(330, 100%, 50%)")).not.toBeNull();
+    expect(parseColor("hsl(-30, 100%, 50%)")).not.toBeNull();
+    expect(parseColor("transparent")).toEqual({ r: 0, g: 0, b: 0, a: 0 });
+    expect(parseColor("unknown")).toBeNull();
+    expect(parseColor("rgba(1, 2)")).toBeNull();
+    expect(parseColor("rgb(, 0, 0)")).toBeNull();
+    expect(parseColor("rgb(%, 0, 0)")).toBeNull();
+    expect(parseColor("rgba(0, 0, 0, %)")).toBeNull();
+    expect(parseColor("hsl(bad, 0%, 0%)")).toBeNull();
+    expect(parseColor("hsl(0, 50, 50%)")).toBeNull();
+    expect(parseColor("hsl(0, 50%)")).toBeNull();
+    expect(parseColor("hsla(0, 0%, 0%, bad)")).toBeNull();
+    expect(parseColor("hsl(")).toBeNull();
+    expect(parseColor("")).toBeNull();
   });
 
   test("calculates contrast ratio", () => {
