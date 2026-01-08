@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ADA Scanner - Live Runtime Report</title>
+    <link rel="stylesheet" href="/assets/app.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <div class="brand">
+        <span class="brand-mark">ADA</span>
+        <div>
+          <div class="brand-title">Runtime Accessibility Report</div>
+          <div class="brand-subtitle">Live results from active capture sessions</div>
+        </div>
+      </div>
+      <div class="status">
+        <span id="connectionStatus" class="status-pill">Connecting…</span>
+        <span class="status-time">Updated <span id="lastUpdated">--</span></span>
+      </div>
+    </header>
+
+    <main class="app-main">
+      <section class="summary-grid">
+        <div class="summary-card">
+          <div class="summary-label">Documents scanned</div>
+          <div class="summary-value" id="documentCount">0</div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-label">Total issues</div>
+          <div class="summary-value" id="issueCount">0</div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-label">Rules triggered</div>
+          <div class="summary-value" id="ruleCount">0</div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-label">Teams impacted</div>
+          <div class="summary-value" id="teamCount">0</div>
+        </div>
+      </section>
+
+      <section class="panel-grid">
+        <article class="panel">
+          <header class="panel-header">
+            <h2>Rule violations</h2>
+            <p>Top offending rules, severity, and affected files.</p>
+          </header>
+          <div class="panel-body">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Rule</th>
+                  <th>Team</th>
+                  <th>Severity</th>
+                  <th>Issues</th>
+                  <th>Files</th>
+                </tr>
+              </thead>
+              <tbody id="ruleTable"></tbody>
+            </table>
+          </div>
+        </article>
+
+        <article class="panel">
+          <header class="panel-header">
+            <h2>Files with violations</h2>
+            <p>Where issues are concentrated in the captured documents.</p>
+          </header>
+          <div class="panel-body">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>File</th>
+                  <th>Issues</th>
+                  <th>Top rules</th>
+                </tr>
+              </thead>
+              <tbody id="fileTable"></tbody>
+            </table>
+          </div>
+        </article>
+      </section>
+
+      <section class="panel">
+        <header class="panel-header">
+          <h2>Latest issues</h2>
+          <p>Live feed of the most recent rule violations.</p>
+        </header>
+        <div class="panel-body">
+          <div id="issueFeed" class="issue-feed"></div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="app-footer">
+      <span>ADA Scanner Runtime Listener</span>
+      <span>Keep this page open to monitor incoming captures.</span>
+    </footer>
+
+    <script src="/assets/app.js"></script>
+  </body>
+</html>

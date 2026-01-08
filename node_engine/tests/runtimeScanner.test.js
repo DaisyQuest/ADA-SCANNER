@@ -37,6 +37,8 @@ describe("RuntimeScanner", () => {
     });
 
     expect(result.issues).toHaveLength(1);
+    expect(result.issues[0].teamName).toBe("team");
+    expect(result.rules).toHaveLength(1);
     expect(result.document.url).toBe("http://example");
   });
 
