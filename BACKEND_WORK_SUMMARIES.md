@@ -19,3 +19,4 @@
 2026-01-07 - Fix ASP.NET Core middleware build and add missing content-type test coverage (SPEC-013)
 2026-01-08 - Added runtime capture listener and CLI options for browser HTML snapshots with tests (SPEC-019, SPEC-013)
 2026-01-08 - Added Chromium extension export for runtime capture with tests (SPEC-019, SPEC-013)
+2026-01-08 - Added CLI runtime capture wiring to start listener and validate options with tests (SPEC-019, SPEC-013)

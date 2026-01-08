@@ -11,6 +11,12 @@ namespace Scanner.Cli;
 public sealed class CommandDispatcher
 {
     private readonly CommandLineParser _parser = new();
+    private readonly IRuntimeDocumentSource? _runtimeSource;
+
+    public CommandDispatcher(IRuntimeDocumentSource? runtimeSource = null)
+    {
+        _runtimeSource = runtimeSource;
+    }
 
     public int Dispatch(string[] args, IConsole console)
     {
@@ -77,8 +83,19 @@ public sealed class CommandDispatcher
             return 1;
         }
 
+        if (!TryBuildRuntimeCaptureOptions(options, rulesRoot, out var runtimeOptions, out var runtimeError))
+        {
+            console.WriteError(runtimeError ?? "Invalid runtime options.");
+            return 1;
+        }
+
         var scanEngine = new ScanEngine(new ProjectDiscovery(), new RuleLoader(), CheckRegistry.Default());
         var result = scanEngine.Scan(new ScanOptions { Path = path, RulesRoot = rulesRoot });
+        RuntimeScanResult? runtimeScan = null;
+        if (runtimeOptions != null)
+        {
+            runtimeScan = RunRuntimeCapture(runtimeOptions, console);
+        }
 
         Directory.CreateDirectory(outputDir);
         var outputPath = Path.Combine(outputDir, "scan.json");
@@ -93,11 +110,168 @@ public sealed class CommandDispatcher
         if (reportOutProvided)
         {
             var generator = new ReportGenerator();
-            var reportArtifacts = generator.WriteReport(result, reportOutDir!, reportBaseName ?? "report");
+            var reportArtifacts = generator.WriteReport(result, reportOutDir!, reportBaseName ?? "report", runtimeScan);
             console.WriteLine($"Report written to {reportArtifacts.JsonPath}, {reportArtifacts.HtmlPath}, {reportArtifacts.MarkdownPath}.");
         }
 
         return 0;
+    }
+
+    private RuntimeScanResult? RunRuntimeCapture(RuntimeScanOptions options, IConsole console)
+    {
+        try
+        {
+            var source = _runtimeSource ?? new RuntimeCaptureListener();
+            var runtimeEngine = new RuntimeScanEngine(source, new RuleLoader(), CheckRegistry.Default());
+            return runtimeEngine.ScanAsync(options).GetAwaiter().GetResult();
+        }
+        catch (Exception ex)
+        {
+            console.WriteError($"Runtime scan failed: {ex.Message}");
+            return null;
+        }
+    }
+
+    private static bool TryBuildRuntimeCaptureOptions(
+        IReadOnlyDictionary<string, string> options,
+        string rulesRoot,
+        out RuntimeScanOptions? runtimeOptions,
+        out string? errorMessage)
+    {
+        runtimeOptions = null;
+        errorMessage = null;
+
+        if (!TryGetOptionalInt(options, "runtime-capture-port", out var capturePort, out errorMessage)
+            || !TryGetOptionalInt(options, "runtime-capture-max-docs", out var captureMaxDocs, out errorMessage)
+            || !TryGetOptionalInt(options, "runtime-capture-idle-seconds", out var captureIdleSeconds, out errorMessage)
+            || !TryGetOptionalInt(options, "runtime-max-body-bytes", out var maxBodyBytes, out errorMessage)
+            || !TryGetOptionalDouble(options, "runtime-sample-rate", out var sampleRate, out errorMessage))
+        {
+            return false;
+        }
+
+        var capturePath = GetOptionalString(options, "runtime-capture-path");
+        var captureToken = GetOptionalString(options, "runtime-capture-token");
+
+        var hasCaptureSettings = !string.IsNullOrWhiteSpace(capturePath)
+            || !string.IsNullOrWhiteSpace(captureToken)
+            || captureMaxDocs.HasValue
+            || captureIdleSeconds.HasValue
+            || maxBodyBytes.HasValue
+            || sampleRate.HasValue;
+
+        if (!capturePort.HasValue && !hasCaptureSettings)
+        {
+            return true;
+        }
+
+        if (!capturePort.HasValue)
+        {
+            errorMessage = "Runtime capture port is required when capture settings are provided.";
+            return false;
+        }
+
+        if (capturePort <= 0 || capturePort > 65535)
+        {
+            errorMessage = $"Invalid runtime capture port: {capturePort}";
+            return false;
+        }
+
+        if (captureMaxDocs.HasValue && captureMaxDocs <= 0)
+        {
+            errorMessage = $"Invalid runtime capture max docs: {captureMaxDocs}";
+            return false;
+        }
+
+        if (captureIdleSeconds.HasValue && captureIdleSeconds <= 0)
+        {
+            errorMessage = $"Invalid runtime capture idle seconds: {captureIdleSeconds}";
+            return false;
+        }
+
+        if (maxBodyBytes.HasValue && maxBodyBytes < 0)
+        {
+            errorMessage = $"Invalid runtime max body bytes: {maxBodyBytes}";
+            return false;
+        }
+
+        if (sampleRate.HasValue && (sampleRate < 0 || sampleRate > 1))
+        {
+            errorMessage = $"Invalid runtime sample rate: {sampleRate}";
+            return false;
+        }
+
+        runtimeOptions = new RuntimeScanOptions
+        {
+            RulesRoot = rulesRoot,
+            MaxBodyBytes = maxBodyBytes ?? 1024 * 1024,
+            SampleRate = sampleRate ?? 1.0,
+            CaptureOptions = new RuntimeCaptureOptions
+            {
+                Port = capturePort.Value,
+                Path = capturePath ?? "/capture",
+                AccessToken = captureToken,
+                MaxDocuments = captureMaxDocs ?? 1,
+                IdleTimeout = TimeSpan.FromSeconds(captureIdleSeconds ?? 120)
+            }
+        };
+
+        return true;
+    }
+
+    private static bool TryGetOptionalInt(
+        IReadOnlyDictionary<string, string> options,
+        string key,
+        out int? value,
+        out string? errorMessage)
+    {
+        errorMessage = null;
+        if (!options.TryGetValue(key, out var rawValue) || string.IsNullOrWhiteSpace(rawValue))
+        {
+            value = null;
+            return true;
+        }
+
+        if (!int.TryParse(rawValue, out var parsed))
+        {
+            value = null;
+            errorMessage = $"Invalid {key.Replace('-', ' ')} value: {rawValue}";
+            return false;
+        }
+
+        value = parsed;
+        return true;
+    }
+
+    private static bool TryGetOptionalDouble(
+        IReadOnlyDictionary<string, string> options,
+        string key,
+        out double? value,
+        out string? errorMessage)
+    {
+        errorMessage = null;
+        if (!options.TryGetValue(key, out var rawValue) || string.IsNullOrWhiteSpace(rawValue))
+        {
+            value = null;
+            return true;
+        }
+
+        if (!double.TryParse(rawValue, out var parsed))
+        {
+            value = null;
+            errorMessage = $"Invalid {key.Replace('-', ' ')} value: {rawValue}";
+            return false;
+        }
+
+        value = parsed;
+        return true;
+    }
+
+    private static string? GetOptionalString(IReadOnlyDictionary<string, string> options, string key)
+    {
+        return options.TryGetValue(key, out var value) && !string.IsNullOrWhiteSpace(value)
+            ? value
+            : null;
     }
 
     private int HandleRules(string[] args, IConsole console)
