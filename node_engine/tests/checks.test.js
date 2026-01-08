@@ -12,6 +12,9 @@ const { UnlabeledButtonCheck, hasButtonLabel, hasInputButtonLabel } = require(".
 const { MissingPageTitleCheck } = require("../src/checks/MissingPageTitleCheck");
 const { MissingTableHeaderCheck } = require("../src/checks/MissingTableHeaderCheck");
 const { MissingAltTextCheck } = require("../src/checks/MissingAltTextCheck");
+const { MissingLinkTextCheck, hasImageAltText } = require("../src/checks/MissingLinkTextCheck");
+const { MissingIframeTitleCheck } = require("../src/checks/MissingIframeTitleCheck");
+const { MissingFieldsetLegendCheck } = require("../src/checks/MissingFieldsetLegendCheck");
 const { NonWrappingContainerCheck, isNonWrappingValue } = require("../src/checks/NonWrappingContainerCheck");
 const { InvalidAriaRoleCheck } = require("../src/checks/InvalidAriaRoleCheck");
 const { HiddenNavigationCheck, hasHiddenStyle } = require("../src/checks/HiddenNavigationCheck");
@@ -237,6 +240,56 @@ describe("NonWrappingContainerCheck", () => {
 
     const htmlOk = createContext('<div style="white-space: normal"></div>', "html");
     expect(NonWrappingContainerCheck.run(htmlOk, rule)).toHaveLength(0);
+  });
+});
+
+describe("MissingLinkTextCheck", () => {
+  test("detects links missing accessible text", () => {
+    const missing = createContext('<a href="/"></a>', "html");
+    expect(MissingLinkTextCheck.run(missing, rule)).toHaveLength(1);
+
+    const withText = createContext('<a href="/">Home</a>', "html");
+    expect(MissingLinkTextCheck.run(withText, rule)).toHaveLength(0);
+
+    const withAriaLabel = createContext('<a href="/" aria-label="Home"></a>', "html");
+    expect(MissingLinkTextCheck.run(withAriaLabel, rule)).toHaveLength(0);
+
+    const withLabelledBy = createContext('<span id="label">Home</span><a href="/" aria-labelledby="label"></a>', "html");
+    expect(MissingLinkTextCheck.run(withLabelledBy, rule)).toHaveLength(0);
+
+    const withTitle = createContext('<a href="/" title="Home"></a>', "html");
+    expect(MissingLinkTextCheck.run(withTitle, rule)).toHaveLength(0);
+
+    const withImageAlt = createContext('<a href="/"><img alt="Home" src="x" /></a>', "html");
+    expect(MissingLinkTextCheck.run(withImageAlt, rule)).toHaveLength(0);
+
+    const missingImageAlt = createContext('<a href="/"><img src="x" /></a>', "html");
+    expect(MissingLinkTextCheck.run(missingImageAlt, rule)).toHaveLength(1);
+
+    expect(hasImageAltText('<img alt="" />')).toBe(false);
+  });
+});
+
+describe("MissingIframeTitleCheck", () => {
+  test("detects iframes missing title", () => {
+    const missing = createContext('<iframe src="video"></iframe>', "html");
+    expect(MissingIframeTitleCheck.run(missing, rule)).toHaveLength(1);
+
+    const present = createContext('<iframe title="Video" src="video"></iframe>', "html");
+    expect(MissingIframeTitleCheck.run(present, rule)).toHaveLength(0);
+  });
+});
+
+describe("MissingFieldsetLegendCheck", () => {
+  test("detects fieldsets missing legend text", () => {
+    const missing = createContext("<fieldset></fieldset>", "html");
+    expect(MissingFieldsetLegendCheck.run(missing, rule)).toHaveLength(1);
+
+    const emptyLegend = createContext("<fieldset><legend></legend></fieldset>", "html");
+    expect(MissingFieldsetLegendCheck.run(emptyLegend, rule)).toHaveLength(1);
+
+    const present = createContext("<fieldset><legend>Billing</legend></fieldset>", "html");
+    expect(MissingFieldsetLegendCheck.run(present, rule)).toHaveLength(0);
   });
 });
 

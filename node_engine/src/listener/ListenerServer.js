@@ -1,4 +1,5 @@
 const http = require("http");
+const crypto = require("crypto");
 const { EventEmitter } = require("events");
 const { RuntimeScanner } = require("../runtime/RuntimeScanner");
 
@@ -11,6 +12,8 @@ class ListenerServer extends EventEmitter {
     this.server = null;
     this.documents = [];
     this.issues = [];
+    this.payloadHashes = new Set();
+    this.issueHashes = new Set();
   }
 
   start() {
@@ -74,6 +77,12 @@ class ListenerServer extends EventEmitter {
             return;
           }
 
+          const payloadHash = this.createPayloadHash(payload);
+          if (this.payloadHashes.has(payloadHash)) {
+            this.writeJson(response, 200, { duplicate: true });
+            return;
+          }
+
           const result = this.scanner.scanDocument({
             rulesRoot: this.rulesRoot,
             url: payload.url,
@@ -82,8 +91,9 @@ class ListenerServer extends EventEmitter {
             contentType: payload.contentType ?? "text/html"
           });
 
+          this.payloadHashes.add(payloadHash);
           this.documents.push(result.document);
-          this.issues.push(...result.issues);
+          this.addIssues(result.issues);
           this.emit("capture", result);
 
           this.writeJson(response, 200, {
@@ -130,6 +140,43 @@ class ListenerServer extends EventEmitter {
       "Content-Length": Buffer.byteLength(json)
     });
     response.end(json);
+  }
+
+  createPayloadHash(payload) {
+    const hash = crypto.createHash("sha256");
+    hash.update(String(payload.url ?? ""));
+    hash.update("::");
+    hash.update(String(payload.kind ?? ""));
+    hash.update("::");
+    hash.update(String(payload.contentType ?? ""));
+    hash.update("::");
+    hash.update(String(payload.html ?? ""));
+    return hash.digest("hex");
+  }
+
+  createIssueKey(issue) {
+    return [
+      issue.ruleId,
+      issue.checkId,
+      issue.filePath,
+      issue.line,
+      issue.message,
+      issue.evidence
+    ]
+      .map((value) => value ?? "")
+      .join("::");
+  }
+
+  addIssues(issues) {
+    for (const issue of issues) {
+      const key = this.createIssueKey(issue);
+      if (this.issueHashes.has(key)) {
+        continue;
+      }
+
+      this.issueHashes.add(key);
+      this.issues.push(issue);
+    }
   }
 }
 

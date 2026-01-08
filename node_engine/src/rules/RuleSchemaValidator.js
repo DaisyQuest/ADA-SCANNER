@@ -13,7 +13,10 @@ const AllowedChecks = new Set([
   "hidden-navigation",
   "hidden-focusable",
   "insufficient-contrast",
-  "xaml-missing-name"
+  "xaml-missing-name",
+  "missing-link-text",
+  "missing-iframe-title",
+  "missing-fieldset-legend"
 ]);
 const AllowedAppliesTo = new Set(["xaml", "cshtml", "razor", "html", "htm", "css"]);
 

@@ -48,6 +48,14 @@ describe("ListenerServer", () => {
     });
     expect(capture.status).toBe(200);
 
+    const duplicate = await postJson(`${baseUrl}/capture`, {
+      url: "http://example",
+      html: "<input />",
+      kind: "html"
+    });
+    const duplicatePayload = await duplicate.json();
+    expect(duplicatePayload.duplicate).toBe(true);
+
     const documents = await fetch(`${baseUrl}/documents`);
     const documentsPayload = await documents.json();
     expect(documentsPayload.documents).toHaveLength(1);
@@ -58,6 +66,34 @@ describe("ListenerServer", () => {
 
     const notFound = await fetch(`${baseUrl}/missing`);
     expect(notFound.status).toBe(404);
+
+    await server.stop();
+  });
+
+  test("deduplicates issues across payloads", async () => {
+    const rulesRoot = createTempRules();
+    const server = new ListenerServer({ rulesRoot });
+    const port = await server.start();
+
+    const baseUrl = `http://localhost:${port}`;
+
+    const captureA = await postJson(`${baseUrl}/capture`, {
+      url: "http://example",
+      html: "<input />",
+      kind: "html"
+    });
+    expect(captureA.status).toBe(200);
+
+    const captureB = await postJson(`${baseUrl}/capture`, {
+      url: "http://example",
+      html: "<input />\n",
+      kind: "html"
+    });
+    expect(captureB.status).toBe(200);
+
+    const issues = await fetch(`${baseUrl}/issues`);
+    const issuesPayload = await issues.json();
+    expect(issuesPayload.issues).toHaveLength(1);
 
     await server.stop();
   });
