@@ -3,6 +3,9 @@ const crypto = require("crypto");
 const { EventEmitter } = require("events");
 const { RuntimeScanner } = require("../runtime/RuntimeScanner");
 
+// CHANGE: configure allowed origin(s)
+const ALLOWED_ORIGIN = "https://localhost:7203";
+
 class ListenerServer extends EventEmitter {
   constructor({ port = 0, rulesRoot, scanner = new RuntimeScanner() } = {}) {
     super();
@@ -52,8 +55,26 @@ class ListenerServer extends EventEmitter {
     });
   }
 
+  // CHANGE: central CORS helper
+  addCors(response) {
+    response.setHeader("Access-Control-Allow-Origin", ALLOWED_ORIGIN);
+    response.setHeader("Vary", "Origin");
+    response.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+    response.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    response.setHeader("Access-Control-Max-Age", "86400");
+  }
+
   handleRequest(request, response) {
     const { method, url } = request;
+
+    // CHANGE: handle preflight
+    if (method === "OPTIONS" && url === "/capture") {
+      this.addCors(response);
+      response.statusCode = 204;
+      response.end();
+      return;
+    }
+
     if (method === "GET" && url === "/health") {
       this.writeJson(response, 200, { status: "ok" });
       return;
@@ -71,39 +92,39 @@ class ListenerServer extends EventEmitter {
 
     if (method === "POST" && url === "/capture") {
       this.readBody(request)
-        .then((payload) => {
-          if (!payload?.url || !payload?.html) {
-            this.writeJson(response, 400, { error: "Payload must include url and html." });
-            return;
-          }
+          .then((payload) => {
+            if (!payload?.url || !payload?.html) {
+              this.writeJson(response, 400, { error: "Payload must include url and html." });
+              return;
+            }
 
-          const payloadHash = this.createPayloadHash(payload);
-          if (this.payloadHashes.has(payloadHash)) {
-            this.writeJson(response, 200, { duplicate: true });
-            return;
-          }
+            const payloadHash = this.createPayloadHash(payload);
+            if (this.payloadHashes.has(payloadHash)) {
+              this.writeJson(response, 200, { duplicate: true });
+              return;
+            }
 
-          const result = this.scanner.scanDocument({
-            rulesRoot: this.rulesRoot,
-            url: payload.url,
-            content: payload.html,
-            kind: payload.kind ?? "html",
-            contentType: payload.contentType ?? "text/html"
+            const result = this.scanner.scanDocument({
+              rulesRoot: this.rulesRoot,
+              url: payload.url,
+              content: payload.html,
+              kind: payload.kind ?? "html",
+              contentType: payload.contentType ?? "text/html"
+            });
+
+            this.payloadHashes.add(payloadHash);
+            this.documents.push(result.document);
+            this.addIssues(result.issues);
+            this.emit("capture", result);
+
+            this.writeJson(response, 200, {
+              document: result.document,
+              issues: result.issues
+            });
+          })
+          .catch((error) => {
+            this.writeJson(response, 500, { error: error.message });
           });
-
-          this.payloadHashes.add(payloadHash);
-          this.documents.push(result.document);
-          this.addIssues(result.issues);
-          this.emit("capture", result);
-
-          this.writeJson(response, 200, {
-            document: result.document,
-            issues: result.issues
-          });
-        })
-        .catch((error) => {
-          this.writeJson(response, 500, { error: error.message });
-        });
       return;
     }
 
@@ -135,6 +156,10 @@ class ListenerServer extends EventEmitter {
 
   writeJson(response, statusCode, payload) {
     const json = JSON.stringify(payload);
+
+    // CHANGE: ensure CORS headers are always present
+    this.addCors(response);
+
     response.writeHead(statusCode, {
       "Content-Type": "application/json",
       "Content-Length": Buffer.byteLength(json)
@@ -163,8 +188,8 @@ class ListenerServer extends EventEmitter {
       issue.message,
       issue.evidence
     ]
-      .map((value) => value ?? "")
-      .join("::");
+        .map((value) => value ?? "")
+        .join("::");
   }
 
   addIssues(issues) {

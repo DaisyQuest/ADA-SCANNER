@@ -5,11 +5,12 @@
   "main": "src/index.js",
   "type": "commonjs",
   "scripts": {
-    "start": "node ./src/cli/startListener.js",
+    "start": "cross-env RULES_ROOT=../rules PORT=45892 node ./src/cli/startListener.js",
     "test": "jest --coverage"
   },
   "devDependencies": {
     "jest": "^29.7.0",
-    "jest-environment-jsdom": "^29.7.0"
+    "jest-environment-jsdom": "^29.7.0",
+    "cross-env": "^7.0.3"
   }
 }

@@ -1,21 +1,33 @@
-const { DEFAULT_SERVER_URL } = require("./forwarder");
+import { DEFAULT_SERVER_URL } from "./forwarder.js";
 
 const updateBadge = (chromeApi, enabled, tabId) => {
   const text = enabled ? "ON" : "OFF";
   chromeApi.action.setBadgeText({ text, tabId });
-  chromeApi.action.setBadgeBackgroundColor({ color: enabled ? "#0F9D58" : "#9E9E9E", tabId });
+  chromeApi.action.setBadgeBackgroundColor({
+    color: enabled ? "#0F9D58" : "#9E9E9E",
+    tabId
+  });
 };
 
 const setEnabledState = async (chromeApi, enabled, tabId) => {
   await chromeApi.storage.local.set({ enabled });
   updateBadge(chromeApi, enabled, tabId);
+
   if (tabId != null) {
-    chromeApi.tabs.sendMessage(tabId, { type: "toggle", enabled });
+    try {
+      await chromeApi.tabs.sendMessage(tabId, { type: "toggle", enabled });
+    } catch {
+      // Tab may not have a content script on it; ignore.
+    }
   }
 };
 
 const toggleExtension = async (chromeApi, tab) => {
-  const current = await chromeApi.storage.local.get({ enabled: false, serverUrl: DEFAULT_SERVER_URL });
+  const current = await chromeApi.storage.local.get({
+    enabled: false,
+    serverUrl: DEFAULT_SERVER_URL
+  });
+
   const next = !current.enabled;
   await setEnabledState(chromeApi, next, tab?.id);
 };
@@ -39,6 +51,4 @@ if (typeof chrome !== "undefined" && chrome?.action) {
   registerBackground(chrome);
 }
 
-if (typeof module !== "undefined") {
-  module.exports = { registerBackground, toggleExtension, setEnabledState, updateBadge };
-}
+export { registerBackground, toggleExtension, setEnabledState, updateBadge };

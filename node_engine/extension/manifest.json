@@ -1,21 +1,26 @@
 {
   "manifest_version": 3,
   "name": "ADA Scanner Forwarder",
-  "version": "0.1.0",
+  "version": "0.4.0",
   "description": "Auto-forwards HTML changes to the ADA scanner listener when enabled.",
   "permissions": ["storage", "activeTab"],
-  "host_permissions": ["http://localhost:*/*"],
+  "host_permissions": [
+    "http://localhost:*/*",
+    "http://127.0.0.1:*/*"
+  ],
   "action": {
     "default_title": "Toggle ADA Scanner Forwarder"
   },
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "background.js",
+    "type": "module"
   },
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["contentScript.js"],
+      "js": ["forwarder.js", "contentScript.js"],
       "run_at": "document_idle"
     }
   ]
+
 }
