@@ -12,6 +12,7 @@
   const createPayload = ({
                            url,
                            html,
+                           title = null,
                            contentType = "text/html",
                            statusCode = 200,
                            kind = "html"
@@ -19,12 +20,14 @@
     // Node listener (required)
     url,
     html,
+    title,
     contentType,
     kind,
 
     // .NET listener (safe duplicates)
     Url: url,
     Html: html,
+    Title: title,
     ContentType: contentType,
     StatusCode: statusCode
   });
@@ -105,8 +108,7 @@
     return config;
   };
 
-  // Expose to content script
-  globalThis.AdaForwarder = {
+  const api = {
     DEFAULT_SERVER_URL,
     DEFAULT_DEBOUNCE_MS,
     normalizeHtml,
@@ -116,4 +118,11 @@
     createForwarder,
     getDefaultConfig
   };
+
+  // Expose to content script
+  globalThis.AdaForwarder = api;
+
+  if (typeof module !== "undefined") {
+    module.exports = api;
+  }
 })();

@@ -1,0 +1,10 @@
+{
+  "id": "link-text-001",
+  "description": "Ensure links expose descriptive text for assistive technologies.",
+  "severity": "high",
+  "checkId": "missing-link-text",
+  "appliesTo": "html, htm, cshtml, razor",
+  "recommendation": "Provide visible link text or aria-labels that describe the destination.",
+  "wcagCriteria": "2.4.4",
+  "problemTags": "link-text, navigation"
+}

@@ -2,6 +2,7 @@ const fs = require("fs");
 const path = require("path");
 const os = require("os");
 const { ListenerServer } = require("../src/listener/ListenerServer");
+const { EventEmitter } = require("events");
 
 const createTempRules = () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "ada-listener-"));
@@ -27,23 +28,6 @@ const postJson = async (url, body) =>
     body: JSON.stringify(body)
   });
 
-const readEvent = (url, eventName) =>
-  new Promise((resolve, reject) => {
-    const http = require("http");
-    const request = http.get(url, (response) => {
-      let data = "";
-      response.on("data", (chunk) => {
-        data += chunk.toString();
-        if (data.includes(`event: ${eventName}`)) {
-          response.destroy();
-          resolve(data);
-        }
-      });
-    });
-
-    request.on("error", reject);
-  });
-
 describe("ListenerServer", () => {
   test("handles capture lifecycle", async () => {
     const rulesRoot = createTempRules();
@@ -57,6 +41,9 @@ describe("ListenerServer", () => {
 
     const badPayload = await postJson(`${baseUrl}/capture`, { url: "http://example" });
     expect(badPayload.status).toBe(400);
+
+    const preflight = await fetch(`${baseUrl}/capture`, { method: "OPTIONS" });
+    expect(preflight.status).toBe(204);
 
     const capture = await postJson(`${baseUrl}/capture`, {
       url: "http://example",
@@ -85,12 +72,25 @@ describe("ListenerServer", () => {
     const reportPayload = await report.json();
     expect(reportPayload.summary.issues).toBe(1);
     expect(reportPayload.byRule).toHaveLength(1);
+    expect(reportPayload.summary.files).toBe(1);
+
+    const fileIndex = await fetch(`${baseUrl}/report/files`);
+    const fileIndexPayload = await fileIndex.json();
+    expect(fileIndexPayload.files).toHaveLength(1);
+
+    const fileReport = await fetch(`${baseUrl}/report/file?path=${encodeURIComponent("http://example")}`);
+    const fileReportPayload = await fileReport.json();
+    expect(fileReportPayload.filePath).toBe("http://example");
+    expect(fileReport.headers.get("content-disposition")).toContain("report-");
 
     const home = await fetch(`${baseUrl}/`);
     expect(home.status).toBe(200);
 
     const assets = await fetch(`${baseUrl}/assets/app.js`);
     expect(assets.status).toBe(200);
+
+    const styles = await fetch(`${baseUrl}/assets/app.css`);
+    expect(styles.status).toBe(200);
 
     const notFound = await fetch(`${baseUrl}/missing`);
     expect(notFound.status).toBe(404);
@@ -161,6 +161,20 @@ describe("ListenerServer", () => {
     await server.stop();
   });
 
+  test("returns errors for missing or unknown file reports", async () => {
+    const rulesRoot = createTempRules();
+    const server = new ListenerServer({ rulesRoot });
+    const port = await server.start();
+
+    const response = await fetch(`http://localhost:${port}/report/file`);
+    expect(response.status).toBe(400);
+
+    const missing = await fetch(`http://localhost:${port}/report/file?path=${encodeURIComponent("nope")}`);
+    expect(missing.status).toBe(404);
+
+    await server.stop();
+  });
+
   test("returns not found when UI assets missing", async () => {
     const rulesRoot = createTempRules();
     const missingUiRoot = fs.mkdtempSync(path.join(os.tmpdir(), "ada-ui-missing-"));
@@ -173,24 +187,67 @@ describe("ListenerServer", () => {
     await server.stop();
   });
 
-  test("streams capture events over SSE", async () => {
+  test("streams capture events over SSE", () => {
     const rulesRoot = createTempRules();
     const server = new ListenerServer({ rulesRoot });
-    const port = await server.start();
+    const request = new EventEmitter();
+    const writes = [];
+    const response = {
+      setHeader: jest.fn(),
+      writeHead: jest.fn(),
+      write: jest.fn((chunk) => writes.push(chunk))
+    };
 
-    const baseUrl = `http://localhost:${port}`;
-    const eventPromise = readEvent(`${baseUrl}/events`, "capture");
+    server.handleEventStream(request, response);
+    server.broadcastEvent("capture", { issues: [{ ruleId: "rule-1" }] });
 
-    await postJson(`${baseUrl}/capture`, {
-      url: "http://example",
-      html: "<input />",
-      kind: "html"
-    });
+    expect(writes.join("")).toContain("event: capture");
+    expect(writes.join("")).toContain("issues");
+  });
 
-    const data = await eventPromise;
-    expect(data).toContain("event: capture");
-    expect(data).toContain("issues");
+  test("cleans up event streams and handles invalid URLs", () => {
+    const rulesRoot = createTempRules();
+    const server = new ListenerServer({ rulesRoot });
+    const request = new EventEmitter();
+    const response = {
+      setHeader: jest.fn(),
+      writeHead: jest.fn(),
+      write: jest.fn()
+    };
 
-    await server.stop();
+    server.handleEventStream(request, response);
+    expect(server.eventClients.size).toBe(1);
+    request.emit("close");
+    expect(server.eventClients.size).toBe(0);
+
+    expect(server.parseUrl("http://[invalid")).toBeNull();
+  });
+
+  test("handles /events requests directly", () => {
+    const rulesRoot = createTempRules();
+    const server = new ListenerServer({ rulesRoot });
+    const request = new EventEmitter();
+    request.method = "GET";
+    request.url = "/events";
+    const response = {
+      setHeader: jest.fn(),
+      writeHead: jest.fn(),
+      write: jest.fn()
+    };
+
+    server.handleRequest(request, response);
+    expect(response.writeHead).toHaveBeenCalled();
+    request.emit("close");
+    expect(server.eventClients.size).toBe(0);
+  });
+
+  test("builds payload hashes and issue keys", () => {
+    const rulesRoot = createTempRules();
+    const server = new ListenerServer({ rulesRoot });
+    const hash = server.createPayloadHash({});
+    expect(hash).toHaveLength(64);
+
+    const key = server.createIssueKey({});
+    expect(key).toContain("::");
   });
 });

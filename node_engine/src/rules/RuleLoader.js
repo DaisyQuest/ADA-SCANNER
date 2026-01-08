@@ -233,7 +233,7 @@ const parseJsonRule = (json, pathToRule) => {
     rule,
     errors,
     ruleIdForError: ruleId,
-    hasParseError: false
+    hasParseError: errors.length > 0
   };
 };
 
@@ -284,7 +284,7 @@ const parseSimpleYamlRule = (lines, pathToRule) => {
     rule,
     errors,
     ruleIdForError: ruleId,
-    hasParseError: false
+    hasParseError: errors.length > 0
   };
 };
 

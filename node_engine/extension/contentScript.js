@@ -61,7 +61,7 @@
 
     const handleToggle = (enabled) => {
       console.log("[ADA] toggle:", enabled);
-      enabled ? start() : start();
+      enabled ? start() : stop();
     };
 
     chromeApi.runtime.onMessage.addListener((message) => {
@@ -78,6 +78,17 @@
     return { start, stop, handleToggle, getObserver: () => observer };
   };
 
+  globalThis.createContentScript = createContentScript;
+
+  if (typeof module !== "undefined") {
+    module.exports = { createContentScript };
+  }
+
+  if (typeof chrome === "undefined") {
+    console.error("[ADA] chrome API not available; skipping content script bootstrap.");
+    return;
+  }
+
   createContentScript({
     chromeApi: chrome,
     documentRoot: document,
@@ -85,6 +96,5 @@
     fetchFn: window.fetch.bind(window)
   });
 
-  globalThis.createContentScript = createContentScript;
   console.log("[ADA] content script loaded");
 })();

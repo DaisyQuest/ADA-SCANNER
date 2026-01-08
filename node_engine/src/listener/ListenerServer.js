@@ -78,51 +78,53 @@ class ListenerServer extends EventEmitter {
 
   handleRequest(request, response) {
     const { method, url } = request;
+    const requestUrl = this.parseUrl(url);
+    const pathname = requestUrl?.pathname ?? url;
 
     // CHANGE: handle preflight
-    if (method === "OPTIONS" && url === "/capture") {
+    if (method === "OPTIONS" && pathname === "/capture") {
       this.addCors(response);
       response.statusCode = 204;
       response.end();
       return;
     }
 
-    if (method === "GET" && url === "/health") {
+    if (method === "GET" && pathname === "/health") {
       this.writeJson(response, 200, { status: "ok" });
       return;
     }
 
-    if (method === "GET" && url === "/") {
+    if (method === "GET" && pathname === "/") {
       this.writeStaticFile(response, "index.html", "text/html; charset=utf-8");
       return;
     }
 
-    if (method === "GET" && url === "/assets/app.js") {
+    if (method === "GET" && pathname === "/assets/app.js") {
       this.writeStaticFile(response, path.join("assets", "app.js"), "text/javascript; charset=utf-8");
       return;
     }
 
-    if (method === "GET" && url === "/assets/app.css") {
+    if (method === "GET" && pathname === "/assets/app.css") {
       this.writeStaticFile(response, path.join("assets", "app.css"), "text/css; charset=utf-8");
       return;
     }
 
-    if (method === "GET" && url === "/events") {
+    if (method === "GET" && pathname === "/events") {
       this.handleEventStream(request, response);
       return;
     }
 
-    if (method === "GET" && url === "/documents") {
+    if (method === "GET" && pathname === "/documents") {
       this.writeJson(response, 200, { documents: this.documents });
       return;
     }
 
-    if (method === "GET" && url === "/issues") {
+    if (method === "GET" && pathname === "/issues") {
       this.writeJson(response, 200, { issues: this.issues });
       return;
     }
 
-    if (method === "GET" && url === "/report") {
+    if (method === "GET" && pathname === "/report") {
       this.writeJson(response, 200, this.reportBuilder.build({
         documents: this.documents,
         issues: this.issues
@@ -130,7 +132,45 @@ class ListenerServer extends EventEmitter {
       return;
     }
 
-    if (method === "POST" && url === "/capture") {
+    if (method === "GET" && pathname === "/report/files") {
+      this.writeJson(response, 200, {
+        files: this.reportBuilder.buildFileSummaries({
+          documents: this.documents,
+          issues: this.issues
+        })
+      });
+      return;
+    }
+
+    if (method === "GET" && pathname === "/report/file") {
+      const filePath = requestUrl?.searchParams.get("path");
+      if (!filePath) {
+        this.writeJson(response, 400, { error: "Query parameter 'path' is required." });
+        return;
+      }
+
+      const report = this.reportBuilder.buildFileReport({
+        filePath,
+        documents: this.documents,
+        issues: this.issues
+      });
+
+      if (!report.document && report.issueCount === 0) {
+        this.writeJson(response, 404, { error: "Report not found for requested file." });
+        return;
+      }
+
+      const filename = this.createReportFilename(filePath);
+      this.writeJson(
+        response,
+        200,
+        report,
+        { "Content-Disposition": `attachment; filename="${filename}"` }
+      );
+      return;
+    }
+
+    if (method === "POST" && pathname === "/capture") {
       this.readBody(request)
           .then((payload) => {
             if (!payload?.url || !payload?.html) {
@@ -205,7 +245,7 @@ class ListenerServer extends EventEmitter {
     });
   }
 
-  writeJson(response, statusCode, payload) {
+  writeJson(response, statusCode, payload, headers = {}) {
     const json = JSON.stringify(payload);
 
     // CHANGE: ensure CORS headers are always present
@@ -213,7 +253,8 @@ class ListenerServer extends EventEmitter {
 
     response.writeHead(statusCode, {
       "Content-Type": "application/json",
-      "Content-Length": Buffer.byteLength(json)
+      "Content-Length": Buffer.byteLength(json),
+      ...headers
     });
     response.end(json);
   }
@@ -257,6 +298,22 @@ class ListenerServer extends EventEmitter {
     hash.update("::");
     hash.update(String(payload.html ?? ""));
     return hash.digest("hex");
+  }
+
+  createReportFilename(filePath) {
+    const sanitized = String(filePath)
+      .replace(/[^a-z0-9_-]+/gi, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 60);
+    return sanitized ? `report-${sanitized}.json` : "report.json";
+  }
+
+  parseUrl(url) {
+    try {
+      return new URL(url, "http://localhost");
+    } catch (error) {
+      return null;
+    }
   }
 
   createIssueKey(issue) {

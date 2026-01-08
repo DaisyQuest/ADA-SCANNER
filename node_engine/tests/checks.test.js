@@ -117,6 +117,12 @@ describe("MissingLabelCheck", () => {
     const hiddenInput = createContext('<input type="hidden" />', "html");
     expect(MissingLabelCheck.run(hiddenInput, rule)).toHaveLength(0);
 
+    const ariaLabel = createContext('<input aria-label="Name" />', "html");
+    expect(MissingLabelCheck.run(ariaLabel, rule)).toHaveLength(0);
+
+    const invalidLabelledBy = createContext('<input aria-labelledby="missing" />', "html");
+    expect(MissingLabelCheck.run(invalidLabelledBy, rule)).toHaveLength(1);
+
     const labelledBy = createContext(
       '<div id="label"></div><input aria-labelledby="label" />',
       "html"
@@ -215,6 +221,9 @@ describe("MissingSkipLinkCheck", () => {
   test("detects missing skip link and ordering issues", () => {
     const missing = createContext("<body><main></main></body>", "html");
     expect(MissingSkipLinkCheck.run(missing, rule)).toHaveLength(1);
+
+    const wrongHref = createContext("<a href=\"/home\">Skip to main</a><main id=\"main\"></main>", "html");
+    expect(MissingSkipLinkCheck.run(wrongHref, rule)).toHaveLength(1);
 
     const skipFirst = createContext(
       '<a href="#main">Skip to main content</a><main id="main"></main>',
@@ -388,6 +397,9 @@ describe("LayoutTableCheck", () => {
 
     const presentation = createContext('<table role="presentation"><tr><td>Cell</td></tr></table>', "html");
     expect(LayoutTableCheck.run(presentation, rule)).toHaveLength(0);
+
+    const noneRole = createContext('<table role="none"><tr><td>Cell</td></tr></table>', "html");
+    expect(LayoutTableCheck.run(noneRole, rule)).toHaveLength(0);
   });
 });
 
@@ -398,6 +410,9 @@ describe("MissingTableHeaderCheck", () => {
 
     const present = createContext("<table><tr><th>Header</th></tr></table>", "html");
     expect(MissingTableHeaderCheck.run(present, rule)).toHaveLength(0);
+
+    const roleGrid = createContext('<table role="grid"><tr><td>Cell</td></tr></table>', "html");
+    expect(MissingTableHeaderCheck.run(roleGrid, rule)).toHaveLength(1);
 
     const presentation = createContext('<table role="presentation"></table>', "html");
     expect(MissingTableHeaderCheck.run(presentation, rule)).toHaveLength(0);
@@ -460,6 +475,8 @@ describe("MissingLinkTextCheck", () => {
     expect(MissingLinkTextCheck.run(missingImageAlt, rule)).toHaveLength(1);
 
     expect(hasImageAltText('<img alt="" />')).toBe(false);
+    expect(hasImageAltText('<img alt="  " />')).toBe(false);
+    expect(hasImageAltText('<img alt="Home" />')).toBe(true);
   });
 });
 
