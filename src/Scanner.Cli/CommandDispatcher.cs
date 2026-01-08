@@ -4,6 +4,7 @@ using Scanner.Core.Checks;
 using Scanner.Core.Discovery;
 using Scanner.Core.Reporting;
 using Scanner.Core.Rules;
+using Scanner.Core.Runtime;
 
 namespace Scanner.Cli;
 
@@ -25,6 +26,7 @@ public sealed class CommandDispatcher
             "scan" => HandleScan(args, console),
             "rules" => HandleRules(args, console),
             "report" => HandleReport(args, console),
+            "export" => HandleExport(args, console),
             _ => HandleUnknown(command, console)
         };
     }
@@ -183,6 +185,68 @@ public sealed class CommandDispatcher
         var scan = generator.LoadScanResult(input);
         var artifacts = generator.WriteReport(scan, output, "report");
         console.WriteLine($"Report written to {artifacts.JsonPath}, {artifacts.HtmlPath}, {artifacts.MarkdownPath}.");
+        return 0;
+    }
+
+    private int HandleExport(string[] args, IConsole console)
+    {
+        if (args.Length < 2)
+        {
+            console.WriteError("Missing export subcommand (chromium-extension).");
+            return 1;
+        }
+
+        var subcommand = args[1];
+        var optionsResult = _parser.ParseOptions(args, 2);
+        if (!optionsResult.IsSuccess)
+        {
+            console.WriteError(optionsResult.Error ?? "Invalid options.");
+            return 1;
+        }
+
+        return subcommand switch
+        {
+            "chromium-extension" => HandleChromiumExtensionExport(optionsResult.Options, console),
+            _ => HandleUnknown($"export {subcommand}", console)
+        };
+    }
+
+    private int HandleChromiumExtensionExport(IReadOnlyDictionary<string, string> options, IConsole console)
+    {
+        if (!options.TryGetValue("out", out var outputDir) || string.IsNullOrWhiteSpace(outputDir))
+        {
+            console.WriteError("Missing --out for export command.");
+            return 1;
+        }
+
+        if (!options.TryGetValue("capture-url", out var captureUrl) || string.IsNullOrWhiteSpace(captureUrl))
+        {
+            console.WriteError("Missing --capture-url for export command.");
+            return 1;
+        }
+
+        if (!Uri.TryCreate(captureUrl, UriKind.Absolute, out _))
+        {
+            console.WriteError("Capture URL must be absolute.");
+            return 1;
+        }
+
+        var token = options.TryGetValue("capture-token", out var captureToken) && !string.IsNullOrWhiteSpace(captureToken)
+            ? captureToken
+            : null;
+        var extensionName = options.TryGetValue("name", out var nameValue) && !string.IsNullOrWhiteSpace(nameValue)
+            ? nameValue
+            : "ADA Scanner Capture";
+
+        var exporter = new RuntimeCaptureExtensionExporter();
+        exporter.ExportChromiumExtension(new RuntimeCaptureExtensionOptions
+        {
+            CaptureUrl = captureUrl,
+            AccessToken = token,
+            ExtensionName = extensionName
+        }, outputDir);
+
+        console.WriteLine($"Chromium extension written to {outputDir}.");
         return 0;
     }
 
