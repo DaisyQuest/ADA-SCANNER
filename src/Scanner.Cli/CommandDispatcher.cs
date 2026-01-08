@@ -83,19 +83,21 @@ public sealed class CommandDispatcher
             return 1;
         }
 
-        if (!TryBuildRuntimeCaptureOptions(options, rulesRoot, out var runtimeOptions, out var runtimeError))
+        if (!TryBuildRuntimeCaptureOptions(options, rulesRoot, console.WriteLine, out var runtimeOptions, out var runtimeError))
         {
             console.WriteError(runtimeError ?? "Invalid runtime options.");
             return 1;
         }
 
-        var scanEngine = new ScanEngine(new ProjectDiscovery(), new RuleLoader(), CheckRegistry.Default());
-        var result = scanEngine.Scan(new ScanOptions { Path = path, RulesRoot = rulesRoot });
-        RuntimeScanResult? runtimeScan = null;
+        Task<RuntimeScanResult?>? runtimeTask = null;
         if (runtimeOptions != null)
         {
-            runtimeScan = RunRuntimeCapture(runtimeOptions, console);
+            runtimeTask = Task.Run(() => RunRuntimeCapture(runtimeOptions, console));
         }
+
+        var scanEngine = new ScanEngine(new ProjectDiscovery(), new RuleLoader(), CheckRegistry.Default());
+        var result = scanEngine.Scan(new ScanOptions { Path = path, RulesRoot = rulesRoot });
+        var runtimeScan = runtimeTask?.GetAwaiter().GetResult();
 
         Directory.CreateDirectory(outputDir);
         var outputPath = Path.Combine(outputDir, "scan.json");
@@ -135,6 +137,7 @@ public sealed class CommandDispatcher
     private static bool TryBuildRuntimeCaptureOptions(
         IReadOnlyDictionary<string, string> options,
         string rulesRoot,
+        Action<string>? log,
         out RuntimeScanOptions? runtimeOptions,
         out string? errorMessage)
     {
@@ -212,7 +215,8 @@ public sealed class CommandDispatcher
                 Path = capturePath ?? "/capture",
                 AccessToken = captureToken,
                 MaxDocuments = captureMaxDocs ?? 1,
-                IdleTimeout = TimeSpan.FromSeconds(captureIdleSeconds ?? 120)
+                IdleTimeout = TimeSpan.FromSeconds(captureIdleSeconds ?? 120),
+                Log = log
             }
         };
 

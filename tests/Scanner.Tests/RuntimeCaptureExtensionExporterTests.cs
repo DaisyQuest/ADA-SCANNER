@@ -96,6 +96,10 @@ public sealed class RuntimeCaptureExtensionExporterTests
         var backgroundContents = File.ReadAllText(backgroundPath);
         Assert.Contains("http://127.0.0.1:45892/capture", backgroundContents);
         Assert.Contains("X-Ada-Scanner-Token", backgroundContents);
+        Assert.Contains("ADA Scanner capture: collecting DOM.", backgroundContents);
+        Assert.Contains("ADA Scanner capture: posting", backgroundContents);
+        Assert.Contains("ADA Scanner capture: response", backgroundContents);
+        Assert.Contains("ADA Scanner capture: action clicked.", backgroundContents);
     }
 
     [Fact]
@@ -112,5 +116,6 @@ public sealed class RuntimeCaptureExtensionExporterTests
 
         var backgroundContents = File.ReadAllText(Path.Combine(output, "background.js"));
         Assert.DoesNotContain("X-Ada-Scanner-Token\"", backgroundContents);
+        Assert.Contains("ADA Scanner capture: collecting DOM.", backgroundContents);
     }
 }

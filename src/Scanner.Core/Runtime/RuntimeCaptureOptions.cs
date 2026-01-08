@@ -34,4 +34,9 @@ public sealed class RuntimeCaptureOptions
     /// Gets the optional token required to post capture payloads.
     /// </summary>
     public string? AccessToken { get; init; }
+
+    /// <summary>
+    /// Gets the optional logger for verbose capture output.
+    /// </summary>
+    public Action<string>? Log { get; set; }
 }

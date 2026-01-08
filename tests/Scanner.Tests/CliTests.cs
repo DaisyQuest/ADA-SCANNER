@@ -430,6 +430,86 @@ public sealed class CliTests
         Assert.Equal(0, code);
         Assert.Contains(console.Errors, message => message.Contains("Runtime scan failed", StringComparison.OrdinalIgnoreCase));
     }
+
+    [Fact]
+    public void CommandDispatcher_Scan_RuntimeCaptureWithoutReportOut_RunsListener()
+    {
+        var root = TestUtilities.CreateTempDirectory();
+        TestUtilities.WriteFile(root, "index.html", "<img src=\"hero.png\">");
+        TestUtilities.WriteFile(root, "rules/team/rule.json", "{\"id\":\"alt-1\",\"description\":\"Missing alt\",\"severity\":\"low\",\"checkId\":\"missing-alt-text\"}");
+        var output = Path.Combine(root, "out");
+
+        var runtimeSource = new TrackingRuntimeSource();
+        var dispatcher = new CommandDispatcher(runtimeSource);
+        var console = new TestConsole();
+        var code = dispatcher.Dispatch(new[]
+        {
+            "scan",
+            "--path",
+            root,
+            "--rules",
+            Path.Combine(root, "rules"),
+            "--out",
+            output,
+            "--runtime-capture-port",
+            "45892"
+        }, console);
+
+        Assert.Equal(0, code);
+        Assert.True(runtimeSource.WasCalled);
+    }
+
+    [Fact]
+    public void CommandDispatcher_Scan_RuntimeCaptureInvalidIdleSeconds_ReturnsError()
+    {
+        var root = TestUtilities.CreateTempDirectory();
+        TestUtilities.WriteFile(root, "index.html", "<img src=\"hero.png\">");
+        TestUtilities.WriteFile(root, "rules/team/rule.json", "{\"id\":\"alt-1\",\"description\":\"Missing alt\",\"severity\":\"low\",\"checkId\":\"missing-alt-text\"}");
+
+        var dispatcher = new CommandDispatcher();
+        var console = new TestConsole();
+        var code = dispatcher.Dispatch(new[]
+        {
+            "scan",
+            "--path",
+            root,
+            "--rules",
+            Path.Combine(root, "rules"),
+            "--runtime-capture-port",
+            "45892",
+            "--runtime-capture-idle-seconds",
+            "nope"
+        }, console);
+
+        Assert.Equal(1, code);
+        Assert.Contains(console.Errors, message => message.Contains("runtime capture idle seconds", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void CommandDispatcher_Scan_RuntimeCaptureInvalidMaxBodyBytes_ReturnsError()
+    {
+        var root = TestUtilities.CreateTempDirectory();
+        TestUtilities.WriteFile(root, "index.html", "<img src=\"hero.png\">");
+        TestUtilities.WriteFile(root, "rules/team/rule.json", "{\"id\":\"alt-1\",\"description\":\"Missing alt\",\"severity\":\"low\",\"checkId\":\"missing-alt-text\"}");
+
+        var dispatcher = new CommandDispatcher();
+        var console = new TestConsole();
+        var code = dispatcher.Dispatch(new[]
+        {
+            "scan",
+            "--path",
+            root,
+            "--rules",
+            Path.Combine(root, "rules"),
+            "--runtime-capture-port",
+            "45892",
+            "--runtime-max-body-bytes",
+            "nope"
+        }, console);
+
+        Assert.Equal(1, code);
+        Assert.Contains(console.Errors, message => message.Contains("runtime max body bytes", StringComparison.OrdinalIgnoreCase));
+    }
 }
 
 public sealed class TestConsole : IConsole
@@ -471,5 +551,18 @@ public sealed class FailingRuntimeSource : Scanner.Core.Runtime.IRuntimeDocument
     {
         await Task.Yield();
         throw new InvalidOperationException("Boom");
+    }
+}
+
+public sealed class TrackingRuntimeSource : Scanner.Core.Runtime.IRuntimeDocumentSource
+{
+    public bool WasCalled { get; private set; }
+
+    public async IAsyncEnumerable<Scanner.Core.Runtime.RuntimeHtmlDocument> GetDocumentsAsync(
+        Scanner.Core.Runtime.RuntimeScanOptions options,
+        [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        WasCalled = true;
+        await Task.Yield();
     }
 }

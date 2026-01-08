@@ -73,6 +73,46 @@ public sealed class RuntimeCaptureListenerTests
     }
 
     [Fact]
+    public async Task CaptureListener_LogsLifecycleMessages()
+    {
+        var port = TestUtilities.GetAvailablePort();
+        var messages = new List<string>();
+        var options = new RuntimeScanOptions
+        {
+            CaptureOptions = new RuntimeCaptureOptions
+            {
+                Port = port,
+                MaxDocuments = 1,
+                IdleTimeout = TimeSpan.FromSeconds(1),
+                Log = messages.Add
+            },
+            SampleRate = 1.0,
+            Random = new Random(0)
+        };
+
+        var listener = new RuntimeCaptureListener();
+        await using var enumerator = listener.GetDocumentsAsync(options).GetAsyncEnumerator();
+        var moveTask = enumerator.MoveNextAsync().AsTask();
+        await Task.Delay(50);
+
+        using var client = new HttpClient();
+        var payload = new { url = "http://example.test/page", html = "<html></html>" };
+
+        var response = await client.PostAsync(
+            $"http://127.0.0.1:{port}/capture",
+            new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json"));
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.True(await moveTask);
+        Assert.False(await enumerator.MoveNextAsync());
+
+        Assert.Contains(messages, message => message.Contains("listener started", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(messages, message => message.Contains("request received", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(messages, message => message.Contains("capture accepted", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(messages, message => message.Contains("listener stopped", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
     public async Task CaptureListener_EmitsEmptyBodyWhenMaxBytesZero()
     {
         var port = TestUtilities.GetAvailablePort();

@@ -64,6 +64,10 @@ public sealed class AdaScanRunner
             if (parsed.RuntimeOptions != null)
             {
                 parsed.RuntimeOptions.RulesRoot = rulesRoot;
+                if (parsed.RuntimeOptions.CaptureOptions != null)
+                {
+                    parsed.RuntimeOptions.CaptureOptions.Log = message => _output.WriteLine(message);
+                }
                 runtimeScan = RunRuntimeScan(parsed.RuntimeOptions);
             }
 

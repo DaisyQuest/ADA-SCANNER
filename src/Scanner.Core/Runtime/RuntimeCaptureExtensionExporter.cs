@@ -90,6 +90,7 @@ const CAPTURE_URL = "{{urlLiteral}}";
 {{tokenConstant}}
 
 async function postCapture() {
+  console.info("ADA Scanner capture: collecting DOM.");
   const payload = {
     url: window.location.href,
     html: document.documentElement.outerHTML,
@@ -100,25 +101,31 @@ async function postCapture() {
   const headers = { "Content-Type": "application/json" };
 {{tokenHeader}}
 
+  console.info(`ADA Scanner capture: posting to ${CAPTURE_URL}.`);
   const response = await fetch(CAPTURE_URL, {
     method: "POST",
     headers,
     body: JSON.stringify(payload)
   });
 
+  console.info(`ADA Scanner capture: response ${response.status}.`);
   return { ok: response.ok, status: response.status };
 }
 
 chrome.action.onClicked.addListener(async (tab) => {
+  console.info("ADA Scanner capture: action clicked.");
   if (!tab.id) {
+    console.warn("ADA Scanner capture: no active tab.");
     return;
   }
 
   try {
+    console.info("ADA Scanner capture: injecting capture script.");
     await chrome.scripting.executeScript({
       target: { tabId: tab.id },
       func: postCapture
     });
+    console.info("ADA Scanner capture: capture script executed.");
   } catch (error) {
     console.error("ADA Scanner capture failed", error);
   }

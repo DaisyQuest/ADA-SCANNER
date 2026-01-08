@@ -35,6 +35,7 @@ public sealed class RuntimeCaptureListener : IRuntimeDocumentSource
         var prefix = BuildPrefix(captureOptions.Host, captureOptions.Port);
         listener.Prefixes.Add(prefix);
         listener.Start();
+        Log(captureOptions, $"Runtime capture listener started at {prefix.TrimEnd('/')}{path}.");
 
         var captured = 0;
         try
@@ -52,8 +53,10 @@ public sealed class RuntimeCaptureListener : IRuntimeDocumentSource
                 }
 
                 var context = await contextTask.ConfigureAwait(false);
+                Log(captureOptions, $"Runtime capture request received: {context.Request.HttpMethod} {context.Request.RawUrl}.");
                 if (!IsValidRequest(context.Request, path, captureOptions.AccessToken, out var errorStatus, out var errorMessage))
                 {
+                    Log(captureOptions, $"Runtime capture request rejected: {errorStatus} {errorMessage}");
                     await WriteResponseAsync(context.Response, errorStatus, errorMessage, sampled: false, capturedUrl: null)
                         .ConfigureAwait(false);
                     continue;
@@ -62,6 +65,7 @@ public sealed class RuntimeCaptureListener : IRuntimeDocumentSource
                 var payload = await TryReadPayloadAsync(context.Request, cancellationToken).ConfigureAwait(false);
                 if (payload == null || string.IsNullOrWhiteSpace(payload.Url) || string.IsNullOrWhiteSpace(payload.Html))
                 {
+                    Log(captureOptions, "Runtime capture request rejected: invalid payload.");
                     await WriteResponseAsync(context.Response, HttpStatusCode.BadRequest, "Invalid payload.", sampled: false, capturedUrl: null)
                         .ConfigureAwait(false);
                     continue;
@@ -69,6 +73,7 @@ public sealed class RuntimeCaptureListener : IRuntimeDocumentSource
 
                 if (!Uri.TryCreate(payload.Url, UriKind.Absolute, out var url))
                 {
+                    Log(captureOptions, "Runtime capture request rejected: invalid URL.");
                     await WriteResponseAsync(context.Response, HttpStatusCode.BadRequest, "Invalid URL.", sampled: false, capturedUrl: null)
                         .ConfigureAwait(false);
                     continue;
@@ -79,6 +84,7 @@ public sealed class RuntimeCaptureListener : IRuntimeDocumentSource
                 var statusCode = payload.StatusCode ?? 200;
                 var sampled = ShouldSample(options);
 
+                Log(captureOptions, $"Runtime capture accepted for {url} (sampled={sampled}).");
                 await WriteResponseAsync(context.Response, HttpStatusCode.OK, "Captured.", sampled, url.ToString())
                     .ConfigureAwait(false);
 
@@ -100,6 +106,7 @@ public sealed class RuntimeCaptureListener : IRuntimeDocumentSource
         {
             listener.Stop();
             listener.Close();
+            Log(captureOptions, "Runtime capture listener stopped.");
         }
     }
 
@@ -160,6 +167,11 @@ public sealed class RuntimeCaptureListener : IRuntimeDocumentSource
     private static bool HttpMethodsMatch(HttpListenerRequest request, string method)
     {
         return request.HttpMethod.Equals(method, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static void Log(RuntimeCaptureOptions options, string message)
+    {
+        options.Log?.Invoke(message);
     }
 
     private static async Task<RuntimeCapturePayload?> TryReadPayloadAsync(HttpListenerRequest request, CancellationToken cancellationToken)
