@@ -15,6 +15,12 @@ const { MissingAltTextCheck } = require("../src/checks/MissingAltTextCheck");
 const { MissingLinkTextCheck, hasImageAltText } = require("../src/checks/MissingLinkTextCheck");
 const { MissingIframeTitleCheck } = require("../src/checks/MissingIframeTitleCheck");
 const { MissingFieldsetLegendCheck } = require("../src/checks/MissingFieldsetLegendCheck");
+const {
+  MissingSkipLinkCheck,
+  normalizeText,
+  isSkipLabel,
+  isFocusable
+} = require("../src/checks/MissingSkipLinkCheck");
 const { NonWrappingContainerCheck, isNonWrappingValue } = require("../src/checks/NonWrappingContainerCheck");
 const { InvalidAriaRoleCheck } = require("../src/checks/InvalidAriaRoleCheck");
 const { HiddenNavigationCheck, hasHiddenStyle } = require("../src/checks/HiddenNavigationCheck");
@@ -195,6 +201,50 @@ describe("MissingPageTitleCheck", () => {
 
     const multi = createContext("<title></title><title>Home</title>", "html");
     expect(MissingPageTitleCheck.run(multi, rule)).toHaveLength(0);
+  });
+});
+
+describe("MissingSkipLinkCheck", () => {
+  test("detects missing skip link and ordering issues", () => {
+    const missing = createContext("<body><main></main></body>", "html");
+    expect(MissingSkipLinkCheck.run(missing, rule)).toHaveLength(1);
+
+    const skipFirst = createContext(
+      '<a href="#main">Skip to main content</a><main id="main"></main>',
+      "html"
+    );
+    expect(MissingSkipLinkCheck.run(skipFirst, rule)).toHaveLength(0);
+
+    const skipSecond = createContext(
+      '<button>Menu</button><a href="#main">Skip to main content</a><main id="main"></main>',
+      "html"
+    );
+    expect(MissingSkipLinkCheck.run(skipSecond, rule)).toHaveLength(1);
+  });
+
+  test("supports aria labels, title text, and focusability checks", () => {
+    expect(normalizeText(" Skip <span>to</span>  content ")).toBe("skip to content");
+    expect(isSkipLabel("Skip to main")).toBe(true);
+    expect(isSkipLabel("Jump to main")).toBe(false);
+    expect(isFocusable("a", 'href="#main"')).toBe(true);
+    expect(isFocusable("a", 'tabindex="0"')).toBe(true);
+    expect(isFocusable("a", 'tabindex="-1"')).toBe(false);
+    expect(isFocusable("a", "")).toBe(false);
+    expect(isFocusable("input", 'type="hidden"')).toBe(false);
+    expect(isFocusable("input", "")).toBe(true);
+    expect(isFocusable("button", 'disabled')).toBe(false);
+
+    const ariaLabel = createContext(
+      '<a href="#main" aria-label="Skip to content"></a><main id="main"></main>',
+      "html"
+    );
+    expect(MissingSkipLinkCheck.run(ariaLabel, rule)).toHaveLength(0);
+
+    const titleLabel = createContext(
+      '<a href="#main" title="Skip to content"></a><main id="main"></main>',
+      "html"
+    );
+    expect(MissingSkipLinkCheck.run(titleLabel, rule)).toHaveLength(0);
   });
 });
 

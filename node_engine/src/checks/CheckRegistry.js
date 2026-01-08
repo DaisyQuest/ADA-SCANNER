@@ -15,6 +15,7 @@ const { XamlMissingNameCheck } = require("./XamlMissingNameCheck");
 const { MissingLinkTextCheck } = require("./MissingLinkTextCheck");
 const { MissingIframeTitleCheck } = require("./MissingIframeTitleCheck");
 const { MissingFieldsetLegendCheck } = require("./MissingFieldsetLegendCheck");
+const { MissingSkipLinkCheck } = require("./MissingSkipLinkCheck");
 
 class CheckRegistry {
   constructor(checks = []) {
@@ -57,7 +58,8 @@ const createDefaultCheckRegistry = () =>
     XamlMissingNameCheck,
     MissingLinkTextCheck,
     MissingIframeTitleCheck,
-    MissingFieldsetLegendCheck
+    MissingFieldsetLegendCheck,
+    MissingSkipLinkCheck
   ]);
 
 module.exports = { CheckRegistry, createDefaultCheckRegistry };
