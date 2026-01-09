@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=980, initial-scale=1" />
+  <title>Fixed Layout Sample</title>
+  <style>
+    .page-container {
+      width: 1200px;
+      margin: 0 auto;
+      font-size: 14px;
+    }
+
+    .sidebar {
+      width: 320px;
+      height: 600px;
+      float: left;
+    }
+
+    .content {
+      width: 840px;
+      float: left;
+    }
+
+    .stat-box {
+      width: 200px;
+      height: 120px;
+      margin: 16px;
+    }
+  </style>
+</head>
+<body>
+  <div class="page-container">
+    <aside class="sidebar">
+      <h2>Filters</h2>
+      <p>Fixed-width sidebar with long labels that overflow.</p>
+    </aside>
+    <main class="content">
+      <h1>Operations Report</h1>
+      <div class="stat-box">Q1 KPI</div>
+      <div class="stat-box">Q2 KPI</div>
+      <div class="stat-box">Q3 KPI</div>
+    </main>
+  </div>
+</body>
+</html>

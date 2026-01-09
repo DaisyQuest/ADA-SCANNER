@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Complex Dashboard Sample</title>
+  <style>
+    .toolbar {
+      background: #2f2f2f;
+      color: #4f4f4f;
+      padding: 16px;
+    }
+
+    .toolbar button {
+      background: #3a3a3a;
+      color: #4d4d4d;
+      border: none;
+      margin-right: 8px;
+      padding: 8px 12px;
+    }
+
+    .cards {
+      display: flex;
+      gap: 12px;
+      width: 1100px;
+    }
+
+    .card {
+      background: #f5f5f5;
+      color: #b1b1b1;
+      padding: 12px;
+      width: 340px;
+      height: 220px;
+    }
+
+    .hidden-panel {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <header class="toolbar" aria-label="Primary toolbar">
+    <button aria-label="">+ Add</button>
+    <button><span aria-hidden="true">⚙</span></button>
+    <input type="search" placeholder="Search" />
+  </header>
+
+  <section class="cards">
+    <article class="card">
+      <h2 id="card-title">Usage</h2>
+      <p aria-labelledby="card-title missing">Summary text with invalid label refs.</p>
+    </article>
+    <article class="card">
+      <h2>Errors</h2>
+      <p>Muted text on muted background.</p>
+      <a href="#" style="color:#aaaaaa">View all</a>
+    </article>
+    <article class="card">
+      <h2>Exports</h2>
+      <button>Download</button>
+    </article>
+  </section>
+
+  <section class="hidden-panel" aria-hidden="true">
+    <a href="/archived" tabindex="0">Archived reports</a>
+  </section>
+</body>
+</html>

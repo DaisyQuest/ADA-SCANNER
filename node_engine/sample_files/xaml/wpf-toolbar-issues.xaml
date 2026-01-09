@@ -1,0 +1,24 @@
+<Window x:Class="SampleApp.ToolbarWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Toolbar" Height="300" Width="500">
+  <DockPanel>
+    <ToolBar DockPanel.Dock="Top">
+      <Button Width="28" Height="28">
+        <Path Data="M0,0 L10,10" Stroke="Black" />
+      </Button>
+      <Button Width="28" Height="28" AutomationProperties.Name="">
+        <Path Data="M0,10 L10,0" Stroke="Black" />
+      </Button>
+      <TextBox Width="120" Text="" />
+    </ToolBar>
+
+    <StackPanel Margin="16">
+      <TextBlock Text="Reports" FontSize="18" />
+      <ListBox>
+        <ListBoxItem>Summary</ListBoxItem>
+        <ListBoxItem>Details</ListBoxItem>
+      </ListBox>
+    </StackPanel>
+  </DockPanel>
+</Window>

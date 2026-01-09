@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>ARIA Missing Labels Sample</title>
+</head>
+<body>
+  <!-- Multiple unlabeled controls -->
+  <form>
+    <input type="text" id="first-name" placeholder="First name" />
+    <input type="text" id="last-name" aria-label="" />
+    <input type="email" id="email" aria-labelledby="missing-label" />
+
+    <!-- label exists but not associated via for attribute -->
+    <label>Email confirmation</label>
+    <input type="email" id="email-confirm" />
+
+    <!-- select missing label -->
+    <select id="country">
+      <option value="">Select a country</option>
+      <option value="us">United States</option>
+      <option value="ca">Canada</option>
+    </select>
+
+    <!-- button with icon only and no accessible name -->
+    <button type="submit">
+      <span class="icon icon-check" aria-hidden="true"></span>
+    </button>
+  </form>
+</body>
+</html>

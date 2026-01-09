@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>ARIA Role Misuse Sample</title>
+</head>
+<body>
+  <div role="button" tabindex="0">
+    <span>Clickable div without keyboard handler</span>
+  </div>
+
+  <div role="link" tabindex="0" aria-expanded="true">
+    <span>Role link with unsupported aria-expanded</span>
+  </div>
+
+  <ul role="menu">
+    <li>Menu item missing role</li>
+    <li role="menuitemcheckbox" aria-checked="false">Settings</li>
+  </ul>
+
+  <section role="region" aria-label="">
+    <p>Region with empty accessible name.</p>
+  </section>
+</body>
+</html>

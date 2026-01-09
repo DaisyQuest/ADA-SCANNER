@@ -37,3 +37,5 @@
 2026-01-09 - Expand static analysis appliesTo handling and improve contrast parsing test coverage (SPEC-004)
 
 2026-01-09 - Improved static analysis dashboard filters, guidance, and user guides with expanded tests. (SPEC-007, SPEC-010, SPEC-013)
+2026-01-09 - Selected backend team; added node_engine sample_files fixtures for rule violations. (SPEC-008)
+2026-01-09 - Added additional sample_files fixtures for expanded rule coverage. (SPEC-008)

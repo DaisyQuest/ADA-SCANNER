@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>ARIA Required Mismatch Sample</title>
+</head>
+<body>
+  <form>
+    <label for="dept">Department</label>
+    <select id="dept" aria-required="true">
+      <option value="">Select one</option>
+      <option value="sales">Sales</option>
+      <option value="support">Support</option>
+    </select>
+
+    <label for="title">Job title</label>
+    <input id="title" type="text" required="false" aria-required="true" />
+
+    <button type="submit">Submit</button>
+  </form>
+</body>
+</html>

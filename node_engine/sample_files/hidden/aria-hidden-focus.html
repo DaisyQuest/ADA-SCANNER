@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>ARIA Hidden Focusable Elements</title>
+  <style>
+    .visually-hidden {
+      visibility: hidden;
+    }
+
+    .collapsed {
+      height: 0;
+      overflow: hidden;
+    }
+  </style>
+</head>
+<body>
+  <button aria-hidden="true">Invisible Button</button>
+
+  <div class="visually-hidden" tabindex="0">Focusable hidden container</div>
+
+  <section class="collapsed">
+    <a href="/archive" tabindex="0">Archived reports</a>
+  </section>
+</body>
+</html>
