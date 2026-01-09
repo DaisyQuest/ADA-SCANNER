@@ -1371,6 +1371,25 @@ describe("Extension highlighter", () => {
     expect(document.querySelectorAll("#ada-highlight-style")).toHaveLength(1);
   });
 
+  test("stores issue messages and restores original titles", () => {
+    document.body.innerHTML = "<button id=\"save\" title=\"Original\">Save</button>";
+    const highlighter = createHighlighter({ documentRoot: document });
+
+    highlighter.applyHighlights([
+      { selector: "#save", message: "Missing label" },
+      { selector: "#save", ruleId: "contrast" }
+    ]);
+
+    const button = document.getElementById("save");
+    expect(button.getAttribute("data-ada-issue-message")).toContain("Missing label");
+    expect(button.getAttribute("data-ada-issue-message")).toContain("contrast");
+    expect(button.getAttribute("data-ada-original-title")).toBe("Original");
+
+    highlighter.clearHighlights();
+    expect(button.hasAttribute("data-ada-issue-message")).toBe(false);
+    expect(button.hasAttribute("data-ada-original-title")).toBe(false);
+  });
+
   test("applies highlights based on evidence and filters by page URL", () => {
     document.body.innerHTML = "<input id=\"email\" type=\"email\" />";
     const highlighter = createHighlighter({ documentRoot: document });
