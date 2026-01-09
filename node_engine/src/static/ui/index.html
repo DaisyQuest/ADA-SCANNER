@@ -21,6 +21,10 @@
         <div class="summary-value" id="fileCount">0</div>
       </div>
       <div class="summary-card">
+        <div class="summary-label">Documents captured</div>
+        <div class="summary-value" id="documentCount">0</div>
+      </div>
+      <div class="summary-card">
         <div class="summary-label">Issues found</div>
         <div class="summary-value" id="issueCount">0</div>
       </div>
@@ -34,8 +38,42 @@
       </div>
     </section>
 
+    <section class="panel filter-panel">
+      <div class="panel-header">
+        <div>
+          <h2>Filter insights</h2>
+          <p class="muted">Refine the file list and recent issues without rerunning the scan.</p>
+        </div>
+        <button class="ghost-button" id="clearFilters" type="button">Clear filters</button>
+      </div>
+      <div class="filter-grid">
+        <label class="field">
+          <span>File search</span>
+          <input id="fileSearchInput" type="search" placeholder="Filter files by path" />
+        </label>
+        <label class="field">
+          <span>Issue search</span>
+          <input id="issueSearchInput" type="search" placeholder="Search issues by message or file" />
+        </label>
+        <label class="field">
+          <span>Rule focus</span>
+          <select id="ruleFilterSelect">
+            <option value="all">All rules</option>
+          </select>
+        </label>
+      </div>
+    </section>
+
     <section class="panel">
-      <h2>Files</h2>
+      <div class="panel-header">
+        <div>
+          <h2>Files</h2>
+          <p class="muted">Download JSON or HTML reports per file.</p>
+        </div>
+        <div class="panel-meta">
+          <span class="meta-chip">Showing <strong id="fileResultCount">0</strong></span>
+        </div>
+      </div>
       <table class="data-table">
         <thead>
           <tr>
@@ -50,8 +88,39 @@
     </section>
 
     <section class="panel">
-      <h2>Recent issues</h2>
+      <div class="panel-header">
+        <div>
+          <h2>Recent issues</h2>
+          <p class="muted">Latest eight issues that match your filters.</p>
+        </div>
+        <div class="panel-meta">
+          <span class="meta-chip">Showing <strong id="issueResultCount">0</strong></span>
+        </div>
+      </div>
       <div id="issueFeed" class="issue-feed"></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <div>
+          <h2>How to use this dashboard</h2>
+          <p class="muted">Quick guidance for reviewing static analysis output.</p>
+        </div>
+      </div>
+      <div class="guide-grid">
+        <div class="guide-card">
+          <h3>Scan overview</h3>
+          <p>Review counts at the top to confirm files, issues, and rules after a scan completes.</p>
+        </div>
+        <div class="guide-card">
+          <h3>Filters</h3>
+          <p>Use the search boxes or rule filter to narrow the file list and recent issues list instantly.</p>
+        </div>
+        <div class="guide-card">
+          <h3>Downloads</h3>
+          <p>Export per-file JSON or HTML reports for deep dives or to share with your team.</p>
+        </div>
+      </div>
     </section>
 
     <script src="/assets/app.js"></script>
