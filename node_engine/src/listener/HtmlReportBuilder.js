@@ -299,6 +299,7 @@ class HtmlReportBuilder {
         <td>${renderBadgeList(file.rules, "ruleId")}</td>
         <td>${renderBadgeList(file.severities, "severity")}</td>
         <td>${renderBadgeList(file.teams, "teamName")}</td>
+        <td>${renderBadgeList(file.linkedStylesheetsWithIssues, "filePath")}</td>
       </tr>
     `).join("");
 
@@ -342,12 +343,13 @@ class HtmlReportBuilder {
               <th>Top rules</th>
               <th>Severities</th>
               <th>Teams</th>
+              <th>Stylesheets with issues</th>
             </tr>
           </thead>
           <tbody>
             ${fileRows || `
               <tr>
-                <td colspan="5" class="muted">No file-level issues recorded.</td>
+                <td colspan="6" class="muted">No file-level issues recorded.</td>
               </tr>
             `}
           </tbody>
@@ -397,6 +399,10 @@ class HtmlReportBuilder {
             <div class="summary-label">Content type</div>
             <div class="summary-value">${escapeHtml(report?.document?.contentType ?? "n/a")}</div>
           </div>
+          <div class="summary-card">
+            <div class="summary-label">Stylesheets with issues</div>
+            <div class="summary-value">${escapeHtml(report?.linkedStylesheetsWithIssues?.length ?? 0)}</div>
+          </div>
         </div>
       </section>
     `;
@@ -405,6 +411,10 @@ class HtmlReportBuilder {
       <section>
         <h2>Issues</h2>
         ${renderIssuesTable(report?.issues)}
+      </section>
+      <section>
+        <h2>Linked stylesheet issues</h2>
+        ${renderBadgeList(report?.linkedStylesheetsWithIssues, "filePath")}
       </section>
       <section>
         <h2>Rule breakdown</h2>

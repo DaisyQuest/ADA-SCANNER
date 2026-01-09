@@ -3,6 +3,7 @@ class ReportBuilder {
     const byRule = new Map();
     const byFile = new Map();
     const byTeam = new Map();
+    const stylesheetIssuesByFile = this.buildStylesheetIssueMap({ documents, issues });
 
     for (const issue of issues) {
       const ruleId = issue.ruleId ?? "unknown";
@@ -32,6 +33,10 @@ class ReportBuilder {
       teamRuleEntry.count += 1;
     }
 
+    for (const filePath of stylesheetIssuesByFile.keys()) {
+      this.ensureFileEntry(byFile, filePath);
+    }
+
     return {
       summary: {
         documents: documents.length,
@@ -53,7 +58,9 @@ class ReportBuilder {
         rules: this.sortRuleCounts(entry.rules),
         teams: this.sortCountMap(entry.teams, "teamName"),
         severities: this.sortCountMap(entry.severities, "severity"),
-        checks: this.sortCountMap(entry.checks, "checkId")
+        checks: this.sortCountMap(entry.checks, "checkId"),
+        linkedStylesheetsWithIssues: stylesheetIssuesByFile.get(entry.filePath) ?? [],
+        linkedStylesheetIssueCount: this.sumIssueCounts(stylesheetIssuesByFile.get(entry.filePath))
       })),
       byTeam: this.sortByCount(byTeam, (entry) => ({
         teamName: entry.teamName,
@@ -72,6 +79,8 @@ class ReportBuilder {
     const fileIssues = issues.filter((issue) => (issue.filePath ?? "unknown") === resolvedPath);
     const counts = this.buildCountMaps(fileIssues);
     const document = documents.find((entry) => entry.url === resolvedPath) ?? null;
+    const stylesheetIssuesByFile = this.buildStylesheetIssueMap({ documents, issues });
+    const linkedStylesheetsWithIssues = stylesheetIssuesByFile.get(resolvedPath) ?? [];
 
     return {
       filePath: resolvedPath,
@@ -86,6 +95,8 @@ class ReportBuilder {
       byTeam: this.sortCountMap(counts.teams, "teamName"),
       bySeverity: this.sortCountMap(counts.severities, "severity"),
       byCheck: this.sortCountMap(counts.checks, "checkId"),
+      linkedStylesheetsWithIssues,
+      linkedStylesheetIssueCount: this.sumIssueCounts(linkedStylesheetsWithIssues),
       issues: fileIssues
         .slice()
         .sort((a, b) => {
@@ -213,6 +224,47 @@ class ReportBuilder {
         return nameA.localeCompare(nameB);
       })
       .map(mapper);
+  }
+
+  buildStylesheetIssueMap({ documents = [], issues = [] } = {}) {
+    const issueCounts = new Map();
+    for (const issue of issues) {
+      const filePath = issue.filePath ?? null;
+      if (!filePath) {
+        continue;
+      }
+      issueCounts.set(filePath, (issueCounts.get(filePath) ?? 0) + 1);
+    }
+
+    const byFile = new Map();
+    for (const document of documents) {
+      const filePath = document?.url;
+      if (!filePath) {
+        continue;
+      }
+
+      const stylesheets = Array.isArray(document.stylesheets) ? document.stylesheets : [];
+      const linked = stylesheets
+        .map((stylesheet) => ({
+          filePath: stylesheet,
+          count: issueCounts.get(stylesheet) ?? 0
+        }))
+        .filter((entry) => entry.count > 0);
+
+      if (linked.length) {
+        byFile.set(filePath, linked);
+      }
+    }
+
+    return byFile;
+  }
+
+  sumIssueCounts(entries) {
+    if (!Array.isArray(entries)) {
+      return 0;
+    }
+
+    return entries.reduce((total, entry) => total + (entry.count ?? 0), 0);
   }
 }
 

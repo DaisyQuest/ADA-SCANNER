@@ -1,10 +1,12 @@
 const DEFAULT_SERVER_URL = "http://127.0.0.1:45892/capture";
 const DEFAULT_MAX_SPIDER_PAGES = 10;
+const DEFAULT_SPIDER_REQUEST_DELAY_MS = 0;
 
 const defaultState = {
   enabled: false,
   spiderEnabled: false,
-  serverUrl: DEFAULT_SERVER_URL
+  serverUrl: DEFAULT_SERVER_URL,
+  spiderRequestDelayMs: DEFAULT_SPIDER_REQUEST_DELAY_MS
 };
 
 const spiderState = {
@@ -40,6 +42,18 @@ const setSpiderState = async (chromeApi, enabled) => {
     spiderState.cancelRequested = true;
   }
 };
+
+const normalizeSpiderDelayMs = (value) => {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    return DEFAULT_SPIDER_REQUEST_DELAY_MS;
+  }
+  return Math.round(parsed);
+};
+
+const wait = (delayMs) => new Promise((resolve) => {
+  setTimeout(resolve, delayMs);
+});
 
 const toggleExtension = async (chromeApi, tab) => {
   const current = await chromeApi.storage.local.get(defaultState);
@@ -120,6 +134,11 @@ const runSpider = async (chromeApi, startTabId) => {
   spiderState.cancelRequested = false;
 
   try {
+    const config = await chromeApi.storage.local.get({
+      spiderRequestDelayMs: DEFAULT_SPIDER_REQUEST_DELAY_MS
+    });
+    const requestDelayMs = normalizeSpiderDelayMs(config.spiderRequestDelayMs);
+
     const tabId = startTabId ?? (await getActiveTab(chromeApi))?.id;
     if (!tabId) {
       await setSpiderState(chromeApi, false);
@@ -130,7 +149,8 @@ const runSpider = async (chromeApi, startTabId) => {
     const links = Array.isArray(response?.links) ? response.links : [];
     const uniqueLinks = Array.from(new Set(links)).slice(0, DEFAULT_MAX_SPIDER_PAGES);
 
-    for (const link of uniqueLinks) {
+    for (let index = 0; index < uniqueLinks.length; index += 1) {
+      const link = uniqueLinks[index];
       if (spiderState.cancelRequested) {
         break;
       }
@@ -141,11 +161,13 @@ const runSpider = async (chromeApi, startTabId) => {
       }
 
       await captureSpiderTab(chromeApi, tab.id);
+      if (!spiderState.cancelRequested && requestDelayMs > 0 && index < uniqueLinks.length - 1) {
+        await wait(requestDelayMs);
+      }
     }
   } finally {
     spiderState.running = false;
     spiderState.cancelRequested = false;
-    await setSpiderState(chromeApi, false);
   }
 };
 
@@ -206,6 +228,9 @@ if (typeof module !== "undefined") {
     waitForTabComplete,
     captureSpiderTab,
     DEFAULT_SERVER_URL,
-    DEFAULT_MAX_SPIDER_PAGES
+    DEFAULT_MAX_SPIDER_PAGES,
+    DEFAULT_SPIDER_REQUEST_DELAY_MS,
+    normalizeSpiderDelayMs,
+    wait
   };
 }

@@ -73,7 +73,9 @@ describe("ReportBuilder", () => {
         checks: [
           { checkId: "check-1", count: 1 },
           { checkId: "check-2", count: 1 }
-        ]
+        ],
+        linkedStylesheetsWithIssues: [],
+        linkedStylesheetIssueCount: 0
       },
       {
         filePath: "file-b.html",
@@ -81,7 +83,9 @@ describe("ReportBuilder", () => {
         rules: [{ ruleId: "rule-a", count: 1 }],
         teams: [{ teamName: "team-a", count: 1 }],
         severities: [{ severity: "high", count: 1 }],
-        checks: [{ checkId: "check-1", count: 1 }]
+        checks: [{ checkId: "check-1", count: 1 }],
+        linkedStylesheetsWithIssues: [],
+        linkedStylesheetIssueCount: 0
       }
     ]);
     expect(report.byTeam).toEqual([
@@ -115,6 +119,8 @@ describe("ReportBuilder", () => {
     expect(report.byRule[0].ruleId).toBe("unknown");
     expect(report.byTeam[0].teamName).toBe("unassigned");
     expect(report.byFile[0].filePath).toBe("unknown");
+    expect(report.byFile[0].linkedStylesheetsWithIssues).toEqual([]);
+    expect(report.byFile[0].linkedStylesheetIssueCount).toBe(0);
   });
 
   test("builds empty report by default", () => {
@@ -170,7 +176,118 @@ describe("ReportBuilder", () => {
       { checkId: "check-1", count: 1 },
       { checkId: "check-2", count: 1 }
     ]);
+    expect(report.linkedStylesheetsWithIssues).toEqual([]);
+    expect(report.linkedStylesheetIssueCount).toBe(0);
     expect(report.issues.map((issue) => issue.line)).toEqual([3, 10]);
+  });
+
+  test("annotates linked stylesheet issues for file reports", () => {
+    const builder = new ReportBuilder();
+    const report = builder.buildFileReport({
+      filePath: "page.html",
+      documents: [
+        { url: "page.html", contentType: "text/html", stylesheets: ["styles.css", "other.css"] }
+      ],
+      issues: [
+        { ruleId: "rule-a", filePath: "styles.css" },
+        { ruleId: "rule-b", filePath: "styles.css" },
+        { ruleId: "rule-c", filePath: "other.css" }
+      ]
+    });
+
+    expect(report.linkedStylesheetsWithIssues).toEqual([
+      { filePath: "styles.css", count: 2 },
+      { filePath: "other.css", count: 1 }
+    ]);
+    expect(report.linkedStylesheetIssueCount).toBe(3);
+  });
+
+  test("includes files that link to stylesheet issues in summaries", () => {
+    const builder = new ReportBuilder();
+    const report = builder.build({
+      documents: [{ url: "page.html", stylesheets: ["styles.css"] }],
+      issues: [{ ruleId: "rule-a", filePath: "styles.css" }]
+    });
+
+    const pageEntry = report.byFile.find((entry) => entry.filePath === "page.html");
+    expect(report.summary.files).toBe(2);
+    expect(pageEntry.issueCount).toBe(0);
+    expect(pageEntry.linkedStylesheetsWithIssues).toEqual([{ filePath: "styles.css", count: 1 }]);
+    expect(pageEntry.linkedStylesheetIssueCount).toBe(1);
+  });
+
+  test("handles empty stylesheet metadata gracefully", () => {
+    const builder = new ReportBuilder();
+    const map = builder.buildStylesheetIssueMap({
+      documents: [
+        { url: "" },
+        { url: "page.html", stylesheets: null },
+        { url: "other.html", stylesheets: ["no-issues.css"] }
+      ],
+      issues: [{ ruleId: "rule-a", filePath: null }]
+    });
+
+    expect(map.size).toBe(0);
+    expect(builder.sumIssueCounts(null)).toBe(0);
+    expect(builder.sumIssueCounts([{ filePath: "no-issues.css" }])).toBe(0);
+  });
+
+  test("skips falsy file paths when tracking rule files", () => {
+    const builder = new ReportBuilder();
+    const report = builder.build({
+      issues: [{ ruleId: "rule-a", filePath: "" }]
+    });
+
+    expect(report.byRule[0].files).toEqual([]);
+    expect(report.byFile[0].filePath).toBe("");
+  });
+
+  test("sorts rule and count maps by name when counts tie", () => {
+    const builder = new ReportBuilder();
+    const ruleMap = new Map([
+      ["rule-b", { ruleId: "rule-b", count: 1 }],
+      ["rule-a", { ruleId: "rule-a", count: 1 }]
+    ]);
+    const countMap = new Map([
+      ["team-b", 1],
+      ["team-a", 1]
+    ]);
+
+    expect(builder.sortRuleCounts(ruleMap).map((entry) => entry.ruleId)).toEqual(["rule-a", "rule-b"]);
+    expect(builder.sortCountMap(countMap, "teamName").map((entry) => entry.teamName)).toEqual(["team-a", "team-b"]);
+  });
+
+  test("buildFileReport defaults missing arguments", () => {
+    const builder = new ReportBuilder();
+    const report = builder.buildFileReport();
+
+    expect(report.filePath).toBe("unknown");
+    expect(report.issueCount).toBe(0);
+  });
+
+  test("sortByCount falls back to empty names when missing", () => {
+    const builder = new ReportBuilder();
+    const map = new Map([
+      ["first", { count: 1 }],
+      ["second", { count: 1 }]
+    ]);
+
+    const result = builder.sortByCount(map, (entry) => entry.count ?? 0);
+    expect(result).toEqual([1, 1]);
+  });
+
+  test("sorts file report issues with empty rule ids last", () => {
+    const builder = new ReportBuilder();
+    const report = builder.buildFileReport({
+      filePath: "file-a.html",
+      documents: [{ url: "file-a.html" }],
+      issues: [
+        { ruleId: null, filePath: "file-a.html", line: 5 },
+        { ruleId: "rule-b", filePath: "file-a.html", line: 5 }
+      ]
+    });
+
+    expect(report.issues.map((issue) => issue.ruleId ?? "")).toEqual(["", "rule-b"]);
   });
 
   test("buildFileSummaries returns file index entries", () => {
@@ -187,7 +304,9 @@ describe("ReportBuilder", () => {
         rules: [{ ruleId: "rule-a", count: 1 }],
         teams: [{ teamName: "unassigned", count: 1 }],
         severities: [{ severity: "unspecified", count: 1 }],
-        checks: [{ checkId: "unknown", count: 1 }]
+        checks: [{ checkId: "unknown", count: 1 }],
+        linkedStylesheetsWithIssues: [],
+        linkedStylesheetIssueCount: 0
       }
     ]);
   });

@@ -140,12 +140,32 @@ describe("HtmlReportBuilder", () => {
         issueCount: 1,
         document: { contentType: "text/html" },
         issues: [{ ruleId: "rule-a", message: "Issue" }],
-        byRule: [{ ruleId: "rule-a", count: 1 }]
+        byRule: [{ ruleId: "rule-a", count: 1 }],
+        linkedStylesheetsWithIssues: []
       }
     });
 
     expect(html).toContain("File Accessibility Report");
     expect(html).toContain("file-a.html");
+  });
+
+  test("builds a file HTML report with linked stylesheet issues", () => {
+    const builder = new HtmlReportBuilder();
+    const html = builder.buildFileReport({
+      report: {
+        filePath: "file-c.html",
+        issueCount: 0,
+        document: { contentType: "text/html" },
+        linkedStylesheetsWithIssues: [
+          { filePath: "styles.css", count: 2 },
+          { filePath: "theme.css", count: 1 }
+        ]
+      }
+    });
+
+    expect(html).toContain("Linked stylesheet issues");
+    expect(html).toContain("styles.css");
+    expect(html).toContain("theme.css");
   });
 
   test("builds a file HTML report without rule data", () => {

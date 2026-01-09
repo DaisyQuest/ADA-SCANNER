@@ -69,6 +69,19 @@ describe("StaticAnalyzer", () => {
     expect(result.issues).toHaveLength(1);
   });
 
+  test("records linked stylesheets on HTML documents", () => {
+    const rulesRoot = createTempRules();
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "ada-static-links-"));
+    fs.writeFileSync(path.join(root, "index.html"), "<link rel=\"stylesheet\" href=\"styles.css\" />");
+    fs.writeFileSync(path.join(root, "styles.css"), ".a { color: #000; }");
+    const analyzer = new StaticAnalyzer();
+
+    const result = analyzer.scanRoot({ rootDir: root, rulesRoot });
+    const document = result.documents.find((doc) => doc.url === "index.html");
+
+    expect(document.stylesheets).toEqual(["styles.css"]);
+  });
+
   test("throws when root or rules are missing", () => {
     const analyzer = new StaticAnalyzer();
     expect(() => analyzer.scanRoot({ rootDir: "", rulesRoot: "/rules" })).toThrow("Root directory is required.");
@@ -545,6 +558,21 @@ describe("StaticReportBuilder", () => {
 
     expect(report.summary.files).toBe(2);
     expect(report.byFile.map((entry) => entry.filePath).sort()).toEqual(["file-a.html", "file-b.css"]);
+  });
+
+  test("includes linked stylesheet issues in file summaries", () => {
+    const builder = new StaticReportBuilder();
+    const report = builder.build({
+      documents: [
+        { url: "page.html", stylesheets: ["styles.css"] },
+        { url: "styles.css" }
+      ],
+      issues: [{ ruleId: "rule-1", checkId: "check", filePath: "styles.css" }]
+    });
+
+    const entry = report.byFile.find((file) => file.filePath === "page.html");
+    expect(entry.linkedStylesheetsWithIssues).toEqual([{ filePath: "styles.css", count: 1 }]);
+    expect(entry.linkedStylesheetIssueCount).toBe(1);
   });
 
   test("returns file report with document info when present", () => {

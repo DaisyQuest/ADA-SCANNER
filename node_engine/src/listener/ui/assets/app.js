@@ -84,6 +84,7 @@ const renderFiles = () => {
     .map((file) => {
       const topRules = file.rules.slice(0, 3).map((rule) => `${rule.ruleId} (${rule.count})`).join(", ");
       const severities = formatCounts(file.severities ?? [], "severity");
+      const stylesheetIssues = formatCounts(file.linkedStylesheetsWithIssues ?? [], "filePath");
       const downloadUrl = `/report/file?path=${encodeURIComponent(file.filePath)}`;
       const downloadHtmlUrl = `/report/file?path=${encodeURIComponent(file.filePath)}&format=html`;
       const downloadName = buildDownloadName(file.filePath);
@@ -94,6 +95,7 @@ const renderFiles = () => {
           <td>${file.issueCount}</td>
           <td>${topRules || "—"}</td>
           <td>${severities}</td>
+          <td>${stylesheetIssues}</td>
           <td>
             <a class="pill-button" href="${downloadUrl}" download="${downloadName}">Save JSON</a>
             <a class="pill-button pill-button--secondary" href="${downloadHtmlUrl}" download="${downloadHtmlName}">Save HTML</a>
