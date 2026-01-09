@@ -27,7 +27,7 @@ const AllowedChecks = new Set([
   "redundant-title-text",
   "layout-table"
 ]);
-const AllowedAppliesTo = new Set(["xaml", "cshtml", "razor", "html", "htm", "css"]);
+const AllowedAppliesTo = new Set(["xaml", "cshtml", "razor", "html", "htm", "css", "ftl"]);
 
 const wcagCriteriaPattern = /^\d+\.\d+\.\d+$/;
 const problemTagPattern = /^[a-z0-9-]+$/;

@@ -193,6 +193,19 @@ public sealed class RulesTests
     }
 
     [Fact]
+    public void ValidateRules_AllowsFreemarkerAppliesTo()
+    {
+        var root = TestUtilities.CreateTempDirectory();
+        TestUtilities.WriteFile(root, "rules/forms/applies.json", "{\"id\":\"rule-5\",\"description\":\"Freemarker appliesTo\",\"severity\":\"low\",\"checkId\":\"missing-alt-text\",\"appliesTo\":\"ftl\"}");
+
+        var loader = new RuleLoader();
+        var result = loader.ValidateRules(Path.Combine(root, "rules"));
+
+        Assert.True(result.IsValid);
+        Assert.Empty(result.Errors);
+    }
+
+    [Fact]
     public void ValidateRules_ReportsUnknownYamlProperties()
     {
         var root = TestUtilities.CreateTempDirectory();

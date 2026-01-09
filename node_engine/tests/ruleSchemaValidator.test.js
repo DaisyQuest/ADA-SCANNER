@@ -8,7 +8,7 @@ describe("RuleSchemaValidator", () => {
       description: "desc",
       severity: "High",
       checkId: "missing-label",
-      appliesTo: "html, htm",
+      appliesTo: "html, htm, ftl",
       recommendation: "fix",
       wcagCriteria: "1.4.3",
       problemTags: "document-language"
