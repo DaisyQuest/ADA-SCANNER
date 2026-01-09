@@ -107,7 +107,7 @@
       const result = force ? { shouldSend: true, nextHash: createHash(html) } : shouldForwardUpdate(lastHash, html);
       lastHash = result.nextHash;
 
-      if (!result.shouldSend) return;
+      if (!result.shouldSend) return { ok: true, skipped: true };
 
       const config = await getConfig();
 
@@ -118,16 +118,22 @@
         statusCode: 200
       });
 
-      const resp = await fetchFn(config.serverUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
+      let resp;
+      try {
+        resp = await fetchFn(config.serverUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+      } catch (error) {
+        console.warn("[ADA] capture failed", error);
+        return { ok: false, error };
+      }
 
       if (!resp.ok) {
         const text = await resp.text().catch(() => "");
         console.warn("[ADA] capture failed", resp.status, text);
-        return;
+        return { ok: false, status: resp.status, errorText: text };
       }
 
       if (typeof onReport === "function") {
@@ -138,6 +144,8 @@
           console.warn("[ADA] unable to parse capture response", error);
         }
       }
+
+      return { ok: true };
     };
 
     const schedule = () => {

@@ -96,8 +96,9 @@ describe("Extension forwarder utilities", () => {
       debounceMs: 1
     });
 
-    await forwarder.send();
+    const firstSend = await forwarder.send();
     expect(fetchFn).toHaveBeenCalledTimes(1);
+    expect(firstSend).toEqual({ ok: true });
 
     document.body.innerHTML = "<div>Changed</div>";
     forwarder.schedule();
@@ -128,8 +129,29 @@ describe("Extension forwarder utilities", () => {
       debounceMs: 1
     });
 
-    await forwarder.send();
+    const result = await forwarder.send();
     expect(fetchFn).toHaveBeenCalledTimes(1);
+    expect(result).toEqual({ ok: false, status: 500, errorText: "fail" });
+    expect(warnSpy).toHaveBeenCalled();
+    warnSpy.mockRestore();
+  });
+
+  test("logs when capture request throws", async () => {
+    const warnSpy = jest.spyOn(console, "warn").mockImplementation(() => {});
+    const fetchFn = jest.fn().mockRejectedValue(new Error("network down"));
+    const getConfig = jest.fn().mockResolvedValue({ serverUrl: DEFAULT_SERVER_URL });
+
+    document.body.innerHTML = "<div>Test</div>";
+    const forwarder = createForwarder({
+      fetchFn,
+      documentRoot: document,
+      location: window.location,
+      getConfig
+    });
+
+    const result = await forwarder.send();
+    expect(fetchFn).toHaveBeenCalledTimes(1);
+    expect(result).toEqual({ ok: false, error: expect.any(Error) });
     expect(warnSpy).toHaveBeenCalled();
     warnSpy.mockRestore();
   });
@@ -148,9 +170,11 @@ describe("Extension forwarder utilities", () => {
       debounceMs: 10
     });
 
-    await forwarder.send();
-    await forwarder.send();
+    const firstSend = await forwarder.send();
+    const secondSend = await forwarder.send();
     expect(fetchFn).toHaveBeenCalledTimes(1);
+    expect(firstSend).toEqual({ ok: true });
+    expect(secondSend).toEqual({ ok: true, skipped: true });
 
     forwarder.schedule();
     forwarder.schedule();
@@ -634,6 +658,39 @@ describe("Extension content script", () => {
     errorSpy.mockRestore();
   });
 
+  test("warns when initial send returns a failure result", async () => {
+    jest.resetModules();
+    const warnSpy = jest.spyOn(console, "warn").mockImplementation(() => {});
+    const chromeApi = {
+      runtime: { onMessage: { addListener: jest.fn() } },
+      storage: { local: { get: (defaults, callback) => callback({ enabled: false, serverUrl: DEFAULT_SERVER_URL }) } }
+    };
+    globalThis.AdaForwarder = {
+      createForwarder: jest.fn(() => ({
+        schedule: jest.fn(),
+        send: jest.fn(() => Promise.resolve({ ok: false, error: new Error("fail") }))
+      })),
+      getDefaultConfig: jest.fn(() => Promise.resolve({ serverUrl: DEFAULT_SERVER_URL }))
+    };
+    globalThis.AdaHighlighter = {
+      createHighlighter: jest.fn(() => ({ applyHighlights: jest.fn(), clearHighlights: jest.fn() })),
+      filterIssuesForPage: jest.fn((issues) => issues ?? [])
+    };
+
+    const { createContentScript: reloadedCreateContentScript } = require("../extension/contentScript");
+    const script = reloadedCreateContentScript({
+      chromeApi,
+      documentRoot: document,
+      windowObj: window,
+      fetchFn: jest.fn()
+    });
+    script.start();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(warnSpy).toHaveBeenCalled();
+    warnSpy.mockRestore();
+  });
+
   test("ignores non-toggle messages", () => {
     const messageListeners = [];
     const chromeApi = {
@@ -1049,6 +1106,82 @@ describe("Extension content script", () => {
       messageListeners[0]({ type: "spider-capture" }, null, resolve);
     });
     expect(response.ok).toBe(false);
+  });
+
+  test("reports errors when spider capture throws", async () => {
+    jest.resetModules();
+    const messageListeners = [];
+    const chromeApi = {
+      runtime: {
+        onMessage: { addListener: (listener) => messageListeners.push(listener) }
+      },
+      storage: {
+        local: { get: (defaults, callback) => callback({ enabled: false, serverUrl: DEFAULT_SERVER_URL }) }
+      }
+    };
+
+    globalThis.AdaForwarder = {
+      createForwarder: jest.fn(() => ({
+        schedule: jest.fn(),
+        send: jest.fn(() => Promise.reject(new Error("boom")))
+      })),
+      getDefaultConfig: jest.fn(() => Promise.resolve({ serverUrl: DEFAULT_SERVER_URL }))
+    };
+    globalThis.AdaHighlighter = {
+      createHighlighter: jest.fn(() => ({ applyHighlights: jest.fn(), clearHighlights: jest.fn() })),
+      filterIssuesForPage: jest.fn((issues) => issues ?? [])
+    };
+
+    const { createContentScript: reloadedCreateContentScript } = require("../extension/contentScript");
+    reloadedCreateContentScript({
+      chromeApi,
+      documentRoot: document,
+      windowObj: window,
+      fetchFn: jest.fn()
+    });
+
+    const response = await new Promise((resolve) => {
+      messageListeners[0]({ type: "spider-capture" }, null, resolve);
+    });
+    expect(response).toEqual({ ok: false, error: "boom" });
+  });
+
+  test("uses a fallback error message when capture errors lack details", async () => {
+    jest.resetModules();
+    const messageListeners = [];
+    const chromeApi = {
+      runtime: {
+        onMessage: { addListener: (listener) => messageListeners.push(listener) }
+      },
+      storage: {
+        local: { get: (defaults, callback) => callback({ enabled: false, serverUrl: DEFAULT_SERVER_URL }) }
+      }
+    };
+
+    globalThis.AdaForwarder = {
+      createForwarder: jest.fn(() => ({
+        schedule: jest.fn(),
+        send: jest.fn(() => Promise.resolve({ ok: false }))
+      })),
+      getDefaultConfig: jest.fn(() => Promise.resolve({ serverUrl: DEFAULT_SERVER_URL }))
+    };
+    globalThis.AdaHighlighter = {
+      createHighlighter: jest.fn(() => ({ applyHighlights: jest.fn(), clearHighlights: jest.fn() })),
+      filterIssuesForPage: jest.fn((issues) => issues ?? [])
+    };
+
+    const { createContentScript: reloadedCreateContentScript } = require("../extension/contentScript");
+    reloadedCreateContentScript({
+      chromeApi,
+      documentRoot: document,
+      windowObj: window,
+      fetchFn: jest.fn()
+    });
+
+    const response = await new Promise((resolve) => {
+      messageListeners[0]({ type: "spider-capture" }, null, resolve);
+    });
+    expect(response).toEqual({ ok: false, error: "Capture failed" });
   });
 
   test("drops cached issues when payload is not an array", () => {

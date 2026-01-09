@@ -6,3 +6,4 @@
 2026-01-08 - Skipped contrast checks when gradients or background images are present; added coverage for new cases. (SPEC-008, SPEC-013)
 2026-01-08 - Updated node_engine contrast detection to evaluate gradients/images and large text thresholds with expanded tests. (SPEC-008, SPEC-013)
 2026-01-09 - Reapplied runtime highlights after DOM mutations and expanded content script coverage. (SPEC-013, SPEC-019)
+2026-01-09 - Handled runtime capture fetch failures and expanded forwarder/content script tests. (SPEC-019)

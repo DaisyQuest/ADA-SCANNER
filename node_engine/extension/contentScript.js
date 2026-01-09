@@ -123,7 +123,10 @@
     };
 
     const captureOnce = async () => {
-      await forwarder.send({ force: true });
+      const result = await forwarder.send({ force: true });
+      if (result?.ok === false) {
+        return { ok: false, error: result.error?.message ?? "Capture failed" };
+      }
       return { ok: true };
     };
 
@@ -151,7 +154,13 @@
       // Force an immediate send on start and log failures
       Promise.resolve()
           .then(() => forwarder.send())
-          .then(() => console.log("[ADA] initial send done"))
+          .then((result) => {
+            if (result?.ok === false) {
+              console.warn("[ADA] initial send failed", result.error ?? result.status ?? "");
+              return;
+            }
+            console.log("[ADA] initial send done");
+          })
           .catch((e) => console.error("[ADA] initial send failed", e));
     };
 
