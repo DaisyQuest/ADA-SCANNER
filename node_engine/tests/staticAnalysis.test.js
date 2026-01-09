@@ -233,6 +233,41 @@ describe("StaticAnalyzer", () => {
     expect(result.issues[0].ruleDescription).toBe("");
     expect(result.issues[0].severity).toBe("");
   });
+
+  test("supports appliesTo matching sourceKind variants", () => {
+    const projectRoot = createTempProject();
+    const analyzer = new StaticAnalyzer({
+      ruleLoader: {
+        validateRules: () => ({
+          isValid: true,
+          teams: [
+            {
+              teamName: "team",
+              rules: [
+                { id: "rule-1", checkId: "html-check", appliesTo: "ftl" },
+                { id: "rule-2", checkId: "html-check", appliesTo: "html" }
+              ]
+            }
+          ]
+        })
+      },
+      checkRegistry: {
+        find: () => ({
+          applicableKinds: ["html"],
+          run: (context, rule) => [
+            { ruleId: rule.id, checkId: "html-check", filePath: context.filePath, message: "Issue" }
+          ]
+        })
+      }
+    });
+
+    const result = analyzer.scanRoot({ rootDir: projectRoot, rulesRoot: "/rules" });
+    const ftlIssues = result.issues.filter((issue) => issue.filePath === "template.ftl");
+    const htmlIssues = result.issues.filter((issue) => issue.filePath === "index.html");
+
+    expect(ftlIssues.map((issue) => issue.ruleId).sort()).toEqual(["rule-1", "rule-2"]);
+    expect(htmlIssues.map((issue) => issue.ruleId)).toEqual(["rule-2"]);
+  });
 });
 
 describe("StaticAnalysisServer", () => {

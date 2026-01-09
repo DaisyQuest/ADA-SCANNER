@@ -133,8 +133,12 @@ class StaticAnalyzer {
           const allowed = rule.appliesTo
             .split(",")
             .map((part) => part.trim())
-            .filter(Boolean);
-          if (!allowed.some((entryKind) => entryKind.toLowerCase() === context.kind.toLowerCase())) {
+            .filter(Boolean)
+            .map((entryKind) => entryKind.toLowerCase());
+          const applicableKinds = [context.kind, entry.sourceKind]
+            .filter(Boolean)
+            .map((entryKind) => entryKind.toLowerCase());
+          if (!allowed.some((entryKind) => applicableKinds.includes(entryKind))) {
             continue;
           }
         }
