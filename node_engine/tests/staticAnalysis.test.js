@@ -186,6 +186,40 @@ describe("StaticAnalyzer", () => {
     expect(result.issues[0].recommendation).toBe("fix");
   });
 
+  test("applies rules scoped to freemarker templates", () => {
+    const projectRoot = createTempProject();
+    const analyzer = new StaticAnalyzer({
+      ruleLoader: {
+        validateRules: () => ({
+          isValid: true,
+          teams: [
+            {
+              teamName: "team",
+              rules: [
+                {
+                  id: "rule-1",
+                  checkId: "mock-check",
+                  appliesTo: "ftl"
+                }
+              ]
+            }
+          ]
+        })
+      },
+      checkRegistry: {
+        find: () => ({
+          applicableKinds: ["html"],
+          run: (context) => [{ ruleId: "rule-1", checkId: "mock-check", filePath: context.filePath }]
+        })
+      }
+    });
+
+    const result = analyzer.scanRoot({ rootDir: projectRoot, rulesRoot: "/rules" });
+    const ftlIssues = result.issues.filter((issue) => issue.filePath === "template.ftl");
+    expect(ftlIssues).toHaveLength(1);
+    expect(result.issues).toHaveLength(1);
+  });
+
   test("collectFiles respects ignored directories", () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "ada-static-ignore-"));
     const ignored = path.join(root, "node_modules");
