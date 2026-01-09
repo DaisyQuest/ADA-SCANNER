@@ -14,12 +14,32 @@
 
   const createContentScript = ({ chromeApi, documentRoot, windowObj, fetchFn }) => {
     let observer = null;
+    let refreshTimeout = null;
+    let lastIssues = [];
     const highlighter = createHighlighter({ documentRoot });
 
     const getConfig = async () => {
       const config = await getDefaultConfig(chromeApi.storage.local);
       console.log("[ADA] config:", config);
       return { serverUrl: config.serverUrl };
+    };
+
+    const clearRefreshTimeout = () => {
+      if (refreshTimeout) {
+        windowObj.clearTimeout(refreshTimeout);
+        refreshTimeout = null;
+      }
+    };
+
+    const scheduleRefresh = () => {
+      if (!lastIssues.length) {
+        return;
+      }
+      clearRefreshTimeout();
+      refreshTimeout = windowObj.setTimeout(() => {
+        refreshTimeout = null;
+        highlighter.applyHighlights(lastIssues);
+      }, 100);
     };
 
     const forwarder = createForwarder({
@@ -29,6 +49,7 @@
       getConfig,
       onReport: (payload) => {
         const issues = filterIssuesForPage(payload?.issues, windowObj.location.href);
+        lastIssues = Array.isArray(issues) ? issues : [];
         highlighter.applyHighlights(issues);
       }
     });
@@ -44,6 +65,7 @@
       observer = new windowObj.MutationObserver(() => {
         // schedule can be very chatty; keep log minimal
         forwarder.schedule();
+        scheduleRefresh();
       });
 
       observer.observe(documentRoot.documentElement, {
@@ -67,6 +89,8 @@
       }
       observer.disconnect();
       observer = null;
+      lastIssues = [];
+      clearRefreshTimeout();
       highlighter.clearHighlights();
       console.log("[ADA] stopped");
     };

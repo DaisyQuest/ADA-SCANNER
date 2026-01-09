@@ -428,6 +428,152 @@ describe("Extension content script", () => {
     expect(applyHighlights).toHaveBeenCalledWith([{ message: "Issue" }]);
   });
 
+  test("reapplies highlights after mutations when issues are cached", () => {
+    jest.useFakeTimers();
+    jest.resetModules();
+    const applyHighlights = jest.fn();
+    const observers = [];
+    const originalObserver = window.MutationObserver;
+    let onReport = null;
+
+    window.MutationObserver = jest.fn(function (callback) {
+      this.observe = jest.fn();
+      this.disconnect = jest.fn();
+      this.trigger = callback;
+      observers.push(this);
+    });
+
+    globalThis.AdaHighlighter = {
+      createHighlighter: jest.fn(() => ({ applyHighlights, clearHighlights: jest.fn() })),
+      filterIssuesForPage: jest.fn((issues) => issues ?? [])
+    };
+    globalThis.AdaForwarder = {
+      createForwarder: jest.fn((options) => {
+        onReport = options.onReport;
+        return { schedule: jest.fn(), send: jest.fn(() => Promise.resolve()) };
+      }),
+      getDefaultConfig: jest.fn(() => Promise.resolve({ serverUrl: DEFAULT_SERVER_URL }))
+    };
+
+    const chromeApi = {
+      runtime: { onMessage: { addListener: jest.fn() } },
+      storage: { local: { get: (defaults, callback) => callback({ enabled: false, serverUrl: DEFAULT_SERVER_URL }) } }
+    };
+
+    const { createContentScript: reloadedCreateContentScript } = require("../extension/contentScript");
+    const script = reloadedCreateContentScript({
+      chromeApi,
+      documentRoot: document,
+      windowObj: window,
+      fetchFn: jest.fn()
+    });
+    script.start();
+
+    onReport({ issues: [{ selector: "#save", message: "Issue" }] });
+    observers[0].trigger([]);
+    observers[0].trigger([]);
+    jest.runOnlyPendingTimers();
+
+    expect(applyHighlights).toHaveBeenCalledTimes(2);
+    window.MutationObserver = originalObserver;
+    jest.useRealTimers();
+  });
+
+  test("skips refresh when no cached issues exist", () => {
+    jest.useFakeTimers();
+    jest.resetModules();
+    const applyHighlights = jest.fn();
+    const observers = [];
+    const originalObserver = window.MutationObserver;
+
+    window.MutationObserver = jest.fn(function (callback) {
+      this.observe = jest.fn();
+      this.disconnect = jest.fn();
+      this.trigger = callback;
+      observers.push(this);
+    });
+
+    globalThis.AdaHighlighter = {
+      createHighlighter: jest.fn(() => ({ applyHighlights, clearHighlights: jest.fn() })),
+      filterIssuesForPage: jest.fn((issues) => issues ?? [])
+    };
+    globalThis.AdaForwarder = {
+      createForwarder: jest.fn(() => ({ schedule: jest.fn(), send: jest.fn(() => Promise.resolve()) })),
+      getDefaultConfig: jest.fn(() => Promise.resolve({ serverUrl: DEFAULT_SERVER_URL }))
+    };
+
+    const chromeApi = {
+      runtime: { onMessage: { addListener: jest.fn() } },
+      storage: { local: { get: (defaults, callback) => callback({ enabled: false, serverUrl: DEFAULT_SERVER_URL }) } }
+    };
+
+    const { createContentScript: reloadedCreateContentScript } = require("../extension/contentScript");
+    const script = reloadedCreateContentScript({
+      chromeApi,
+      documentRoot: document,
+      windowObj: window,
+      fetchFn: jest.fn()
+    });
+    script.start();
+
+    observers[0].trigger([]);
+    jest.runOnlyPendingTimers();
+
+    expect(applyHighlights).not.toHaveBeenCalled();
+    window.MutationObserver = originalObserver;
+    jest.useRealTimers();
+  });
+
+  test("drops cached issues when payload is not an array", () => {
+    jest.useFakeTimers();
+    jest.resetModules();
+    const applyHighlights = jest.fn();
+    const observers = [];
+    const originalObserver = window.MutationObserver;
+    let onReport = null;
+
+    window.MutationObserver = jest.fn(function (callback) {
+      this.observe = jest.fn();
+      this.disconnect = jest.fn();
+      this.trigger = callback;
+      observers.push(this);
+    });
+
+    globalThis.AdaHighlighter = {
+      createHighlighter: jest.fn(() => ({ applyHighlights, clearHighlights: jest.fn() })),
+      filterIssuesForPage: jest.fn(() => null)
+    };
+    globalThis.AdaForwarder = {
+      createForwarder: jest.fn((options) => {
+        onReport = options.onReport;
+        return { schedule: jest.fn(), send: jest.fn(() => Promise.resolve()) };
+      }),
+      getDefaultConfig: jest.fn(() => Promise.resolve({ serverUrl: DEFAULT_SERVER_URL }))
+    };
+
+    const chromeApi = {
+      runtime: { onMessage: { addListener: jest.fn() } },
+      storage: { local: { get: (defaults, callback) => callback({ enabled: false, serverUrl: DEFAULT_SERVER_URL }) } }
+    };
+
+    const { createContentScript: reloadedCreateContentScript } = require("../extension/contentScript");
+    const script = reloadedCreateContentScript({
+      chromeApi,
+      documentRoot: document,
+      windowObj: window,
+      fetchFn: jest.fn()
+    });
+    script.start();
+
+    onReport({ issues: [{ message: "Issue" }] });
+    observers[0].trigger([]);
+    jest.runOnlyPendingTimers();
+
+    expect(applyHighlights).toHaveBeenCalledTimes(1);
+    window.MutationObserver = originalObserver;
+    jest.useRealTimers();
+  });
+
   test("auto-registers content script when chrome global is present", () => {
     jest.resetModules();
     global.chrome = {

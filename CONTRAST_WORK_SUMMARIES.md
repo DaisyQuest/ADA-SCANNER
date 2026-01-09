@@ -5,3 +5,4 @@
 2026-01-08 - Enhanced contrast detection to align with WAVE thresholds and added exhaustive parsing/filter tests. (SPEC-008, SPEC-013)
 2026-01-08 - Skipped contrast checks when gradients or background images are present; added coverage for new cases. (SPEC-008, SPEC-013)
 2026-01-08 - Updated node_engine contrast detection to evaluate gradients/images and large text thresholds with expanded tests. (SPEC-008, SPEC-013)
+2026-01-09 - Reapplied runtime highlights after DOM mutations and expanded content script coverage. (SPEC-013, SPEC-019)
