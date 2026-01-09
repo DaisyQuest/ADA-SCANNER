@@ -44,3 +44,4 @@
 2026-01-09 - Enhanced iframe and freemarker static checks with expanded tests (SPEC-008, SPEC-013)
 2026-01-09 - Added iframe/AJAX capture metadata in node engine extension and listener with tests. (SPEC-019)
 2026-01-09 - Enhanced runtime listener UI/report styling with badge variants and tests. (SPEC-019)
+2026-01-09 - Allow ftl in rule appliesTo validation (SPEC-009)

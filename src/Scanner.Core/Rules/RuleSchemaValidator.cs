@@ -46,7 +46,8 @@ public sealed class RuleSchemaValidator
         "razor",
         "html",
         "htm",
-        "css"
+        "css",
+        "ftl"
     };
 
     private static readonly Regex WcagCriteriaPattern = new(@"^\d+\.\d+\.\d+$", RegexOptions.Compiled);
