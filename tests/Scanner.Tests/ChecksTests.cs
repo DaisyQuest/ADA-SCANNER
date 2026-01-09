@@ -949,6 +949,106 @@ public sealed class ChecksTests
     }
 
     [Fact]
+    public void InsufficientContrastCheck_FlagsNormalTextBelowLargeTextThreshold()
+    {
+        var check = new InsufficientContrastCheck();
+        var content = "<div style=\"color:#888888;background-color:#ffffff;font-size:20px\">Text</div>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Single(issues);
+    }
+
+    [Fact]
+    public void InsufficientContrastCheck_AllowsLargeTextAtThreeToOne()
+    {
+        var check = new InsufficientContrastCheck();
+        var content = "<div style=\"color:#888888;background-color:#ffffff;font-size:24px\">Text</div>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Empty(issues);
+    }
+
+    [Fact]
+    public void InsufficientContrastCheck_AllowsBoldLargeTextAtFourteenPoint()
+    {
+        var check = new InsufficientContrastCheck();
+        var content = "<div style=\"color:#888888;background-color:#ffffff;font-size:19px;font-weight:bold\">Text</div>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Empty(issues);
+    }
+
+    [Fact]
+    public void InsufficientContrastCheck_SkipsTransparentColors()
+    {
+        var check = new InsufficientContrastCheck();
+        var content = "<div style=\"color:rgba(0,0,0,0.5);background-color:#ffffff\">Text</div>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Empty(issues);
+    }
+
+    [Fact]
+    public void InsufficientContrastCheck_ParsesBackgroundProperty()
+    {
+        var check = new InsufficientContrastCheck();
+        var content = "<div style=\"color:#888888;background:#ffffff\">Text</div>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Single(issues);
+    }
+
+    [Fact]
+    public void InsufficientContrastCheck_SkipsGradientBackgrounds()
+    {
+        var check = new InsufficientContrastCheck();
+        var content = "<div style=\"color:#888888;background:linear-gradient(#fff, #000)\">Text</div>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Empty(issues);
+    }
+
+    [Fact]
+    public void InsufficientContrastCheck_SkipsWhenGradientMixedWithBackgroundColor()
+    {
+        var check = new InsufficientContrastCheck();
+        var content = "<div style=\"color:#888888;background:#ffffff linear-gradient(#fff, #000)\">Text</div>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Empty(issues);
+    }
+
+    [Fact]
+    public void InsufficientContrastCheck_SkipsWhenBackgroundImagePresent()
+    {
+        var check = new InsufficientContrastCheck();
+        var content = "<div style=\"color:#888888;background-color:#ffffff;background-image:url(hero.png)\">Text</div>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Empty(issues);
+    }
+
+    [Fact]
+    public void InsufficientContrastCheck_SkipsWhenBackgroundImageGradientPresent()
+    {
+        var check = new InsufficientContrastCheck();
+        var content = "<div style=\"color:#888888;background-color:#ffffff;background-image:linear-gradient(#fff, #000)\">Text</div>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Empty(issues);
+    }
+
+    [Fact]
+    public void InsufficientContrastCheck_SkipsWhenFilterApplied()
+    {
+        var check = new InsufficientContrastCheck();
+        var content = "<div style=\"color:#888888;background-color:#ffffff;filter:blur(2px)\">Text</div>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Empty(issues);
+    }
+
+    [Fact]
     public void InsufficientContrastCheck_FlagsXamlForegroundBackground()
     {
         var check = new InsufficientContrastCheck();
@@ -1013,6 +1113,26 @@ public sealed class ChecksTests
     {
         var check = new InsufficientContrastCheck();
         var content = ".card { color: var(--text-color); background-color: #888888; }";
+        var issues = check.Run(new CheckContext("site.css", content, "css"), Rule(check.Id)).ToList();
+
+        Assert.Empty(issues);
+    }
+
+    [Fact]
+    public void InsufficientContrastCheck_FlagsCssBlockWithRgbColors()
+    {
+        var check = new InsufficientContrastCheck();
+        var content = ".card { color: rgb(136, 136, 136); background: rgb(255, 255, 255); }";
+        var issues = check.Run(new CheckContext("site.css", content, "css"), Rule(check.Id)).ToList();
+
+        Assert.Single(issues);
+    }
+
+    [Fact]
+    public void InsufficientContrastCheck_AllowsLargeTextInCssBlocks()
+    {
+        var check = new InsufficientContrastCheck();
+        var content = ".card { color: #888888; background-color: #ffffff; font-size: 18pt; }";
         var issues = check.Run(new CheckContext("site.css", content, "css"), Rule(check.Id)).ToList();
 
         Assert.Empty(issues);
