@@ -1,0 +1,18 @@
+@page
+@model SampleApp.Pages.CheckoutModel
+
+<section class="checkout">
+  <h1>Checkout</h1>
+
+  <form method="post">
+    <label for="card">Card number</label>
+    <input id="card" name="card" type="text" aria-describedby="missing-help" />
+
+    <label>Expiration</label>
+    <input name="expiry" type="text" placeholder="MM/YY" />
+
+    <button type="submit">
+      <span class="icon" aria-hidden="true">💳</span>
+    </button>
+  </form>
+</section>

@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Nested Overflow Sample</title>
+  <style>
+    .outer-shell {
+      width: 960px;
+      height: 500px;
+      overflow: hidden;
+      border: 1px solid #ccc;
+    }
+
+    .inner-panel {
+      width: 900px;
+      height: 450px;
+      overflow: hidden;
+      padding: 16px;
+    }
+
+    .fixed-card {
+      position: absolute;
+      right: 20px;
+      bottom: 20px;
+      width: 320px;
+      height: 220px;
+    }
+  </style>
+</head>
+<body>
+  <div class="outer-shell">
+    <div class="inner-panel">
+      <h1>Inventory</h1>
+      <p>Content clipped by nested overflow containers.</p>
+      <p>
+        This paragraph is intentionally long to demonstrate how fixed containers
+        can force horizontal scrolling and clipping when the viewport is narrow.
+      </p>
+      <div class="fixed-card">Pinned summary card</div>
+    </div>
+  </div>
+</body>
+</html>

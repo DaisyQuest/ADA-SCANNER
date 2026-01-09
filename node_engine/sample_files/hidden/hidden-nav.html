@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Hidden Navigation Sample</title>
+  <style>
+    .offscreen-nav {
+      display: none;
+    }
+
+    .sr-only-link {
+      position: absolute;
+      left: -9999px;
+      top: 0;
+    }
+  </style>
+</head>
+<body>
+  <nav class="offscreen-nav">
+    <a href="#main">Skip to content</a>
+  </nav>
+
+  <nav aria-hidden="true">
+    <ul>
+      <li><a href="/home">Home</a></li>
+      <li><a href="/reports" tabindex="0">Reports</a></li>
+      <li><a href="/settings">Settings</a></li>
+    </ul>
+  </nav>
+
+  <a class="sr-only-link" href="#footer">Jump to footer</a>
+
+  <main id="main">
+    <h1>Dashboard</h1>
+    <p>Content appears here.</p>
+  </main>
+</body>
+</html>

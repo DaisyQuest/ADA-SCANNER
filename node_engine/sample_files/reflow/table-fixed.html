@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Fixed Table Sample</title>
+  <style>
+    table {
+      width: 960px;
+      table-layout: fixed;
+      border-collapse: collapse;
+    }
+
+    th, td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      width: 240px;
+    }
+  </style>
+</head>
+<body>
+  <table>
+    <thead>
+      <tr>
+        <th>Region</th>
+        <th>Manager</th>
+        <th>Status</th>
+        <th>Notes</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Northwest</td>
+        <td>Alexandra Johnson</td>
+        <td>Active</td>
+        <td>Extremely long note that will overflow the fixed-width cell.</td>
+      </tr>
+    </tbody>
+  </table>
+</body>
+</html>

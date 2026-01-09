@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>ARIA Invalid References Sample</title>
+</head>
+<body>
+  <h1 id="page-title">Account Settings</h1>
+
+  <!-- duplicate ids used in aria-labelledby -->
+  <p id="dup-label">Primary label</p>
+  <p id="dup-label">Secondary label</p>
+
+  <div role="region" aria-labelledby="dup-label missing-id">
+    <p>Region with invalid aria-labelledby references.</p>
+  </div>
+
+  <!-- aria-describedby references element that is visually hidden but removed from flow -->
+  <p id="desc-1" style="display:none">Hidden description text.</p>
+  <input type="text" aria-describedby="desc-1" />
+
+  <!-- invalid role with aria-expanded -->
+  <div role="presentation" aria-expanded="true">
+    <span>Expandable panel without proper role.</span>
+  </div>
+</body>
+</html>

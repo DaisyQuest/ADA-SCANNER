@@ -1,0 +1,19 @@
+<Page
+  x:Class="SampleApp.SettingsPage"
+  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <Grid>
+    <StackPanel Padding="24">
+      <TextBlock Text="Settings" FontSize="20" />
+
+      <!-- ToggleSwitch without Header content -->
+      <ToggleSwitch IsOn="True" />
+
+      <!-- TextBox with placeholder only -->
+      <TextBox PlaceholderText="Email" Width="260" />
+
+      <!-- HyperlinkButton without AutomationProperties.Name -->
+      <HyperlinkButton NavigateUri="https://example.com" Content="" />
+    </StackPanel>
+  </Grid>
+</Page>

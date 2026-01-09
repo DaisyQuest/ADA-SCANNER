@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Kitchen Sink Sample</title>
+  <style>
+    .status-card {
+      background: #eeeeee;
+      color: #bdbdbd;
+      width: 900px;
+      padding: 16px;
+    }
+
+    .hidden-alert {
+      visibility: hidden;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Operations</h1>
+    <button aria-label="">+</button>
+  </header>
+
+  <nav aria-hidden="true">
+    <a href="/home">Home</a>
+    <a href="/alerts" tabindex="0">Alerts</a>
+  </nav>
+
+  <section class="status-card">
+    <h2 id="status-title">Status</h2>
+    <p aria-labelledby="status-title missing">Low contrast content and bad label refs.</p>
+    <input type="text" placeholder="Filter" />
+  </section>
+
+  <div class="hidden-alert">
+    <a href="/dismiss">Dismiss</a>
+  </div>
+
+  <form>
+    <label>Account</label>
+    <input id="account" type="text" />
+    <span class="error">Required</span>
+  </form>
+</body>
+</html>

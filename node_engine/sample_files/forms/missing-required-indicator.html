@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Missing Required Indicator Sample</title>
+  <style>
+    .required {
+      color: red;
+    }
+  </style>
+</head>
+<body>
+  <form>
+    <label for="address">Address <span class="required">*</span></label>
+    <input id="address" type="text" />
+
+    <label for="city">City <span class="required">*</span></label>
+    <input id="city" type="text" />
+
+    <button type="submit">Save</button>
+  </form>
+</body>
+</html>

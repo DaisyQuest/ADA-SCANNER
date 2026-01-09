@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Error Placement Sample</title>
+  <style>
+    .error {
+      color: #c00000;
+    }
+  </style>
+</head>
+<body>
+  <form>
+    <label for="username">Username</label>
+    <input id="username" type="text" />
+    <span class="error">Required</span>
+
+    <label for="password">Password</label>
+    <input id="password" type="password" />
+    <span class="error">Must be 12+ characters</span>
+
+    <label for="phone">Phone</label>
+    <input id="phone" type="tel" />
+    <span class="error">Invalid</span>
+
+    <button type="submit">Create account</button>
+  </form>
+</body>
+</html>

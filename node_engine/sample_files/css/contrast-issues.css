@@ -1,0 +1,53 @@
+body.dim-background {
+  background-color: #f2f2f2;
+  color: #c9c9c9;
+  font-family: Arial, sans-serif;
+}
+
+.header-banner {
+  background-color: #ffffff;
+  padding: 24px;
+}
+
+.muted-title {
+  color: #b5b5b5;
+}
+
+.muted-subtitle {
+  color: #cfcfcf;
+}
+
+.card {
+  margin: 24px;
+  padding: 16px;
+  border-radius: 6px;
+}
+
+.light-card {
+  background-color: #efefef;
+  color: #bdbdbd;
+}
+
+.dark-card {
+  background-color: #333333;
+  color: #4a4a4a;
+}
+
+.card-title {
+  color: #8a8a8a;
+}
+
+.card-copy {
+  color: #9b9b9b;
+}
+
+.ghost-button {
+  background-color: transparent;
+  border: 1px solid #bfbfbf;
+  color: #bfbfbf;
+  padding: 8px 16px;
+}
+
+.dim-link {
+  color: #444444;
+}

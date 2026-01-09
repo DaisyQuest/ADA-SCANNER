@@ -1,0 +1,35 @@
+body {
+  background-color: #ffffff;
+  color: #b0b0b0;
+  font-family: "Segoe UI", sans-serif;
+}
+
+.toolbar {
+  background-color: #f7f7f7;
+  padding: 12px;
+}
+
+.icon-button {
+  background-color: #f7f7f7;
+  border: 1px solid #dcdcdc;
+  color: #bdbdbd;
+  padding: 6px 10px;
+  margin-right: 8px;
+}
+
+.toolbar-link {
+  color: #c5c5c5;
+}
+
+.panel {
+  margin: 24px;
+  padding: 16px;
+  background-color: #f0f0f0;
+}
+
+.ghost-input {
+  background-color: #f0f0f0;
+  border: 1px solid #cfcfcf;
+  color: #c7c7c7;
+  padding: 6px 8px;
+}

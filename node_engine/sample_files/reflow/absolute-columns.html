@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Absolute Columns Sample</title>
+  <style>
+    .container {
+      position: relative;
+      width: 1100px;
+      height: 600px;
+    }
+
+    .left-panel {
+      position: absolute;
+      left: 0;
+      width: 400px;
+      height: 600px;
+      background: #f4f4f4;
+    }
+
+    .right-panel {
+      position: absolute;
+      left: 420px;
+      width: 600px;
+      height: 600px;
+      background: #fafafa;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <aside class="left-panel">
+      <h2>Filters</h2>
+    </aside>
+    <main class="right-panel">
+      <h1>Reports</h1>
+      <p>Absolute positioned columns that fail to reflow on narrow screens.</p>
+    </main>
+  </div>
+</body>
+</html>

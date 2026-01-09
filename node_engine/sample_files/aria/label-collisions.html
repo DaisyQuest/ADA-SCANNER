@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>ARIA Label Collisions</title>
+</head>
+<body>
+  <label for="search">Search</label>
+  <input id="search" type="text" aria-label="Search field" />
+
+  <label for="search">Search again</label>
+  <input id="search" type="text" aria-labelledby="search" />
+
+  <div id="label-text">Orders</div>
+  <button aria-labelledby="label-text missing-label">Open orders</button>
+</body>
+</html>
