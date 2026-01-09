@@ -34,7 +34,29 @@ const extractCssColorToken = (value) => {
   return null;
 };
 
-const parseCssColor = (style, properties) => {
+const extractColorTokens = (value) => {
+  if (!value || !value.trim()) {
+    return [];
+  }
+
+  const tokens = [];
+  const normalized = value.trim();
+  const colorMatches = normalized.match(/#[0-9a-fA-F]{3,8}|rgba?\([^)]+\)|hsla?\([^)]+\)/g);
+  if (colorMatches) {
+    tokens.push(...colorMatches);
+  }
+
+  const wordMatches = normalized.match(/\b[a-z]+\b/gi) ?? [];
+  for (const word of wordMatches) {
+    if (parseColor(word)) {
+      tokens.push(word);
+    }
+  }
+
+  return [...new Set(tokens)];
+};
+
+const parseCssValue = (style, properties) => {
   const parts = style.split(";").filter(Boolean);
   for (const part of parts) {
     const kv = part.split(":", 2).map((segment) => segment.trim());
@@ -44,11 +66,36 @@ const parseCssColor = (style, properties) => {
 
     const propertyList = Array.isArray(properties) ? properties : [properties];
     if (propertyList.some((property) => kv[0].toLowerCase() === property.toLowerCase())) {
-      return extractCssColorToken(kv[1]) ?? kv[1];
+      return kv[1];
     }
   }
 
   return null;
+};
+
+const parseCssColor = (style, properties) => {
+  const value = parseCssValue(style, properties);
+  return value ? extractCssColorToken(value) ?? value : null;
+};
+
+const parseCssBackgroundColors = (style) => {
+  const colors = [];
+  const backgroundColor = parseCssValue(style, "background-color");
+  if (backgroundColor) {
+    colors.push(backgroundColor);
+  }
+
+  const background = parseCssValue(style, "background");
+  if (background) {
+    colors.push(...extractColorTokens(background));
+  }
+
+  const backgroundImage = parseCssValue(style, "background-image");
+  if (backgroundImage) {
+    colors.push(...extractColorTokens(backgroundImage));
+  }
+
+  return [...new Set(colors.filter(Boolean))];
 };
 
 const parseXmlAttribute = (attributes, attribute) => {
@@ -116,6 +163,61 @@ const resolveStaticColor = (value) => {
   return trimmed ? trimmed : null;
 };
 
+const parseFontSize = (value) => {
+  if (!value || !value.trim()) {
+    return null;
+  }
+
+  const match = value.trim().match(/^(?<size>[0-9.]+)\s*(?<unit>[a-z%]*)$/i);
+  if (!match || !match.groups) {
+    return null;
+  }
+
+  const size = Number.parseFloat(match.groups.size);
+  if (Number.isNaN(size)) {
+    return null;
+  }
+
+  const unit = match.groups.unit.toLowerCase();
+  switch (unit) {
+    case "":
+    case "px":
+      return size;
+    case "pt":
+      return (size * 96) / 72;
+    case "em":
+    case "rem":
+      return size * 16;
+    default:
+      return null;
+  }
+};
+
+const parseCssFontSize = (style) => parseFontSize(parseCssValue(style, "font-size"));
+
+const parseFontWeight = (value) => {
+  if (!value || !value.trim()) {
+    return false;
+  }
+
+  const numeric = Number.parseFloat(value.trim());
+  if (!Number.isNaN(numeric)) {
+    return numeric >= 700;
+  }
+
+  const normalized = value.trim().toLowerCase();
+  return normalized === "bold" || normalized === "bolder" || normalized === "semibold";
+};
+
+const getRequiredContrastRatio = ({ fontSizePx, isBold }) => {
+  if (!fontSizePx) {
+    return 4.5;
+  }
+
+  const largeText = fontSizePx >= 24 || (fontSizePx >= 18.6667 && isBold);
+  return largeText ? 3.0 : 4.5;
+};
+
 const getCandidates = (context) => {
   const kind = context.kind.toLowerCase();
   if (kind === "xaml") {
@@ -130,7 +232,9 @@ const getCandidates = (context) => {
 
         return {
           foreground,
-          background,
+          backgroundColors: [background],
+          fontSizePx: parseFontSize(parseXmlAttribute(attrs, "FontSize")),
+          isBold: parseFontWeight(parseXmlAttribute(attrs, "FontWeight")),
           index: match.index,
           snippet: match[0]
         };
@@ -143,14 +247,16 @@ const getCandidates = (context) => {
       .map((match) => {
         const body = match.groups.body;
         const foreground = parseCssColor(body, "color");
-        const background = parseCssColor(body, ["background-color", "background"]);
-        if (!foreground || !background) {
+        const backgroundColors = parseCssBackgroundColors(body);
+        if (!foreground || backgroundColors.length === 0) {
           return null;
         }
 
         return {
           foreground,
-          background,
+          backgroundColors,
+          fontSizePx: parseCssFontSize(body),
+          isBold: parseFontWeight(parseCssValue(body, "font-weight")),
           index: match.index,
           snippet: match[0]
         };
@@ -162,14 +268,16 @@ const getCandidates = (context) => {
     .map((match) => {
       const style = match.groups.style;
       const foreground = parseCssColor(style, "color");
-      const background = parseCssColor(style, ["background-color", "background"]);
-      if (!foreground || !background) {
+      const backgroundColors = parseCssBackgroundColors(style);
+      if (!foreground || backgroundColors.length === 0) {
         return null;
       }
 
       return {
         foreground,
-        background,
+        backgroundColors,
+        fontSizePx: parseCssFontSize(style),
+        isBold: parseFontWeight(parseCssValue(style, "font-weight")),
         index: match.index,
         snippet: match[0]
       };
@@ -185,27 +293,43 @@ const InsufficientContrastCheck = {
     const candidates = getCandidates(context);
     for (const candidate of candidates) {
       const foreground = resolveStaticColor(candidate.foreground);
-      const background = resolveStaticColor(candidate.background);
-      if (!foreground || !background) {
+      if (!foreground) {
         continue;
       }
 
       const alphaPosition = context.kind.toLowerCase() === "xaml" ? "start" : "end";
       const fg = parseColor(foreground, { alphaPosition });
-      const bg = parseColor(background, { alphaPosition });
-      if (!fg || !bg) {
+      if (!fg) {
         continue;
       }
 
-      const resolvedBackground = bg.a < 1
-        ? blendColors(bg, { r: 1, g: 1, b: 1, a: 1 })
-        : bg;
-      const resolvedForeground = fg.a < 1
-        ? blendColors(fg, resolvedBackground)
-        : fg;
+      const backgroundColors = candidate.backgroundColors
+        .map((color) => resolveStaticColor(color))
+        .filter(Boolean);
+      if (backgroundColors.length === 0) {
+        continue;
+      }
 
-      const ratio = contrastRatio(resolvedForeground, resolvedBackground);
-      if (ratio >= 4.5) {
+      const parsedBackgrounds = backgroundColors
+        .map((color) => parseColor(color, { alphaPosition }))
+        .filter(Boolean);
+      if (parsedBackgrounds.length === 0) {
+        continue;
+      }
+
+      const threshold = getRequiredContrastRatio(candidate);
+      const ratios = parsedBackgrounds.map((backgroundColor) => {
+        const resolvedBackground = backgroundColor.a < 1
+          ? blendColors(backgroundColor, { r: 1, g: 1, b: 1, a: 1 })
+          : backgroundColor;
+        const resolvedForeground = fg.a < 1
+          ? blendColors(fg, resolvedBackground)
+          : fg;
+        return contrastRatio(resolvedForeground, resolvedBackground);
+      });
+
+      const minRatio = Math.min(...ratios);
+      if (minRatio >= threshold) {
         continue;
       }
 
@@ -215,7 +339,7 @@ const InsufficientContrastCheck = {
         checkId: InsufficientContrastCheck.id,
         filePath: context.filePath,
         line,
-        message: `Color contrast ratio ${ratio.toFixed(2)} is below 4.5:1.`,
+        message: `Color contrast ratio ${minRatio.toFixed(2)} is below ${threshold.toFixed(1)}:1.`,
         evidence: candidate.snippet
       });
     }
@@ -239,11 +363,18 @@ module.exports = {
   InsufficientContrastCheck,
   parseCssColor,
   extractCssColorToken,
+  extractColorTokens,
+  parseCssBackgroundColors,
+  parseCssValue,
   parseXmlAttribute,
   resolveStaticColor,
   extractCssVarFallback,
   extractXamlFallback,
   normalizeColorValue,
+  parseFontSize,
+  parseCssFontSize,
+  parseFontWeight,
+  getRequiredContrastRatio,
   getCandidates,
   blendColors
 };

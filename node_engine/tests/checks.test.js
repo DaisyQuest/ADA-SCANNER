@@ -47,11 +47,18 @@ const {
   InsufficientContrastCheck,
   parseCssColor,
   extractCssColorToken,
+  extractColorTokens,
+  parseCssBackgroundColors,
+  parseCssValue,
   parseXmlAttribute,
   resolveStaticColor,
   extractCssVarFallback,
   extractXamlFallback,
   normalizeColorValue,
+  parseFontSize,
+  parseCssFontSize,
+  parseFontWeight,
+  getRequiredContrastRatio,
   getCandidates,
   blendColors
 } = require("../src/checks/InsufficientContrastCheck");
@@ -599,6 +606,11 @@ describe("InsufficientContrastCheck", () => {
     expect(parseCssColor("color", "color")).toBeNull();
     expect(parseCssColor("background: url(x) #abc", ["background", "background-color"])).toBe("#abc");
     expect(extractCssColorToken("url(x) rgba(1, 2, 3, 0.5)")).toBe("rgba(1, 2, 3, 0.5)");
+    expect(extractColorTokens("linear-gradient(#fff, rgb(0,0,0))")).toEqual(["#fff", "rgb(0,0,0)"]);
+    expect(parseCssValue("background: #fff;", "background")).toBe("#fff");
+    expect(parseCssValue("color: #fff;", ["background", "color"])).toBe("#fff");
+    expect(parseCssBackgroundColors("background: #fff linear-gradient(#000, #333);"))
+      .toEqual(["#fff", "#000", "#333"]);
     expect(parseXmlAttribute('Foreground=" #fff "', "Foreground")).toBe("#fff");
     expect(parseXmlAttribute("", "Foreground")).toBeNull();
     expect(normalizeColorValue("#fff !important")).toBe("#fff");
@@ -651,6 +663,48 @@ describe("InsufficientContrastCheck", () => {
 
     const invalidColors = createContext('<div style="color:ggg;background-color:#fff"></div>', "html");
     expect(InsufficientContrastCheck.run(invalidColors, rule)).toHaveLength(0);
+  });
+
+  test("evaluates gradients and background images using extracted colors", () => {
+    const gradientContext = createContext(
+      '<div style="color:#777;background:linear-gradient(#fff, #000)"></div>',
+      "html"
+    );
+    expect(InsufficientContrastCheck.run(gradientContext, rule)).toHaveLength(1);
+
+    const backgroundImageContext = createContext(
+      '<div style="color:#777;background-color:#888;background-image:url(hero.png)"></div>',
+      "html"
+    );
+    expect(InsufficientContrastCheck.run(backgroundImageContext, rule)).toHaveLength(1);
+
+    const backgroundImageNoColor = createContext(
+      '<div style="color:#777;background-image:url(hero.png)"></div>',
+      "html"
+    );
+    expect(InsufficientContrastCheck.run(backgroundImageNoColor, rule)).toHaveLength(0);
+  });
+
+  test("uses large text thresholds when font size is present", () => {
+    expect(parseFontSize("24px")).toBe(24);
+    expect(parseCssFontSize("font-size: 18pt")).toBeCloseTo(24, 4);
+    expect(parseFontWeight("700")).toBe(true);
+    expect(parseFontWeight("normal")).toBe(false);
+    expect(getRequiredContrastRatio({ fontSizePx: 24, isBold: false })).toBe(3);
+    expect(getRequiredContrastRatio({ fontSizePx: 19, isBold: true })).toBe(3);
+    expect(getRequiredContrastRatio({ fontSizePx: 16, isBold: false })).toBe(4.5);
+
+    const normalText = createContext(
+      '<div style="color:#888;background-color:#fff;font-size:20px"></div>',
+      "html"
+    );
+    expect(InsufficientContrastCheck.run(normalText, rule)).toHaveLength(1);
+
+    const largeText = createContext(
+      '<div style="color:#888;background-color:#fff;font-size:24px"></div>',
+      "html"
+    );
+    expect(InsufficientContrastCheck.run(largeText, rule)).toHaveLength(0);
   });
 });
 
