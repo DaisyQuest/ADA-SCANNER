@@ -37,3 +37,4 @@
 2026-01-09 - Expand static analysis appliesTo handling and improve contrast parsing test coverage (SPEC-004)
 
 2026-01-09 - Improved static analysis dashboard filters, guidance, and user guides with expanded tests. (SPEC-007, SPEC-010, SPEC-013)
+2026-01-09 - Enhance node engine reflow detection, extension spider mode, and popup controls with comprehensive tests. (SPEC-008, SPEC-013, SPEC-019)

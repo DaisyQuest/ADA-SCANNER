@@ -102,9 +102,9 @@
     let lastHash = null;
     let timeout = null;
 
-    const send = async () => {
+    const send = async ({ force = false } = {}) => {
       const html = normalizeHtml(documentRoot);
-      const result = shouldForwardUpdate(lastHash, html);
+      const result = force ? { shouldSend: true, nextHash: createHash(html) } : shouldForwardUpdate(lastHash, html);
       lastHash = result.nextHash;
 
       if (!result.shouldSend) return;
@@ -173,6 +173,7 @@
   // Expose to content script
   globalThis.AdaForwarder = api;
 
+  /* istanbul ignore next */
   if (typeof module !== "undefined") {
     module.exports = api;
   }

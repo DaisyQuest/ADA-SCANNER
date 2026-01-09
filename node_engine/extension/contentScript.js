@@ -54,6 +54,79 @@
       }
     });
 
+    const normalizeSpiderUrl = (href) => {
+      if (!href || !href.trim()) {
+        return null;
+      }
+
+      try {
+        const url = new URL(href, windowObj.location.href);
+        if (!["http:", "https:"].includes(url.protocol)) {
+          return null;
+        }
+        url.hash = "";
+        return url.toString();
+      } catch {
+        return null;
+      }
+    };
+
+    const isElementVisible = (element) => {
+      if (!element) {
+        return false;
+      }
+
+      const style = windowObj.getComputedStyle(element);
+      if (style.display === "none" || style.visibility === "hidden") {
+        return false;
+      }
+
+      const rect = element.getBoundingClientRect();
+      if (rect.width <= 0 || rect.height <= 0) {
+        return false;
+      }
+
+      return !(
+        rect.bottom < 0 ||
+        rect.top > windowObj.innerHeight ||
+        rect.right < 0 ||
+        rect.left > windowObj.innerWidth
+      );
+    };
+
+    const collectVisibleLinks = () => {
+      const links = [];
+      const seen = new Set();
+      const anchors = Array.from(documentRoot.querySelectorAll("a[href]"));
+      for (const anchor of anchors) {
+        if (!isElementVisible(anchor)) {
+          continue;
+        }
+
+        const normalized = normalizeSpiderUrl(anchor.getAttribute("href"));
+        if (!normalized) {
+          continue;
+        }
+
+        if (normalized === windowObj.location.href) {
+          continue;
+        }
+
+        if (seen.has(normalized)) {
+          continue;
+        }
+
+        seen.add(normalized);
+        links.push(normalized);
+      }
+      return links;
+    };
+
+    const captureOnce = async () => {
+      await forwarder.send({ force: true });
+      return { ok: true };
+    };
+
     const start = () => {
       if (observer) {
         console.log("[ADA] already started");
@@ -100,9 +173,26 @@
       enabled ? start() : stop();
     };
 
-    chromeApi.runtime.onMessage.addListener((message) => {
+    chromeApi.runtime.onMessage.addListener((message, sender, sendResponse) => {
       if (message?.type === "toggle") {
         handleToggle(!!message.enabled);
+        return;
+      }
+
+      if (message?.type === "spider-collect") {
+        Promise.resolve()
+          .then(() => ({ links: collectVisibleLinks() }))
+          .then((payload) => sendResponse(payload))
+          .catch((error) => sendResponse({ error: error.message }));
+        return true;
+      }
+
+      if (message?.type === "spider-capture") {
+        Promise.resolve()
+          .then(() => captureOnce())
+          .then((payload) => sendResponse(payload))
+          .catch((error) => sendResponse({ ok: false, error: error.message }));
+        return true;
       }
     });
 
@@ -111,7 +201,14 @@
       handleToggle(!!state.enabled);
     });
 
-    return { start, stop, handleToggle, getObserver: () => observer };
+    return {
+      start,
+      stop,
+      handleToggle,
+      getObserver: () => observer,
+      collectVisibleLinks,
+      captureOnce
+    };
   };
 
   globalThis.createContentScript = createContentScript;
