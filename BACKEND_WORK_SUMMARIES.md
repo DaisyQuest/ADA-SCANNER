@@ -34,3 +34,4 @@
 2026-01-08 - Improved contrast parsing, configurable CORS, highlight stability, and static analysis UI foundation with expanded tests. (SPEC-001, SPEC-004, SPEC-010, SPEC-013, SPEC-019)
 
 2026-01-08 - Added static analysis support for XAML and Razor file extensions with tests. (SPEC-004)
+2026-01-09 - Expand static analysis appliesTo handling and improve contrast parsing test coverage (SPEC-004)

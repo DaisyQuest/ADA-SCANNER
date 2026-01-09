@@ -706,6 +706,33 @@ describe("InsufficientContrastCheck", () => {
     );
     expect(InsufficientContrastCheck.run(largeText, rule)).toHaveLength(0);
   });
+
+  test("covers parsing fallbacks and invalid values", () => {
+    expect(extractCssColorToken("   ")).toBeNull();
+    expect(extractColorTokens(null)).toEqual([]);
+    expect(extractColorTokens("12345")).toEqual([]);
+    expect(extractColorTokens("no-colors-here")).toEqual([]);
+    expect(extractXamlFallback("{Binding FallbackValue=#123456")).toBe("#123456");
+    expect(resolveStaticColor("{Binding FallbackValue=}")).toBeNull();
+    expect(resolveStaticColor("{Binding FallbackValue=#fff")).toBe("{Binding FallbackValue=#fff");
+    expect(parseFontSize("big")).toBeNull();
+    expect(parseFontSize(".px")).toBeNull();
+    expect(parseFontSize("12vh")).toBeNull();
+    expect(blendColors({ r: 0, g: 0, b: 0 }, { r: 1, g: 1, b: 1, a: 1 }))
+      .toEqual({ r: 0, g: 0, b: 0, a: 1 });
+
+    const unresolvedBackground = createContext(
+      '<div style="color:#777;background-color:var(--missing)"></div>',
+      "html"
+    );
+    expect(InsufficientContrastCheck.run(unresolvedBackground, rule)).toHaveLength(0);
+
+    const invalidBackground = createContext(
+      '<div style="color:#777;background-color:not-a-color"></div>',
+      "html"
+    );
+    expect(InsufficientContrastCheck.run(invalidBackground, rule)).toHaveLength(0);
+  });
 });
 
 describe("XamlMissingNameCheck", () => {
