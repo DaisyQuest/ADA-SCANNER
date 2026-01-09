@@ -11,8 +11,19 @@ const {
   getDefaultConfig
 } = require("../extension/forwarder");
 const { createHighlighter, filterIssuesForPage } = require("../extension/highlighter");
-const { registerBackground, toggleExtension, setEnabledState, updateBadge } = require("../extension/background");
+const {
+  registerBackground,
+  toggleExtension,
+  setEnabledState,
+  setSpiderState,
+  updateBadge,
+  getActiveTab,
+  runSpider,
+  waitForTabComplete,
+  captureSpiderTab
+} = require("../extension/background");
 const { createContentScript } = require("../extension/contentScript");
+const { createPopup, normalizeServerUrl } = require("../extension/popup");
 
 describe("Extension forwarder utilities", () => {
   test("builds payloads and hashes", () => {
@@ -37,6 +48,17 @@ describe("Extension forwarder utilities", () => {
     expect(stripHighlights(null)).toBeUndefined();
     const strippedHtml = normalizeHtml(document);
     expect(strippedHtml).not.toContain("ada-highlight");
+
+    const fallbackDoc = {
+      documentElement: {
+        cloneNode: () => ({
+          outerHTML: null,
+          querySelector: () => null,
+          querySelectorAll: () => []
+        })
+      }
+    };
+    expect(normalizeHtml(fallbackDoc)).toBe("");
 
     const payload = createPayload({ url: "http://example", html, title: "Title" });
     expect(payload).toEqual({
@@ -138,6 +160,23 @@ describe("Extension forwarder utilities", () => {
     jest.useRealTimers();
   });
 
+  test("forces send even when content is unchanged", async () => {
+    const fetchFn = jest.fn().mockResolvedValue({ ok: true, json: jest.fn().mockResolvedValue({}) });
+    const getConfig = jest.fn().mockResolvedValue({ serverUrl: DEFAULT_SERVER_URL });
+
+    document.body.innerHTML = "<div>Stable</div>";
+    const forwarder = createForwarder({
+      fetchFn,
+      documentRoot: document,
+      location: window.location,
+      getConfig
+    });
+
+    await forwarder.send();
+    await forwarder.send({ force: true });
+    expect(fetchFn).toHaveBeenCalledTimes(2);
+  });
+
   test("reads default config", async () => {
     const storageApi = {
       get: (defaults, callback) => callback({ serverUrl: defaults.serverUrl })
@@ -195,7 +234,7 @@ describe("Extension forwarder utilities", () => {
 describe("Extension background", () => {
   const createChrome = () => {
     const state = { enabled: false, serverUrl: DEFAULT_SERVER_URL };
-    const listeners = { clicked: [], installed: [], activated: [] };
+    const listeners = { clicked: [], installed: [], activated: [], message: [] };
     return {
       action: {
         setBadgeText: jest.fn(),
@@ -205,11 +244,19 @@ describe("Extension background", () => {
         }
       },
       runtime: {
-        onInstalled: { addListener: jest.fn((listener) => listeners.installed.push(listener)) }
+        onInstalled: { addListener: jest.fn((listener) => listeners.installed.push(listener)) },
+        onMessage: { addListener: jest.fn((listener) => listeners.message.push(listener)) }
       },
       tabs: {
         sendMessage: jest.fn(),
-        onActivated: { addListener: jest.fn((listener) => listeners.activated.push(listener)) }
+        onActivated: { addListener: jest.fn((listener) => listeners.activated.push(listener)) },
+        query: jest.fn(() => Promise.resolve([{ id: 1 }])),
+        create: jest.fn(() => Promise.resolve({ id: 99 })),
+        remove: jest.fn(() => Promise.resolve()),
+        onUpdated: {
+          addListener: jest.fn(),
+          removeListener: jest.fn()
+        }
       },
       storage: {
         local: {
@@ -238,6 +285,14 @@ describe("Extension background", () => {
     expect(chromeApi.action.setBadgeText).toHaveBeenCalled();
   });
 
+  test("updates spider state and cancels when disabled", async () => {
+    const chromeApi = createChrome();
+    await setSpiderState(chromeApi, true);
+    expect(chromeApi.storage.local.set).toHaveBeenCalledWith({ spiderEnabled: true });
+    await setSpiderState(chromeApi, false);
+    expect(chromeApi.storage.local.set).toHaveBeenCalledWith({ spiderEnabled: false });
+  });
+
   test("ignores sendMessage failures when toggling", async () => {
     const chromeApi = createChrome();
     chromeApi.tabs.sendMessage.mockRejectedValue(new Error("missing"));
@@ -258,6 +313,7 @@ describe("Extension background", () => {
     expect(chromeApi.action.onClicked.addListener).toHaveBeenCalled();
     expect(chromeApi.runtime.onInstalled.addListener).toHaveBeenCalled();
     expect(chromeApi.tabs.onActivated.addListener).toHaveBeenCalled();
+    expect(chromeApi.runtime.onMessage.addListener).toHaveBeenCalled();
   });
 
   test("invokes background listeners", async () => {
@@ -268,15 +324,169 @@ describe("Extension background", () => {
     chromeApi.__listeners.installed[0]();
     await chromeApi.__listeners.activated[0]({ tabId: 2 });
 
-    expect(chromeApi.storage.local.set).toHaveBeenCalledWith({ enabled: false, serverUrl: DEFAULT_SERVER_URL });
+    expect(chromeApi.storage.local.set).toHaveBeenCalledWith({
+      enabled: false,
+      spiderEnabled: false,
+      serverUrl: DEFAULT_SERVER_URL
+    });
+  });
+
+  test("handles runtime messages for state updates", async () => {
+    const chromeApi = createChrome();
+    registerBackground(chromeApi);
+
+    await new Promise((resolve) => {
+      chromeApi.__listeners.message[0]({ type: "set-enabled", enabled: true }, { tab: { id: 2 } }, resolve);
+    });
+    expect(chromeApi.storage.local.set).toHaveBeenCalledWith({ enabled: true });
+
+    await new Promise((resolve) => {
+      chromeApi.__listeners.message[0]({ type: "set-server-url", serverUrl: "http://localhost:9999" }, null, resolve);
+    });
+    expect(chromeApi.storage.local.set).toHaveBeenCalledWith({ serverUrl: "http://localhost:9999" });
+  });
+
+  test("returns error payload when server url update fails", async () => {
+    const chromeApi = createChrome();
+    chromeApi.storage.local.set = jest.fn(() => Promise.reject(new Error("bad set")));
+    registerBackground(chromeApi);
+
+    const response = await new Promise((resolve) => {
+      chromeApi.__listeners.message[0]({ type: "set-server-url", serverUrl: "http://broken" }, null, resolve);
+    });
+
+    expect(response.ok).toBe(false);
+    expect(response.error).toBe("bad set");
+  });
+
+  test("returns error payload when spider setup fails", async () => {
+    const chromeApi = createChrome();
+    chromeApi.storage.local.set = jest.fn(() => Promise.reject(new Error("fail")));
+    registerBackground(chromeApi);
+
+    const response = await new Promise((resolve) => {
+      chromeApi.__listeners.message[0]({ type: "set-spider", enabled: true }, null, resolve);
+    });
+
+    expect(response.ok).toBe(false);
+    expect(response.error).toBe("fail");
+  });
+
+  test("handles spider disable message without starting run", async () => {
+    const chromeApi = createChrome();
+    registerBackground(chromeApi);
+    const response = await new Promise((resolve) => {
+      chromeApi.__listeners.message[0]({ type: "set-spider", enabled: false }, null, resolve);
+    });
+    expect(response.ok).toBe(true);
+    expect(chromeApi.tabs.create).not.toHaveBeenCalled();
+  });
+
+  test("starts spider when enabled via message", async () => {
+    const chromeApi = createChrome();
+    chromeApi.tabs.sendMessage = jest.fn().mockResolvedValueOnce({ links: [] });
+    registerBackground(chromeApi);
+    const response = await new Promise((resolve) => {
+      chromeApi.__listeners.message[0]({ type: "set-spider", enabled: true }, { tab: { id: 7 } }, resolve);
+    });
+    expect(response.ok).toBe(true);
+    expect(chromeApi.tabs.sendMessage).toHaveBeenCalledWith(7, { type: "spider-collect" });
+  });
+
+  test("returns true for spider message handlers", () => {
+    const chromeApi = createChrome();
+    chromeApi.tabs.sendMessage = jest.fn().mockResolvedValueOnce({ links: [] });
+    registerBackground(chromeApi);
+    const result = chromeApi.__listeners.message[0]({ type: "set-spider", enabled: true }, { tab: { id: 3 } }, jest.fn());
+    expect(result).toBe(true);
+  });
+
+  test("updates storage when spider message is received", async () => {
+    const chromeApi = createChrome();
+    chromeApi.tabs.sendMessage = jest.fn().mockResolvedValueOnce({ links: [] });
+    registerBackground(chromeApi);
+    await new Promise((resolve) => {
+      chromeApi.__listeners.message[0]({ type: "set-spider", enabled: true }, { tab: { id: 9 } }, resolve);
+    });
+    expect(chromeApi.storage.local.set).toHaveBeenCalledWith({ spiderEnabled: true });
+  });
+
+  test("handles missing active tab when spider runs", async () => {
+    const chromeApi = createChrome();
+    chromeApi.tabs.query = jest.fn(() => Promise.resolve([]));
+    await runSpider(chromeApi);
+    expect(chromeApi.storage.local.set).toHaveBeenCalledWith({ spiderEnabled: false });
+  });
+
+  test("returns null when active tab query is unavailable", async () => {
+    const tab = await getActiveTab({});
+    expect(tab).toBeNull();
+  });
+
+  test("skips spider capture when collection fails", async () => {
+    const chromeApi = createChrome();
+    chromeApi.tabs.sendMessage = jest.fn(() => Promise.reject(new Error("nope")));
+    await runSpider(chromeApi, 1);
+    expect(chromeApi.tabs.create).not.toHaveBeenCalled();
+  });
+
+  test("skips spider capture when tab creation lacks id", async () => {
+    const chromeApi = createChrome();
+    chromeApi.tabs.sendMessage = jest.fn()
+      .mockResolvedValueOnce({ links: ["http://example.com/a"] })
+      .mockResolvedValue({ ok: true });
+    chromeApi.tabs.create = jest.fn(() => Promise.resolve({}));
+    await runSpider(chromeApi, 1);
+    expect(chromeApi.tabs.remove).not.toHaveBeenCalled();
+  });
+
+  test("treats non-array spider responses as empty", async () => {
+    const chromeApi = createChrome();
+    chromeApi.tabs.sendMessage = jest.fn().mockResolvedValueOnce({ links: "not-an-array" });
+    await runSpider(chromeApi, 1);
+    expect(chromeApi.tabs.create).not.toHaveBeenCalled();
+  });
+
+  test("avoids duplicate spider runs when already running", async () => {
+    const chromeApi = createChrome();
+    chromeApi.tabs.sendMessage = jest.fn().mockResolvedValue({ links: [] });
+    const first = runSpider(chromeApi, 1);
+    const second = runSpider(chromeApi, 1);
+    await first;
+    await second;
+    expect(chromeApi.tabs.sendMessage).toHaveBeenCalledTimes(1);
+  });
+
+  test("cancels spider processing when disabled mid-run", async () => {
+    const chromeApi = createChrome();
+    chromeApi.tabs.sendMessage = jest.fn()
+      .mockResolvedValueOnce({ links: ["http://example.com/a", "http://example.com/b"] })
+      .mockResolvedValue({ ok: true });
+    chromeApi.tabs.onUpdated.addListener.mockImplementation((listener) => {
+      listener(99, { status: "complete" });
+    });
+    chromeApi.tabs.create = jest.fn(() => {
+      setSpiderState(chromeApi, false);
+      return Promise.resolve({ id: 99 });
+    });
+
+    await runSpider(chromeApi, 1);
+    expect(chromeApi.tabs.create).toHaveBeenCalledTimes(1);
   });
 
   test("auto-registers background when chrome global is present", () => {
     jest.resetModules();
     global.chrome = {
       action: { setBadgeText: jest.fn(), setBadgeBackgroundColor: jest.fn(), onClicked: { addListener: jest.fn() } },
-      runtime: { onInstalled: { addListener: jest.fn() } },
-      tabs: { onActivated: { addListener: jest.fn() }, sendMessage: jest.fn() },
+      runtime: { onInstalled: { addListener: jest.fn() }, onMessage: { addListener: jest.fn() } },
+      tabs: {
+        onActivated: { addListener: jest.fn() },
+        onUpdated: { addListener: jest.fn(), removeListener: jest.fn() },
+        sendMessage: jest.fn(),
+        query: jest.fn(() => Promise.resolve([{ id: 1 }])),
+        create: jest.fn(() => Promise.resolve({ id: 2 })),
+        remove: jest.fn(() => Promise.resolve())
+      },
       storage: { local: { set: jest.fn(), get: jest.fn(() => Promise.resolve({ enabled: false })) } }
     };
     require("../extension/background");
@@ -287,6 +497,68 @@ describe("Extension background", () => {
     jest.resetModules();
     delete global.chrome;
     expect(() => require("../extension/background")).not.toThrow();
+  });
+
+  test("runs spider and captures tabs", async () => {
+    const chromeApi = createChrome();
+    chromeApi.tabs.sendMessage = jest
+      .fn()
+      .mockResolvedValueOnce({ links: ["http://example.com/a", "http://example.com/b"] })
+      .mockResolvedValue({ ok: true });
+    chromeApi.tabs.onUpdated.addListener.mockImplementation((listener) => {
+      listener(99, { status: "complete" });
+    });
+
+    await runSpider(chromeApi, 1);
+
+    expect(chromeApi.tabs.create).toHaveBeenCalledTimes(2);
+    expect(chromeApi.tabs.remove).toHaveBeenCalledTimes(2);
+  });
+
+  test("waits for tab completion with timeout handling", async () => {
+    jest.useFakeTimers();
+    const chromeApi = createChrome();
+    const promise = waitForTabComplete(chromeApi, 2, 5).catch((error) => error.message);
+    jest.runAllTimers();
+    await expect(promise).resolves.toBe("Spider tab load timed out.");
+    jest.useRealTimers();
+  });
+
+  test("resolves waitForTabComplete when status matches", async () => {
+    const chromeApi = createChrome();
+    chromeApi.tabs.onUpdated.addListener.mockImplementation((listener) => {
+      listener(4, { status: "loading" });
+      listener(5, { status: "loading" });
+      listener(5, { status: "complete" });
+    });
+    await expect(waitForTabComplete(chromeApi, 5, 50)).resolves.toBeUndefined();
+  });
+
+  test("captures spider tab and handles send errors", async () => {
+    jest.useFakeTimers();
+    const chromeApi = createChrome();
+    chromeApi.tabs.sendMessage.mockRejectedValueOnce(new Error("no script"));
+    chromeApi.tabs.onUpdated.addListener.mockImplementation((listener) => {
+      setTimeout(() => listener(3, { status: "complete" }), 1);
+    });
+
+    const promise = captureSpiderTab(chromeApi, 3);
+    jest.runAllTimers();
+    await promise;
+    expect(chromeApi.tabs.remove).toHaveBeenCalled();
+    jest.useRealTimers();
+  });
+
+  test("captures spider tab and ignores close errors", async () => {
+    const chromeApi = createChrome();
+    chromeApi.tabs.sendMessage.mockResolvedValueOnce({ ok: true });
+    chromeApi.tabs.remove.mockRejectedValueOnce(new Error("close fail"));
+    chromeApi.tabs.onUpdated.addListener.mockImplementation((listener) => {
+      listener(3, { status: "complete" });
+    });
+
+    const result = await captureSpiderTab(chromeApi, 3);
+    expect(result.ok).toBe(true);
   });
 });
 
@@ -524,6 +796,261 @@ describe("Extension content script", () => {
     jest.useRealTimers();
   });
 
+  test("collects visible links for spider mode", () => {
+    document.body.innerHTML = "<a id=\"good\" href=\"/good\">Link</a><a id=\"hash\" href=\"#hash\">Hash</a>";
+    const chromeApi = {
+      runtime: { onMessage: { addListener: jest.fn() } },
+      storage: { local: { get: (defaults, callback) => callback({ enabled: false, serverUrl: DEFAULT_SERVER_URL }) } }
+    };
+    globalThis.AdaHighlighter = {
+      createHighlighter: jest.fn(() => ({ applyHighlights: jest.fn(), clearHighlights: jest.fn() })),
+      filterIssuesForPage: jest.fn((issues) => issues ?? [])
+    };
+
+    const good = document.getElementById("good");
+    good.getBoundingClientRect = () => ({ width: 10, height: 10, top: 0, bottom: 10, left: 0, right: 10 });
+    const hash = document.getElementById("hash");
+    hash.getBoundingClientRect = () => ({ width: 10, height: 10, top: 0, bottom: 10, left: 0, right: 10 });
+
+    const script = createContentScript({
+      chromeApi,
+      documentRoot: document,
+      windowObj: window,
+      fetchFn: jest.fn()
+    });
+
+    const links = script.collectVisibleLinks();
+    expect(links).toHaveLength(1);
+    expect(links[0]).toContain("/good");
+  });
+
+  test("skips hidden or non-http links during spider collection", () => {
+    document.body.innerHTML = "\n      <a id=\"hidden\" href=\"/hidden\" style=\"display:none\">Hidden</a>\n      <a id=\"mailto\" href=\"mailto:test@example.com\">Email</a>\n      <a id=\"empty\" href=\"\">Empty</a>\n      <a id=\"invalid\" href=\"http://[invalid\">Bad</a>\n      <a id=\"visible\" href=\"https://example.com/page\">Visible</a>\n    ";
+    const chromeApi = {
+      runtime: { onMessage: { addListener: jest.fn() } },
+      storage: { local: { get: (defaults, callback) => callback({ enabled: false, serverUrl: DEFAULT_SERVER_URL }) } }
+    };
+    globalThis.AdaHighlighter = {
+      createHighlighter: jest.fn(() => ({ applyHighlights: jest.fn(), clearHighlights: jest.fn() })),
+      filterIssuesForPage: jest.fn((issues) => issues ?? [])
+    };
+
+    document.getElementById("hidden").getBoundingClientRect = () => ({
+      width: 10,
+      height: 10,
+      top: 0,
+      bottom: 10,
+      left: 0,
+      right: 10
+    });
+    document.getElementById("mailto").getBoundingClientRect = () => ({
+      width: 10,
+      height: 10,
+      top: 0,
+      bottom: 10,
+      left: 0,
+      right: 10
+    });
+    document.getElementById("empty").getBoundingClientRect = () => ({
+      width: 10,
+      height: 10,
+      top: 0,
+      bottom: 10,
+      left: 0,
+      right: 10
+    });
+    document.getElementById("invalid").getBoundingClientRect = () => ({
+      width: 10,
+      height: 10,
+      top: 0,
+      bottom: 10,
+      left: 0,
+      right: 10
+    });
+    document.getElementById("visible").getBoundingClientRect = () => ({
+      width: 10,
+      height: 10,
+      top: 0,
+      bottom: 10,
+      left: 0,
+      right: 10
+    });
+
+    const script = createContentScript({
+      chromeApi,
+      documentRoot: document,
+      windowObj: window,
+      fetchFn: jest.fn()
+    });
+
+    const links = script.collectVisibleLinks();
+    expect(links).toEqual(["https://example.com/page"]);
+  });
+
+  test("responds to spider-collect messages", async () => {
+    const messageListeners = [];
+    document.body.innerHTML = "<a id=\"link\" href=\"/page\">Link</a>";
+    const chromeApi = {
+      runtime: { onMessage: { addListener: (listener) => messageListeners.push(listener) } },
+      storage: { local: { get: (defaults, callback) => callback({ enabled: false, serverUrl: DEFAULT_SERVER_URL }) } }
+    };
+    globalThis.AdaHighlighter = {
+      createHighlighter: jest.fn(() => ({ applyHighlights: jest.fn(), clearHighlights: jest.fn() })),
+      filterIssuesForPage: jest.fn((issues) => issues ?? [])
+    };
+
+    document.getElementById("link").getBoundingClientRect = () => ({
+      width: 10,
+      height: 10,
+      top: 0,
+      bottom: 10,
+      left: 0,
+      right: 10
+    });
+
+    createContentScript({
+      chromeApi,
+      documentRoot: document,
+      windowObj: window,
+      fetchFn: jest.fn()
+    });
+
+    const response = await new Promise((resolve) => {
+      messageListeners[0]({ type: "spider-collect" }, null, resolve);
+    });
+    expect(response.links).toHaveLength(1);
+  });
+
+  test("reports errors when spider collection fails", async () => {
+    const messageListeners = [];
+    const chromeApi = {
+      runtime: { onMessage: { addListener: (listener) => messageListeners.push(listener) } },
+      storage: { local: { get: (defaults, callback) => callback({ enabled: false, serverUrl: DEFAULT_SERVER_URL }) } }
+    };
+    globalThis.AdaHighlighter = {
+      createHighlighter: jest.fn(() => ({ applyHighlights: jest.fn(), clearHighlights: jest.fn() })),
+      filterIssuesForPage: jest.fn((issues) => issues ?? [])
+    };
+
+    const docRoot = {
+      querySelectorAll: () => {
+        throw new Error("fail");
+      }
+    };
+
+    createContentScript({
+      chromeApi,
+      documentRoot: docRoot,
+      windowObj: window,
+      fetchFn: jest.fn()
+    });
+
+    const response = await new Promise((resolve) => {
+      messageListeners[0]({ type: "spider-collect" }, null, resolve);
+    });
+
+    expect(response.error).toBe("fail");
+  });
+
+  test("deduplicates visible links and ignores zero-size elements", () => {
+    const chromeApi = {
+      runtime: { onMessage: { addListener: jest.fn() } },
+      storage: { local: { get: (defaults, callback) => callback({ enabled: false, serverUrl: DEFAULT_SERVER_URL }) } }
+    };
+    globalThis.AdaHighlighter = {
+      createHighlighter: jest.fn(() => ({ applyHighlights: jest.fn(), clearHighlights: jest.fn() })),
+      filterIssuesForPage: jest.fn((issues) => issues ?? [])
+    };
+
+    const docRoot = {
+      querySelectorAll: () => [
+        null,
+        { getAttribute: () => "/dup", getBoundingClientRect: () => ({ width: 10, height: 10, top: 0, bottom: 10, left: 0, right: 10 }) },
+        { getAttribute: () => "/dup", getBoundingClientRect: () => ({ width: 10, height: 10, top: 0, bottom: 10, left: 0, right: 10 }) },
+        { getAttribute: () => "/zero", getBoundingClientRect: () => ({ width: 0, height: 0, top: 0, bottom: 0, left: 0, right: 0 }) }
+      ]
+    };
+
+    const script = createContentScript({
+      chromeApi,
+      documentRoot: docRoot,
+      windowObj: {
+        location: window.location,
+        innerWidth: 1024,
+        innerHeight: 768,
+        getComputedStyle: () => ({ display: "block", visibility: "visible" })
+      },
+      fetchFn: jest.fn()
+    });
+
+    const links = script.collectVisibleLinks();
+    expect(links).toHaveLength(1);
+  });
+
+  test("captures once when spider capture message arrives", async () => {
+    const messageListeners = [];
+    const fetchFn = jest.fn().mockResolvedValue({ ok: true, json: jest.fn().mockResolvedValue({}) });
+    const chromeApi = {
+      runtime: {
+        onMessage: {
+          addListener: (listener) => messageListeners.push(listener)
+        }
+      },
+      storage: {
+        local: {
+          get: (defaults, callback) => callback({ enabled: false, serverUrl: DEFAULT_SERVER_URL })
+        }
+      }
+    };
+
+    globalThis.AdaHighlighter = {
+      createHighlighter: jest.fn(() => ({ applyHighlights: jest.fn(), clearHighlights: jest.fn() })),
+      filterIssuesForPage: jest.fn((issues) => issues ?? [])
+    };
+
+    createContentScript({
+      chromeApi,
+      documentRoot: document,
+      windowObj: window,
+      fetchFn
+    });
+
+    const response = await new Promise((resolve) => {
+      messageListeners[0]({ type: "spider-capture" }, null, resolve);
+    });
+    expect(response.ok).toBe(true);
+  });
+
+  test("reports errors when spider capture fails", async () => {
+    const messageListeners = [];
+    const fetchFn = jest.fn().mockRejectedValue(new Error("fetch failed"));
+    const chromeApi = {
+      runtime: {
+        onMessage: { addListener: (listener) => messageListeners.push(listener) }
+      },
+      storage: {
+        local: { get: (defaults, callback) => callback({ enabled: false, serverUrl: DEFAULT_SERVER_URL }) }
+      }
+    };
+
+    globalThis.AdaHighlighter = {
+      createHighlighter: jest.fn(() => ({ applyHighlights: jest.fn(), clearHighlights: jest.fn() })),
+      filterIssuesForPage: jest.fn((issues) => issues ?? [])
+    };
+
+    createContentScript({
+      chromeApi,
+      documentRoot: document,
+      windowObj: window,
+      fetchFn
+    });
+
+    const response = await new Promise((resolve) => {
+      messageListeners[0]({ type: "spider-capture" }, null, resolve);
+    });
+    expect(response.ok).toBe(false);
+  });
+
   test("drops cached issues when payload is not an array", () => {
     jest.useFakeTimers();
     jest.resetModules();
@@ -647,6 +1174,176 @@ describe("Extension content script", () => {
 
     delete global.chrome;
     logSpy.mockRestore();
+  });
+});
+
+describe("Extension popup", () => {
+  const createChromeApi = () => {
+    const state = { enabled: false, spiderEnabled: false, serverUrl: DEFAULT_SERVER_URL };
+    return {
+      runtime: { sendMessage: jest.fn() },
+      storage: {
+        local: {
+          get: jest.fn((defaults, callback) => callback({ ...defaults, ...state })),
+          set: jest.fn((values) => Object.assign(state, values))
+        },
+        onChanged: { addListener: jest.fn() }
+      }
+    };
+  };
+
+  test("normalizes server urls", () => {
+    expect(normalizeServerUrl("").url).toBe(DEFAULT_SERVER_URL);
+    expect(normalizeServerUrl("notaurl").error).toBeTruthy();
+    expect(normalizeServerUrl("http://localhost:1234").url).toBe("http://localhost:1234/");
+    expect(normalizeServerUrl("file:///tmp").error).toBe("Enter a full URL (http://host/path).");
+    expect(normalizeServerUrl(null).url).toBe(DEFAULT_SERVER_URL);
+  });
+
+  test("updates toggles and server url", async () => {
+    document.body.innerHTML = "\n      <input id=\"enabled-toggle\" type=\"checkbox\" />\n      <input id=\"spider-toggle\" type=\"checkbox\" />\n      <input id=\"server-url\" type=\"text\" />\n      <div id=\"status-text\"></div>\n      <div id=\"server-status\"></div>\n    ";
+    const chromeApi = createChromeApi();
+    const popup = createPopup({ documentRoot: document, chromeApi });
+
+    await popup.updateEnabled(true);
+    await popup.updateSpider(true);
+    await popup.updateServerUrl("http://localhost:9999/capture");
+
+    expect(chromeApi.storage.local.set).toHaveBeenCalledWith({ enabled: true });
+    expect(chromeApi.storage.local.set).toHaveBeenCalledWith({ spiderEnabled: true });
+    expect(chromeApi.storage.local.set).toHaveBeenCalledWith({ serverUrl: "http://localhost:9999/capture" });
+    expect(chromeApi.runtime.sendMessage).toHaveBeenCalled();
+  });
+
+  test("responds to popup change events", async () => {
+    document.body.innerHTML = "\n      <input id=\"enabled-toggle\" type=\"checkbox\" />\n      <input id=\"spider-toggle\" type=\"checkbox\" />\n      <input id=\"server-url\" type=\"text\" />\n      <div id=\"status-text\"></div>\n      <div id=\"server-status\"></div>\n    ";
+    const chromeApi = createChromeApi();
+    createPopup({ documentRoot: document, chromeApi });
+
+    const enabledToggle = document.getElementById("enabled-toggle");
+    enabledToggle.checked = true;
+    enabledToggle.dispatchEvent(new Event("change"));
+
+    const spiderToggle = document.getElementById("spider-toggle");
+    spiderToggle.checked = true;
+    spiderToggle.dispatchEvent(new Event("change"));
+
+    const serverUrl = document.getElementById("server-url");
+    serverUrl.value = "http://localhost:7777/capture";
+    serverUrl.dispatchEvent(new Event("change"));
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(chromeApi.storage.local.set).toHaveBeenCalledWith({ enabled: true });
+    expect(chromeApi.storage.local.set).toHaveBeenCalledWith({ spiderEnabled: true });
+    expect(chromeApi.storage.local.set).toHaveBeenCalledWith({ serverUrl: "http://localhost:7777/capture" });
+  });
+
+  test("rejects invalid server urls", async () => {
+    document.body.innerHTML = "\n      <input id=\"enabled-toggle\" type=\"checkbox\" />\n      <input id=\"spider-toggle\" type=\"checkbox\" />\n      <input id=\"server-url\" type=\"text\" />\n      <div id=\"status-text\"></div>\n      <div id=\"server-status\"></div>\n    ";
+    const chromeApi = createChromeApi();
+    const popup = createPopup({ documentRoot: document, chromeApi });
+    await popup.updateServerUrl("bad url");
+    expect(chromeApi.storage.local.set).not.toHaveBeenCalledWith({ serverUrl: "bad url" });
+    expect(document.getElementById("server-status").textContent).toBe("Listener URL is not valid.");
+  });
+
+  test("uses default server url when blank and shows warning", async () => {
+    document.body.innerHTML = "\n      <input id=\"enabled-toggle\" type=\"checkbox\" />\n      <input id=\"spider-toggle\" type=\"checkbox\" />\n      <input id=\"server-url\" type=\"text\" />\n      <div id=\"status-text\"></div>\n      <div id=\"server-status\"></div>\n    ";
+    const chromeApi = createChromeApi();
+    const popup = createPopup({ documentRoot: document, chromeApi });
+    await popup.updateServerUrl(" ");
+    expect(chromeApi.storage.local.set).toHaveBeenCalledWith({ serverUrl: DEFAULT_SERVER_URL });
+    expect(document.getElementById("server-status").textContent).toContain("Using default");
+  });
+
+  test("applies state defaults and error hints", () => {
+    document.body.innerHTML = "\n      <input id=\"enabled-toggle\" type=\"checkbox\" />\n      <input id=\"spider-toggle\" type=\"checkbox\" />\n      <input id=\"server-url\" type=\"text\" />\n      <div id=\"status-text\"></div>\n      <div id=\"server-status\"></div>\n    ";
+    const chromeApi = createChromeApi();
+    const popup = createPopup({ documentRoot: document, chromeApi });
+
+    popup.applyState({ enabled: true, spiderEnabled: true });
+    popup.setServerHint("Bad URL", true);
+    expect(document.getElementById("server-status").classList.contains("error")).toBe(true);
+    popup.setServerHint(null, false);
+
+    expect(document.getElementById("server-url").value).toBe(DEFAULT_SERVER_URL);
+    expect(document.getElementById("status-text").textContent).toContain("Spider mode running");
+    expect(document.getElementById("server-status").classList.contains("error")).toBe(false);
+  });
+
+  test("applies disabled state and clears status", () => {
+    document.body.innerHTML = "\n      <input id=\"enabled-toggle\" type=\"checkbox\" />\n      <input id=\"spider-toggle\" type=\"checkbox\" />\n      <input id=\"server-url\" type=\"text\" />\n      <div id=\"status-text\"></div>\n      <div id=\"server-status\"></div>\n    ";
+    const chromeApi = createChromeApi();
+    const popup = createPopup({ documentRoot: document, chromeApi });
+
+    popup.applyState({ enabled: false, spiderEnabled: false, serverUrl: null });
+
+    expect(document.getElementById("status-text").textContent).toContain("Forwarding disabled");
+    expect(document.getElementById("server-url").value).toBe(DEFAULT_SERVER_URL);
+  });
+
+  test("ignores unrelated storage changes", () => {
+    document.body.innerHTML = "\n      <input id=\"enabled-toggle\" type=\"checkbox\" />\n      <input id=\"spider-toggle\" type=\"checkbox\" />\n      <input id=\"server-url\" type=\"text\" />\n      <div id=\"status-text\"></div>\n      <div id=\"server-status\"></div>\n    ";
+    const chromeApi = createChromeApi();
+    let listener = null;
+    chromeApi.storage.onChanged.addListener.mockImplementation((cb) => {
+      listener = cb;
+    });
+    const getSpy = chromeApi.storage.local.get;
+    createPopup({ documentRoot: document, chromeApi });
+    const initialCalls = getSpy.mock.calls.length;
+
+    listener({ other: { newValue: true } });
+    expect(getSpy.mock.calls.length).toBe(initialCalls);
+  });
+
+  test("refreshes state when storage changes", async () => {
+    document.body.innerHTML = "\n      <input id=\"enabled-toggle\" type=\"checkbox\" />\n      <input id=\"spider-toggle\" type=\"checkbox\" />\n      <input id=\"server-url\" type=\"text\" />\n      <div id=\"status-text\"></div>\n      <div id=\"server-status\"></div>\n    ";
+    const chromeApi = createChromeApi();
+    let listener = null;
+    chromeApi.storage.onChanged.addListener.mockImplementation((cb) => {
+      listener = cb;
+    });
+    createPopup({ documentRoot: document, chromeApi });
+
+    chromeApi.storage.local.set({ enabled: true, spiderEnabled: true, serverUrl: "http://updated" });
+    listener({ enabled: { newValue: true } });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(document.getElementById("enabled-toggle").checked).toBe(true);
+  });
+
+  test("reads storage when get returns a promise", async () => {
+    document.body.innerHTML = "\n      <input id=\"enabled-toggle\" type=\"checkbox\" />\n      <input id=\"spider-toggle\" type=\"checkbox\" />\n      <input id=\"server-url\" type=\"text\" />\n      <div id=\"status-text\"></div>\n      <div id=\"server-status\"></div>\n    ";
+    const chromeApi = createChromeApi();
+    chromeApi.storage.local.get = jest.fn(() => Promise.resolve({ enabled: true, spiderEnabled: true, serverUrl: "http://example" }));
+    createPopup({ documentRoot: document, chromeApi });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(document.getElementById("spider-toggle").checked).toBe(true);
+  });
+
+  test("auto-bootstraps when chrome is available", () => {
+    jest.resetModules();
+    document.body.innerHTML = "\n      <input id=\"enabled-toggle\" type=\"checkbox\" />\n      <input id=\"spider-toggle\" type=\"checkbox\" />\n      <input id=\"server-url\" type=\"text\" />\n      <div id=\"status-text\"></div>\n      <div id=\"server-status\"></div>\n    ";
+    global.chrome = {
+      runtime: { sendMessage: jest.fn() },
+      storage: {
+        local: { get: jest.fn((defaults, callback) => callback(defaults)), set: jest.fn() },
+        onChanged: { addListener: jest.fn() }
+      }
+    };
+
+    jest.isolateModules(() => {
+      require("../extension/popup");
+    });
+
+    delete global.chrome;
+  });
+
+  test("skips storage change wiring when onChanged is missing", () => {
+    document.body.innerHTML = "\n      <input id=\"enabled-toggle\" type=\"checkbox\" />\n      <input id=\"spider-toggle\" type=\"checkbox\" />\n      <input id=\"server-url\" type=\"text\" />\n      <div id=\"status-text\"></div>\n      <div id=\"server-status\"></div>\n    ";
+    const chromeApi = createChromeApi();
+    delete chromeApi.storage.onChanged;
+    expect(() => createPopup({ documentRoot: document, chromeApi })).not.toThrow();
   });
 });
 

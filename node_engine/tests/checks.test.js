@@ -1,10 +1,15 @@
 const { AbsolutePositioningCheck, isAbsolutePositioningValue, tryGetCanvasPositioning } = require("../src/checks/AbsolutePositioningCheck");
 const {
   FixedWidthLayoutCheck,
-  isFixedWidthValue,
+  isFixedDimensionValue,
   tryGetFixedStyleWidth,
   isFixedMarkupLength,
-  describeProperty
+  describeProperty,
+  tryGetFixedStyleHeight,
+  parseFixedLengthToPx,
+  isFixedLengthAtLeast,
+  MIN_VIEWPORT_WIDTH_PX,
+  MIN_VIEWPORT_HEIGHT_PX
 } = require("../src/checks/FixedWidthLayoutCheck");
 const { MissingLabelCheck } = require("../src/checks/MissingLabelCheck");
 const { MissingDocumentLanguageCheck } = require("../src/checks/MissingDocumentLanguageCheck");
@@ -94,26 +99,53 @@ describe("AbsolutePositioningCheck", () => {
 });
 
 describe("FixedWidthLayoutCheck", () => {
-  test("detects fixed widths", () => {
-    expect(isFixedWidthValue("10")).toBe(true);
-    expect(isFixedWidthValue("Auto")).toBe(false);
-    expect(isFixedWidthValue("1*")).toBe(false);
+  test("detects fixed dimensions that exceed reflow thresholds", () => {
+    expect(isFixedDimensionValue("400", MIN_VIEWPORT_WIDTH_PX)).toBe(true);
+    expect(isFixedDimensionValue("300", MIN_VIEWPORT_WIDTH_PX)).toBe(false);
+    expect(isFixedDimensionValue("Auto", MIN_VIEWPORT_WIDTH_PX)).toBe(false);
+    expect(isFixedDimensionValue("1*", MIN_VIEWPORT_WIDTH_PX)).toBe(false);
 
-    const htmlContext = createContext('<div style="width:10px"></div><div width="200"></div>', "html");
+    const htmlContext = createContext(
+      '<div style="width:400px"></div><div height="300"></div><div width="200"></div>',
+      "html"
+    );
     expect(FixedWidthLayoutCheck.run(htmlContext, rule)).toHaveLength(2);
 
-    const xamlContext = createContext('<Grid Width="200" /><Grid MinWidth="50" />', "xaml");
-    expect(FixedWidthLayoutCheck.run(xamlContext, rule)).toHaveLength(2);
+    const xamlContext = createContext(
+      '<Grid Width="400" /><Grid MinWidth="500" /><Grid Height="300" /><Grid MinHeight="200" />',
+      "xaml"
+    );
+    expect(FixedWidthLayoutCheck.run(xamlContext, rule)).toHaveLength(3);
 
-    expect(tryGetFixedStyleWidth("width:10px; min-width:20px").propertyName).toBe("width");
-    expect(isFixedMarkupLength("100%")).toBe(false);
-    expect(isFixedMarkupLength("10px")).toBe(true);
+    expect(tryGetFixedStyleWidth("width:400px; min-width:200px").propertyName).toBe("width");
+    expect(tryGetFixedStyleHeight("height:100px; min-height:300px").propertyName).toBe("min-height");
+    expect(isFixedMarkupLength("100%", { minPx: MIN_VIEWPORT_WIDTH_PX })).toBe(false);
+    expect(isFixedMarkupLength("10px", { minPx: MIN_VIEWPORT_WIDTH_PX })).toBe(false);
+    expect(isFixedMarkupLength("500", { minPx: MIN_VIEWPORT_WIDTH_PX })).toBe(true);
     expect(describeProperty("min-width")).toBe("minimum width");
+    expect(describeProperty("min-height")).toBe("minimum height");
   });
 
-  test("skips non-fixed xaml min width", () => {
-    const xamlContext = createContext('<Grid MinWidth="Auto" />', "xaml");
+  test("parses fixed lengths and thresholds", () => {
+    expect(parseFixedLengthToPx("20px")).toBe(20);
+    expect(parseFixedLengthToPx("1in")).toBeCloseTo(96, 4);
+    expect(parseFixedLengthToPx("2em")).toBe(32);
+    expect(parseFixedLengthToPx("10%", { assumePixels: true })).toBeNull();
+    expect(parseFixedLengthToPx("12", { assumePixels: false })).toBeNull();
+    expect(isFixedLengthAtLeast("320px", MIN_VIEWPORT_WIDTH_PX)).toBe(false);
+    expect(isFixedLengthAtLeast("321px", MIN_VIEWPORT_WIDTH_PX)).toBe(true);
+  });
+
+  test("skips non-fixed or under-threshold values", () => {
+    const xamlContext = createContext('<Grid MinWidth="Auto" /><Grid Height="200" />', "xaml");
     expect(FixedWidthLayoutCheck.run(xamlContext, rule)).toHaveLength(0);
+
+    const htmlContext = createContext('<div style="width:10px;height:200px"></div>', "html");
+    expect(FixedWidthLayoutCheck.run(htmlContext, rule)).toHaveLength(0);
+
+    const nullStyle = tryGetFixedStyleWidth("");
+    expect(nullStyle).toBeNull();
+    expect(isFixedMarkupLength(null, { minPx: MIN_VIEWPORT_HEIGHT_PX })).toBe(false);
   });
 });
 

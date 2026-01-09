@@ -1,0 +1,61 @@
+:root {
+  color-scheme: light;
+  font-family: "Segoe UI", system-ui, sans-serif;
+}
+
+body {
+  margin: 0;
+  padding: 12px;
+  min-width: 280px;
+  background: #ffffff;
+  color: #1a1a1a;
+}
+
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+h1 {
+  font-size: 16px;
+  margin: 0;
+}
+
+.control {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+
+input[type="text"] {
+  padding: 6px 8px;
+  border: 1px solid #c7c7c7;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.hint {
+  font-size: 11px;
+  color: #4a4a4a;
+}
+
+.hint.error {
+  color: #b00020;
+}
+
+.status {
+  font-size: 12px;
+  color: #1f4d2d;
+}
+
+.status.disabled {
+  color: #6b6b6b;
+}

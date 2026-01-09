@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ADA Scanner</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <div class="container">
+      <h1>ADA Scanner</h1>
+      <div class="control">
+        <label class="toggle">
+          <input type="checkbox" id="enabled-toggle" />
+          <span>Send to listener</span>
+        </label>
+      </div>
+      <div class="control">
+        <label class="toggle">
+          <input type="checkbox" id="spider-toggle" />
+          <span>Spider visible links</span>
+        </label>
+      </div>
+      <div class="control">
+        <label for="server-url">Listener URL</label>
+        <input id="server-url" type="text" placeholder="http://127.0.0.1:45892/capture" />
+        <div id="server-status" class="hint" role="status"></div>
+      </div>
+      <div id="status-text" class="status" role="status"></div>
+    </div>
+    <script src="popup.js"></script>
+  </body>
+</html>
