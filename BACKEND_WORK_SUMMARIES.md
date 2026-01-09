@@ -35,3 +35,5 @@
 
 2026-01-08 - Added static analysis support for XAML and Razor file extensions with tests. (SPEC-004)
 2026-01-09 - Expand static analysis appliesTo handling and improve contrast parsing test coverage (SPEC-004)
+
+2026-01-09 - Improved static analysis dashboard filters, guidance, and user guides with expanded tests. (SPEC-007, SPEC-010, SPEC-013)

@@ -9,6 +9,11 @@ body {
   color: #0f172a;
 }
 
+* :focus-visible {
+  outline: 3px solid #2563eb;
+  outline-offset: 2px;
+}
+
 .page-header {
   display: flex;
   justify-content: space-between;
@@ -77,6 +82,79 @@ body {
   box-shadow: 0 1px 4px rgba(15, 23, 42, 0.08);
 }
 
+.panel-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.panel-header h2 {
+  margin: 0 0 6px;
+  font-size: 18px;
+}
+
+.panel-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.meta-chip {
+  background: #e2e8f0;
+  color: #1e293b;
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.filter-panel {
+  background: #eff6ff;
+  border: 1px solid #dbeafe;
+}
+
+.filter-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.field input,
+.field select {
+  padding: 10px 12px;
+  border: 1px solid #cbd5f5;
+  border-radius: 10px;
+  font-size: 14px;
+  background: #fff;
+  color: #0f172a;
+}
+
+.field input::placeholder {
+  color: #94a3b8;
+  font-weight: 400;
+}
+
+.ghost-button {
+  border: 1px solid #bfdbfe;
+  background: #fff;
+  color: #1d4ed8;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
 .data-table {
   width: 100%;
   border-collapse: collapse;
@@ -94,6 +172,13 @@ body {
   font-size: 12px;
   text-transform: uppercase;
   color: #64748b;
+}
+
+.empty-state {
+  padding: 24px 8px;
+  text-align: center;
+  color: #64748b;
+  font-size: 14px;
 }
 
 .pill-button {
@@ -144,4 +229,29 @@ body {
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+}
+
+.guide-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.guide-card {
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.guide-card h3 {
+  margin: 0 0 8px;
+  font-size: 14px;
+}
+
+.guide-card p {
+  margin: 0;
+  color: #475569;
+  font-size: 13px;
+  line-height: 1.5;
 }
