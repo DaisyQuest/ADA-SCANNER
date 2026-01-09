@@ -60,6 +60,19 @@ describe("RuntimeScanner", () => {
     expect(result.document.url).toBe("http://example");
   });
 
+  test("captures linked stylesheets when scanning HTML", () => {
+    const rulesRoot = createTempRules();
+    const scanner = new RuntimeScanner();
+    const result = scanner.scanDocument({
+      rulesRoot,
+      url: "http://example/page",
+      content: "<link rel=\"stylesheet\" href=\"/styles.css\" /><link rel=\"preload\" href=\"skip.css\" />",
+      kind: "html"
+    });
+
+    expect(result.document.stylesheets).toEqual(["http://example/styles.css"]);
+  });
+
   test("skips rules when appliesTo does not match", () => {
     const rulesRoot = createTempRules();
     const scanner = new RuntimeScanner();

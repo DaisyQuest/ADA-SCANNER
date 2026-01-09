@@ -54,6 +54,13 @@ const buildDownloadName = (filePath, extension = "json") => {
   return safe ? `report-${safe}.${normalizedExtension}` : `report.${normalizedExtension}`;
 };
 
+const formatCounts = (items, label) => {
+  if (!items.length) {
+    return "—";
+  }
+  return items.map((entry) => `${entry[label]} (${entry.count})`).join(", ");
+};
+
 const getRuleOptions = () => {
   if (!state.report || !Array.isArray(state.report.byRule)) {
     return [];
@@ -170,21 +177,23 @@ const renderFiles = () => {
 
   elements.fileTable.innerHTML = filteredFiles
     .map((file) => {
-      const topRules = file.rules.slice(0, 3).map((rule) => `${rule.ruleId} (${rule.count})`).join(", ");
-      const downloadUrl = `/report/file?path=${encodeURIComponent(file.filePath)}`;
-      const downloadHtmlUrl = `/report/file?path=${encodeURIComponent(file.filePath)}&format=html`;
-      const downloadName = buildDownloadName(file.filePath);
-      const downloadHtmlName = buildDownloadName(file.filePath, "html");
-      return `
-        <tr>
-          <td>${file.filePath}</td>
-          <td>${file.issueCount}</td>
-          <td>${topRules || "—"}</td>
-          <td>
-            <a class="pill-button" href="${downloadUrl}" download="${downloadName}">Save JSON</a>
-            <a class="pill-button pill-button--secondary" href="${downloadHtmlUrl}" download="${downloadHtmlName}">Save HTML</a>
-          </td>
-        </tr>
+    const topRules = file.rules.slice(0, 3).map((rule) => `${rule.ruleId} (${rule.count})`).join(", ");
+    const stylesheetIssues = formatCounts(file.linkedStylesheetsWithIssues ?? [], "filePath");
+    const downloadUrl = `/report/file?path=${encodeURIComponent(file.filePath)}`;
+    const downloadHtmlUrl = `/report/file?path=${encodeURIComponent(file.filePath)}&format=html`;
+    const downloadName = buildDownloadName(file.filePath);
+    const downloadHtmlName = buildDownloadName(file.filePath, "html");
+    return `
+      <tr>
+        <td>${file.filePath}</td>
+        <td>${file.issueCount}</td>
+        <td>${topRules || "—"}</td>
+        <td>${stylesheetIssues}</td>
+        <td>
+          <a class="pill-button" href="${downloadUrl}" download="${downloadName}">Save JSON</a>
+          <a class="pill-button pill-button--secondary" href="${downloadHtmlUrl}" download="${downloadHtmlName}">Save HTML</a>
+        </td>
+      </tr>
       `;
     })
     .join("");

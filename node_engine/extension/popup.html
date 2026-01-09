@@ -16,10 +16,16 @@
         </label>
       </div>
       <div class="control">
-        <label class="toggle">
-          <input type="checkbox" id="spider-toggle" />
-          <span>Spider visible links</span>
-        </label>
+        <div class="spider-row">
+          <label class="toggle">
+            <input type="checkbox" id="spider-toggle" />
+            <span>Spider visible links</span>
+          </label>
+          <label class="spider-delay">
+            <span>Req delay ms</span>
+            <input type="number" id="spider-delay" min="0" step="100" />
+          </label>
+        </div>
       </div>
       <div class="control">
         <label for="server-url">Listener URL</label>

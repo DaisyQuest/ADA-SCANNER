@@ -1,5 +1,6 @@
 (() => {
   const DEFAULT_SERVER_URL = "http://127.0.0.1:45892/capture";
+  const DEFAULT_SPIDER_REQUEST_DELAY_MS = 0;
 
   const normalizeServerUrl = (value) => {
     const trimmed = String(value ?? "").trim();
@@ -18,6 +19,14 @@
     }
   };
 
+  const normalizeSpiderDelayMs = (value) => {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed) || parsed < 0) {
+      return DEFAULT_SPIDER_REQUEST_DELAY_MS;
+    }
+    return Math.round(parsed);
+  };
+
   const readStorage = (storageApi, defaults) =>
     new Promise((resolve) => {
       const maybePromise = storageApi.get(defaults, (result) => resolve(result));
@@ -29,6 +38,7 @@
   const createPopup = ({ documentRoot, chromeApi }) => {
     const enabledToggle = documentRoot.getElementById("enabled-toggle");
     const spiderToggle = documentRoot.getElementById("spider-toggle");
+    const spiderDelayInput = documentRoot.getElementById("spider-delay");
     const serverUrlInput = documentRoot.getElementById("server-url");
     const statusText = documentRoot.getElementById("status-text");
     const serverStatus = documentRoot.getElementById("server-status");
@@ -51,6 +61,7 @@
     const applyState = (state) => {
       enabledToggle.checked = !!state.enabled;
       spiderToggle.checked = !!state.spiderEnabled;
+      spiderDelayInput.value = state.spiderRequestDelayMs ?? DEFAULT_SPIDER_REQUEST_DELAY_MS;
       serverUrlInput.value = state.serverUrl ?? DEFAULT_SERVER_URL;
       setStatus(!!state.enabled, !!state.spiderEnabled);
     };
@@ -65,6 +76,11 @@
       await chromeApi.storage.local.set({ spiderEnabled: enabled });
       chromeApi.runtime.sendMessage({ type: "set-spider", enabled });
       setStatus(enabledToggle.checked, enabled);
+    };
+
+    const updateSpiderDelay = async (value) => {
+      const spiderRequestDelayMs = normalizeSpiderDelayMs(value);
+      await chromeApi.storage.local.set({ spiderRequestDelayMs });
     };
 
     const updateServerUrl = async (value) => {
@@ -87,16 +103,21 @@
       updateSpider(event.target.checked);
     });
 
+    spiderDelayInput.addEventListener("change", (event) => {
+      updateSpiderDelay(event.target.value);
+    });
+
     serverUrlInput.addEventListener("change", (event) => {
       updateServerUrl(event.target.value);
     });
 
     chromeApi.storage.onChanged?.addListener((changes) => {
-      if (changes.enabled || changes.spiderEnabled || changes.serverUrl) {
+      if (changes.enabled || changes.spiderEnabled || changes.serverUrl || changes.spiderRequestDelayMs) {
         readStorage(chromeApi.storage.local, {
           enabled: false,
           spiderEnabled: false,
-          serverUrl: DEFAULT_SERVER_URL
+          serverUrl: DEFAULT_SERVER_URL,
+          spiderRequestDelayMs: DEFAULT_SPIDER_REQUEST_DELAY_MS
         }).then(applyState);
       }
     });
@@ -104,12 +125,14 @@
     readStorage(chromeApi.storage.local, {
       enabled: false,
       spiderEnabled: false,
-      serverUrl: DEFAULT_SERVER_URL
+      serverUrl: DEFAULT_SERVER_URL,
+      spiderRequestDelayMs: DEFAULT_SPIDER_REQUEST_DELAY_MS
     }).then(applyState);
 
     return {
       updateEnabled,
       updateSpider,
+      updateSpiderDelay,
       updateServerUrl,
       applyState,
       setServerHint
@@ -118,7 +141,7 @@
 
   /* istanbul ignore next */
   if (typeof module !== "undefined") {
-    module.exports = { createPopup, normalizeServerUrl };
+    module.exports = { createPopup, normalizeServerUrl, normalizeSpiderDelayMs };
   }
 
   if (typeof chrome === "undefined") {

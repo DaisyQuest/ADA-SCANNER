@@ -50,12 +50,14 @@ describe("Static analysis UI app", () => {
         {
           filePath: "file-a.html",
           issueCount: 1,
-          rules: [{ ruleId: "rule-1", count: 1 }]
+          rules: [{ ruleId: "rule-1", count: 1 }],
+          linkedStylesheetsWithIssues: [{ filePath: "styles.css", count: 2 }]
         },
         {
           filePath: "file-b.js",
           issueCount: 0,
-          rules: []
+          rules: [],
+          linkedStylesheetsWithIssues: []
         }
       ]
     };
@@ -72,6 +74,7 @@ describe("Static analysis UI app", () => {
     expect(app.elements.ruleCount.textContent).toBe("1");
     expect(app.elements.fileTable.innerHTML).toContain("file-a.html");
     expect(app.elements.fileTable.innerHTML).toContain("Save JSON");
+    expect(app.elements.fileTable.innerHTML).toContain("styles.css (2)");
     expect(app.elements.issueFeed.innerHTML).toContain("Problem");
     expect(app.elements.fileResultCount.textContent).toBe("2 of 2");
     expect(app.elements.issueResultCount.textContent).toBe("1 of 1");

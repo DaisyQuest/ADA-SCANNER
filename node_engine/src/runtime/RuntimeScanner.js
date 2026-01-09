@@ -1,5 +1,6 @@
 const { RuleLoader } = require("../rules/RuleLoader");
 const { createDefaultCheckRegistry } = require("../checks/CheckRegistry");
+const { extractStylesheetLinks } = require("../utils/StylesheetLinks");
 
 class RuntimeScanner {
   constructor({ ruleLoader = new RuleLoader(), checkRegistry = createDefaultCheckRegistry() } = {}) {
@@ -77,7 +78,8 @@ class RuntimeScanner {
       document: {
         url,
         body: content,
-        contentType
+        contentType,
+        stylesheets: extractStylesheetLinks({ content, baseUrl: url })
       },
       issues,
       rules: rules.map(({ teamName, rule }) => ({ ...rule, teamName }))

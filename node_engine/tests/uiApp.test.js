@@ -73,7 +73,8 @@ describe("Runtime listener UI app", () => {
           rules: [{ ruleId: "rule-1", count: 3 }],
           teams: [{ teamName: "team-a", count: 3 }],
           severities: [{ severity: "high", count: 3 }],
-          checks: [{ checkId: "check-a", count: 3 }]
+          checks: [{ checkId: "check-a", count: 3 }],
+          linkedStylesheetsWithIssues: [{ filePath: "styles.css", count: 2 }]
         },
         {
           filePath: "file-b",
@@ -81,7 +82,8 @@ describe("Runtime listener UI app", () => {
           rules: [],
           teams: [],
           severities: undefined,
-          checks: []
+          checks: [],
+          linkedStylesheetsWithIssues: []
         }
       ],
       byTeam: [{ teamName: "team-a", issueCount: 3, rules: [{ ruleId: "rule-1", count: 3 }] }]
@@ -104,6 +106,7 @@ describe("Runtime listener UI app", () => {
     expect(app.elements.fileTable.innerHTML).toContain("Save HTML");
     expect(app.elements.fileTable.innerHTML).toContain("report-file-b.json");
     expect(app.elements.fileTable.innerHTML).toContain("report-file-b.html");
+    expect(app.elements.fileTable.innerHTML).toContain("styles.css (2)");
     expect(app.elements.issueFeed.innerHTML).toContain("Problem");
     expect(app.elements.issueFeed.innerHTML).toContain("line ?");
   });

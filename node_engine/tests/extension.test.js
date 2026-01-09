@@ -20,10 +20,17 @@ const {
   getActiveTab,
   runSpider,
   waitForTabComplete,
-  captureSpiderTab
+  captureSpiderTab,
+  normalizeSpiderDelayMs: normalizeSpiderDelayMsInBackground
 } = require("../extension/background");
 const { createContentScript } = require("../extension/contentScript");
-const { createPopup, normalizeServerUrl } = require("../extension/popup");
+const { createPopup, normalizeServerUrl, normalizeSpiderDelayMs: normalizeSpiderDelayMsInPopup } = require("../extension/popup");
+const { setTimeout: setTimeoutFn, clearTimeout: clearTimeoutFn } = require("timers");
+
+beforeEach(() => {
+  global.setTimeout = setTimeoutFn;
+  global.clearTimeout = clearTimeoutFn;
+});
 
 describe("Extension forwarder utilities", () => {
   test("builds payloads and hashes", () => {
@@ -257,7 +264,7 @@ describe("Extension forwarder utilities", () => {
 
 describe("Extension background", () => {
   const createChrome = () => {
-    const state = { enabled: false, serverUrl: DEFAULT_SERVER_URL };
+    const state = { enabled: false, serverUrl: DEFAULT_SERVER_URL, spiderRequestDelayMs: 0 };
     const listeners = { clicked: [], installed: [], activated: [], message: [] };
     return {
       action: {
@@ -317,6 +324,12 @@ describe("Extension background", () => {
     expect(chromeApi.storage.local.set).toHaveBeenCalledWith({ spiderEnabled: false });
   });
 
+  test("normalizes spider delay values in background", () => {
+    expect(normalizeSpiderDelayMsInBackground(250)).toBe(250);
+    expect(normalizeSpiderDelayMsInBackground(-1)).toBe(0);
+    expect(normalizeSpiderDelayMsInBackground("oops")).toBe(0);
+  });
+
   test("ignores sendMessage failures when toggling", async () => {
     const chromeApi = createChrome();
     chromeApi.tabs.sendMessage.mockRejectedValue(new Error("missing"));
@@ -351,7 +364,8 @@ describe("Extension background", () => {
     expect(chromeApi.storage.local.set).toHaveBeenCalledWith({
       enabled: false,
       spiderEnabled: false,
-      serverUrl: DEFAULT_SERVER_URL
+      serverUrl: DEFAULT_SERVER_URL,
+      spiderRequestDelayMs: 0
     });
   });
 
@@ -537,6 +551,31 @@ describe("Extension background", () => {
 
     expect(chromeApi.tabs.create).toHaveBeenCalledTimes(2);
     expect(chromeApi.tabs.remove).toHaveBeenCalledTimes(2);
+  });
+
+  test("applies spider request delay between captures", async () => {
+    jest.useFakeTimers();
+    const chromeApi = createChrome();
+    chromeApi.storage.local.get = jest.fn((defaults) => Promise.resolve({
+      ...defaults,
+      spiderRequestDelayMs: 50
+    }));
+    chromeApi.tabs.sendMessage = jest
+      .fn()
+      .mockResolvedValueOnce({ links: ["http://example.com/a", "http://example.com/b"] })
+      .mockResolvedValue({ ok: true });
+    chromeApi.tabs.onUpdated.addListener.mockImplementation((listener) => {
+      listener(99, { status: "complete" });
+    });
+
+    const timeoutSpy = jest.spyOn(global, "setTimeout");
+    const promise = runSpider(chromeApi, 1);
+    await jest.runAllTimersAsync();
+    await promise;
+
+    expect(timeoutSpy.mock.calls.some((call) => call[1] === 50)).toBe(true);
+    timeoutSpy.mockRestore();
+    jest.useRealTimers();
   });
 
   test("waits for tab completion with timeout handling", async () => {
@@ -1312,7 +1351,12 @@ describe("Extension content script", () => {
 
 describe("Extension popup", () => {
   const createChromeApi = () => {
-    const state = { enabled: false, spiderEnabled: false, serverUrl: DEFAULT_SERVER_URL };
+    const state = {
+      enabled: false,
+      spiderEnabled: false,
+      serverUrl: DEFAULT_SERVER_URL,
+      spiderRequestDelayMs: 0
+    };
     return {
       runtime: { sendMessage: jest.fn() },
       storage: {
@@ -1333,23 +1377,31 @@ describe("Extension popup", () => {
     expect(normalizeServerUrl(null).url).toBe(DEFAULT_SERVER_URL);
   });
 
+  test("normalizes spider request delays", () => {
+    expect(normalizeSpiderDelayMsInPopup("150")).toBe(150);
+    expect(normalizeSpiderDelayMsInPopup(-5)).toBe(0);
+    expect(normalizeSpiderDelayMsInPopup("nope")).toBe(0);
+  });
+
   test("updates toggles and server url", async () => {
-    document.body.innerHTML = "\n      <input id=\"enabled-toggle\" type=\"checkbox\" />\n      <input id=\"spider-toggle\" type=\"checkbox\" />\n      <input id=\"server-url\" type=\"text\" />\n      <div id=\"status-text\"></div>\n      <div id=\"server-status\"></div>\n    ";
+    document.body.innerHTML = "\n      <input id=\"enabled-toggle\" type=\"checkbox\" />\n      <input id=\"spider-toggle\" type=\"checkbox\" />\n      <input id=\"spider-delay\" type=\"number\" />\n      <input id=\"server-url\" type=\"text\" />\n      <div id=\"status-text\"></div>\n      <div id=\"server-status\"></div>\n    ";
     const chromeApi = createChromeApi();
     const popup = createPopup({ documentRoot: document, chromeApi });
 
     await popup.updateEnabled(true);
     await popup.updateSpider(true);
+    await popup.updateSpiderDelay(250);
     await popup.updateServerUrl("http://localhost:9999/capture");
 
     expect(chromeApi.storage.local.set).toHaveBeenCalledWith({ enabled: true });
     expect(chromeApi.storage.local.set).toHaveBeenCalledWith({ spiderEnabled: true });
+    expect(chromeApi.storage.local.set).toHaveBeenCalledWith({ spiderRequestDelayMs: 250 });
     expect(chromeApi.storage.local.set).toHaveBeenCalledWith({ serverUrl: "http://localhost:9999/capture" });
     expect(chromeApi.runtime.sendMessage).toHaveBeenCalled();
   });
 
   test("responds to popup change events", async () => {
-    document.body.innerHTML = "\n      <input id=\"enabled-toggle\" type=\"checkbox\" />\n      <input id=\"spider-toggle\" type=\"checkbox\" />\n      <input id=\"server-url\" type=\"text\" />\n      <div id=\"status-text\"></div>\n      <div id=\"server-status\"></div>\n    ";
+    document.body.innerHTML = "\n      <input id=\"enabled-toggle\" type=\"checkbox\" />\n      <input id=\"spider-toggle\" type=\"checkbox\" />\n      <input id=\"spider-delay\" type=\"number\" />\n      <input id=\"server-url\" type=\"text\" />\n      <div id=\"status-text\"></div>\n      <div id=\"server-status\"></div>\n    ";
     const chromeApi = createChromeApi();
     createPopup({ documentRoot: document, chromeApi });
 
@@ -1361,6 +1413,10 @@ describe("Extension popup", () => {
     spiderToggle.checked = true;
     spiderToggle.dispatchEvent(new Event("change"));
 
+    const spiderDelay = document.getElementById("spider-delay");
+    spiderDelay.value = "200";
+    spiderDelay.dispatchEvent(new Event("change"));
+
     const serverUrl = document.getElementById("server-url");
     serverUrl.value = "http://localhost:7777/capture";
     serverUrl.dispatchEvent(new Event("change"));
@@ -1368,11 +1424,12 @@ describe("Extension popup", () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(chromeApi.storage.local.set).toHaveBeenCalledWith({ enabled: true });
     expect(chromeApi.storage.local.set).toHaveBeenCalledWith({ spiderEnabled: true });
+    expect(chromeApi.storage.local.set).toHaveBeenCalledWith({ spiderRequestDelayMs: 200 });
     expect(chromeApi.storage.local.set).toHaveBeenCalledWith({ serverUrl: "http://localhost:7777/capture" });
   });
 
   test("rejects invalid server urls", async () => {
-    document.body.innerHTML = "\n      <input id=\"enabled-toggle\" type=\"checkbox\" />\n      <input id=\"spider-toggle\" type=\"checkbox\" />\n      <input id=\"server-url\" type=\"text\" />\n      <div id=\"status-text\"></div>\n      <div id=\"server-status\"></div>\n    ";
+    document.body.innerHTML = "\n      <input id=\"enabled-toggle\" type=\"checkbox\" />\n      <input id=\"spider-toggle\" type=\"checkbox\" />\n      <input id=\"spider-delay\" type=\"number\" />\n      <input id=\"server-url\" type=\"text\" />\n      <div id=\"status-text\"></div>\n      <div id=\"server-status\"></div>\n    ";
     const chromeApi = createChromeApi();
     const popup = createPopup({ documentRoot: document, chromeApi });
     await popup.updateServerUrl("bad url");
@@ -1381,7 +1438,7 @@ describe("Extension popup", () => {
   });
 
   test("uses default server url when blank and shows warning", async () => {
-    document.body.innerHTML = "\n      <input id=\"enabled-toggle\" type=\"checkbox\" />\n      <input id=\"spider-toggle\" type=\"checkbox\" />\n      <input id=\"server-url\" type=\"text\" />\n      <div id=\"status-text\"></div>\n      <div id=\"server-status\"></div>\n    ";
+    document.body.innerHTML = "\n      <input id=\"enabled-toggle\" type=\"checkbox\" />\n      <input id=\"spider-toggle\" type=\"checkbox\" />\n      <input id=\"spider-delay\" type=\"number\" />\n      <input id=\"server-url\" type=\"text\" />\n      <div id=\"status-text\"></div>\n      <div id=\"server-status\"></div>\n    ";
     const chromeApi = createChromeApi();
     const popup = createPopup({ documentRoot: document, chromeApi });
     await popup.updateServerUrl(" ");
@@ -1390,7 +1447,7 @@ describe("Extension popup", () => {
   });
 
   test("applies state defaults and error hints", () => {
-    document.body.innerHTML = "\n      <input id=\"enabled-toggle\" type=\"checkbox\" />\n      <input id=\"spider-toggle\" type=\"checkbox\" />\n      <input id=\"server-url\" type=\"text\" />\n      <div id=\"status-text\"></div>\n      <div id=\"server-status\"></div>\n    ";
+    document.body.innerHTML = "\n      <input id=\"enabled-toggle\" type=\"checkbox\" />\n      <input id=\"spider-toggle\" type=\"checkbox\" />\n      <input id=\"spider-delay\" type=\"number\" />\n      <input id=\"server-url\" type=\"text\" />\n      <div id=\"status-text\"></div>\n      <div id=\"server-status\"></div>\n    ";
     const chromeApi = createChromeApi();
     const popup = createPopup({ documentRoot: document, chromeApi });
 
@@ -1400,12 +1457,13 @@ describe("Extension popup", () => {
     popup.setServerHint(null, false);
 
     expect(document.getElementById("server-url").value).toBe(DEFAULT_SERVER_URL);
+    expect(document.getElementById("spider-delay").value).toBe("0");
     expect(document.getElementById("status-text").textContent).toContain("Spider mode running");
     expect(document.getElementById("server-status").classList.contains("error")).toBe(false);
   });
 
   test("applies disabled state and clears status", () => {
-    document.body.innerHTML = "\n      <input id=\"enabled-toggle\" type=\"checkbox\" />\n      <input id=\"spider-toggle\" type=\"checkbox\" />\n      <input id=\"server-url\" type=\"text\" />\n      <div id=\"status-text\"></div>\n      <div id=\"server-status\"></div>\n    ";
+    document.body.innerHTML = "\n      <input id=\"enabled-toggle\" type=\"checkbox\" />\n      <input id=\"spider-toggle\" type=\"checkbox\" />\n      <input id=\"spider-delay\" type=\"number\" />\n      <input id=\"server-url\" type=\"text\" />\n      <div id=\"status-text\"></div>\n      <div id=\"server-status\"></div>\n    ";
     const chromeApi = createChromeApi();
     const popup = createPopup({ documentRoot: document, chromeApi });
 
@@ -1416,7 +1474,7 @@ describe("Extension popup", () => {
   });
 
   test("ignores unrelated storage changes", () => {
-    document.body.innerHTML = "\n      <input id=\"enabled-toggle\" type=\"checkbox\" />\n      <input id=\"spider-toggle\" type=\"checkbox\" />\n      <input id=\"server-url\" type=\"text\" />\n      <div id=\"status-text\"></div>\n      <div id=\"server-status\"></div>\n    ";
+    document.body.innerHTML = "\n      <input id=\"enabled-toggle\" type=\"checkbox\" />\n      <input id=\"spider-toggle\" type=\"checkbox\" />\n      <input id=\"spider-delay\" type=\"number\" />\n      <input id=\"server-url\" type=\"text\" />\n      <div id=\"status-text\"></div>\n      <div id=\"server-status\"></div>\n    ";
     const chromeApi = createChromeApi();
     let listener = null;
     chromeApi.storage.onChanged.addListener.mockImplementation((cb) => {
@@ -1431,7 +1489,7 @@ describe("Extension popup", () => {
   });
 
   test("refreshes state when storage changes", async () => {
-    document.body.innerHTML = "\n      <input id=\"enabled-toggle\" type=\"checkbox\" />\n      <input id=\"spider-toggle\" type=\"checkbox\" />\n      <input id=\"server-url\" type=\"text\" />\n      <div id=\"status-text\"></div>\n      <div id=\"server-status\"></div>\n    ";
+    document.body.innerHTML = "\n      <input id=\"enabled-toggle\" type=\"checkbox\" />\n      <input id=\"spider-toggle\" type=\"checkbox\" />\n      <input id=\"spider-delay\" type=\"number\" />\n      <input id=\"server-url\" type=\"text\" />\n      <div id=\"status-text\"></div>\n      <div id=\"server-status\"></div>\n    ";
     const chromeApi = createChromeApi();
     let listener = null;
     chromeApi.storage.onChanged.addListener.mockImplementation((cb) => {
@@ -1446,17 +1504,23 @@ describe("Extension popup", () => {
   });
 
   test("reads storage when get returns a promise", async () => {
-    document.body.innerHTML = "\n      <input id=\"enabled-toggle\" type=\"checkbox\" />\n      <input id=\"spider-toggle\" type=\"checkbox\" />\n      <input id=\"server-url\" type=\"text\" />\n      <div id=\"status-text\"></div>\n      <div id=\"server-status\"></div>\n    ";
+    document.body.innerHTML = "\n      <input id=\"enabled-toggle\" type=\"checkbox\" />\n      <input id=\"spider-toggle\" type=\"checkbox\" />\n      <input id=\"spider-delay\" type=\"number\" />\n      <input id=\"server-url\" type=\"text\" />\n      <div id=\"status-text\"></div>\n      <div id=\"server-status\"></div>\n    ";
     const chromeApi = createChromeApi();
-    chromeApi.storage.local.get = jest.fn(() => Promise.resolve({ enabled: true, spiderEnabled: true, serverUrl: "http://example" }));
+    chromeApi.storage.local.get = jest.fn(() => Promise.resolve({
+      enabled: true,
+      spiderEnabled: true,
+      serverUrl: "http://example",
+      spiderRequestDelayMs: 150
+    }));
     createPopup({ documentRoot: document, chromeApi });
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(document.getElementById("spider-toggle").checked).toBe(true);
+    expect(document.getElementById("spider-delay").value).toBe("150");
   });
 
   test("auto-bootstraps when chrome is available", () => {
     jest.resetModules();
-    document.body.innerHTML = "\n      <input id=\"enabled-toggle\" type=\"checkbox\" />\n      <input id=\"spider-toggle\" type=\"checkbox\" />\n      <input id=\"server-url\" type=\"text\" />\n      <div id=\"status-text\"></div>\n      <div id=\"server-status\"></div>\n    ";
+    document.body.innerHTML = "\n      <input id=\"enabled-toggle\" type=\"checkbox\" />\n      <input id=\"spider-toggle\" type=\"checkbox\" />\n      <input id=\"spider-delay\" type=\"number\" />\n      <input id=\"server-url\" type=\"text\" />\n      <div id=\"status-text\"></div>\n      <div id=\"server-status\"></div>\n    ";
     global.chrome = {
       runtime: { sendMessage: jest.fn() },
       storage: {
@@ -1473,7 +1537,7 @@ describe("Extension popup", () => {
   });
 
   test("skips storage change wiring when onChanged is missing", () => {
-    document.body.innerHTML = "\n      <input id=\"enabled-toggle\" type=\"checkbox\" />\n      <input id=\"spider-toggle\" type=\"checkbox\" />\n      <input id=\"server-url\" type=\"text\" />\n      <div id=\"status-text\"></div>\n      <div id=\"server-status\"></div>\n    ";
+    document.body.innerHTML = "\n      <input id=\"enabled-toggle\" type=\"checkbox\" />\n      <input id=\"spider-toggle\" type=\"checkbox\" />\n      <input id=\"spider-delay\" type=\"number\" />\n      <input id=\"server-url\" type=\"text\" />\n      <div id=\"status-text\"></div>\n      <div id=\"server-status\"></div>\n    ";
     const chromeApi = createChromeApi();
     delete chromeApi.storage.onChanged;
     expect(() => createPopup({ documentRoot: document, chromeApi })).not.toThrow();

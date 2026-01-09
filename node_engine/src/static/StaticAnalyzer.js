@@ -2,6 +2,7 @@ const fs = require("fs");
 const path = require("path");
 const { RuleLoader } = require("../rules/RuleLoader");
 const { createDefaultCheckRegistry } = require("../checks/CheckRegistry");
+const { extractStylesheetLinks } = require("../utils/StylesheetLinks");
 
 const DEFAULT_EXTENSIONS = new Map([
   [".java", { kind: "java", contentType: "text/x-java-source" }],
@@ -115,7 +116,8 @@ class StaticAnalyzer {
       documents.push({
         url: normalizedPath,
         contentType: entry.contentType,
-        kind: entry.sourceKind ?? entry.kind
+        kind: entry.sourceKind ?? entry.kind,
+        stylesheets: extractStylesheetLinks({ content, basePath: normalizedPath })
       });
 
       for (const entryRule of rules) {
