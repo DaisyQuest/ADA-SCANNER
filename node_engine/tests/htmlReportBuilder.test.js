@@ -83,7 +83,7 @@ describe("HtmlReportBuilder", () => {
     const builder = new HtmlReportBuilder();
     const html = builder.buildReport({
       report: {
-        summary: { documents: 1, issues: 2, files: 1 },
+        summary: { documents: 1, issues: 2, files: 1, rules: 1, teams: 1, checks: 1 },
         byRule: [
           {
             ruleId: "rule-a",
@@ -91,7 +91,8 @@ describe("HtmlReportBuilder", () => {
             severity: "high",
             teamName: "team-a",
             count: 2,
-            files: ["file-a.html"]
+            files: ["file-a.html"],
+            checks: ["check-a"]
           }
         ],
         byFile: [
@@ -103,13 +104,17 @@ describe("HtmlReportBuilder", () => {
             teams: [{ teamName: "team-a", count: 2 }]
           }
         ],
-        byTeam: [{ teamName: "team-a", issueCount: 2, rules: [{ ruleId: "rule-a", count: 2 }] }]
+        byTeam: [{ teamName: "team-a", issueCount: 2, rules: [{ ruleId: "rule-a", count: 2 }] }],
+        bySeverity: [{ severity: "high", count: 2 }],
+        byCheck: [{ checkId: "check-a", count: 2 }]
       }
     });
 
     expect(html).toContain("Runtime Accessibility Report");
     expect(html).toContain("rule-a");
     expect(html).toContain("badge--severity-high");
+    expect(html).toContain("Severity breakdown");
+    expect(html).toContain("Checks triggered");
   });
 
   test("builds a report with empty sections", () => {
@@ -124,7 +129,7 @@ describe("HtmlReportBuilder", () => {
     const builder = new HtmlReportBuilder();
     const html = builder.buildReport({
       report: {
-        summary: { documents: 1, issues: 1, files: 1 },
+        summary: { documents: 1, issues: 1, files: 1, rules: 1, teams: 1, checks: 1 },
         byRule: [
           {
             ruleId: "rule-x",
@@ -132,7 +137,8 @@ describe("HtmlReportBuilder", () => {
             severity: "",
             teamName: "",
             count: 1,
-            files: []
+            files: [],
+            checks: []
           }
         ],
         byFile: [
@@ -144,7 +150,9 @@ describe("HtmlReportBuilder", () => {
             teams: []
           }
         ],
-        byTeam: [{ teamName: "", issueCount: 1, rules: [] }]
+        byTeam: [{ teamName: "", issueCount: 1, rules: [] }],
+        bySeverity: [],
+        byCheck: []
       }
     });
 

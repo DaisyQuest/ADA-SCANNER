@@ -353,7 +353,15 @@ const buildHtmlPage = ({ title, summaryHtml, sectionsHtml }) => `
 
 class HtmlReportBuilder {
   buildReport({ report }) {
-    const summary = report?.summary ?? { documents: 0, issues: 0, files: 0 };
+    const summarySource = report?.summary ?? {};
+    const summary = {
+      documents: summarySource.documents ?? 0,
+      issues: summarySource.issues ?? 0,
+      files: summarySource.files ?? 0,
+      rules: summarySource.rules ?? 0,
+      teams: summarySource.teams ?? 0,
+      checks: summarySource.checks ?? 0
+    };
     const summaryHtml = `
       <section>
         <div class="summary-grid">
@@ -366,8 +374,20 @@ class HtmlReportBuilder {
             <div class="summary-value">${escapeHtml(summary.issues)}</div>
           </div>
           <div class="summary-card">
+            <div class="summary-label">Rules triggered</div>
+            <div class="summary-value">${escapeHtml(summary.rules)}</div>
+          </div>
+          <div class="summary-card">
+            <div class="summary-label">Teams impacted</div>
+            <div class="summary-value">${escapeHtml(summary.teams)}</div>
+          </div>
+          <div class="summary-card">
             <div class="summary-label">Files with issues</div>
             <div class="summary-value">${escapeHtml(summary.files)}</div>
+          </div>
+          <div class="summary-card">
+            <div class="summary-label">Checks triggered</div>
+            <div class="summary-value">${escapeHtml(summary.checks)}</div>
           </div>
         </div>
       </section>
@@ -467,6 +487,14 @@ class HtmlReportBuilder {
             `}
           </tbody>
         </table>
+      </section>
+      <section>
+        <h2>Severity breakdown</h2>
+        ${renderBadgeList(report?.bySeverity, "severity", { variantResolver: resolveSeverityVariant })}
+      </section>
+      <section>
+        <h2>Checks triggered</h2>
+        ${renderBadgeList(report?.byCheck, "checkId", { variant: "rule" })}
       </section>
     `;
 

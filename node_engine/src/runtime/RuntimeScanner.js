@@ -1,6 +1,7 @@
 const { RuleLoader } = require("../rules/RuleLoader");
 const { createDefaultCheckRegistry } = require("../checks/CheckRegistry");
 const { extractStylesheetLinks } = require("../utils/StylesheetLinks");
+const { createDomDocument } = require("../utils/DomParser");
 
 class RuntimeScanner {
   constructor({ ruleLoader = new RuleLoader(), checkRegistry = createDefaultCheckRegistry() } = {}) {
@@ -32,7 +33,8 @@ class RuntimeScanner {
     const context = {
       filePath: url,
       content,
-      kind
+      kind,
+      document: createDomDocument({ content, url })
     };
 
     for (const entry of rules) {

@@ -33,7 +33,14 @@ describe("ReportBuilder", () => {
       ]
     });
 
-    expect(report.summary).toEqual({ documents: 2, issues: 3, files: 2 });
+    expect(report.summary).toEqual({
+      documents: 2,
+      issues: 3,
+      files: 2,
+      rules: 2,
+      teams: 2,
+      checks: 2
+    });
     expect(report.byRule).toEqual([
       {
         ruleId: "rule-a",
@@ -100,6 +107,14 @@ describe("ReportBuilder", () => {
         rules: [{ ruleId: "rule-b", count: 1 }]
       }
     ]);
+    expect(report.bySeverity).toEqual([
+      { severity: "high", count: 2 },
+      { severity: "low", count: 1 }
+    ]);
+    expect(report.byCheck).toEqual([
+      { checkId: "check-1", count: 2 },
+      { checkId: "check-2", count: 1 }
+    ]);
   });
 
   test("handles missing fields gracefully", () => {
@@ -115,7 +130,14 @@ describe("ReportBuilder", () => {
       ]
     });
 
-    expect(report.summary).toEqual({ documents: 0, issues: 1, files: 1 });
+    expect(report.summary).toEqual({
+      documents: 0,
+      issues: 1,
+      files: 1,
+      rules: 1,
+      teams: 1,
+      checks: 1
+    });
     expect(report.byRule[0].ruleId).toBe("unknown");
     expect(report.byTeam[0].teamName).toBe("unassigned");
     expect(report.byFile[0].filePath).toBe("unknown");
@@ -127,10 +149,19 @@ describe("ReportBuilder", () => {
     const builder = new ReportBuilder();
     const report = builder.build();
 
-    expect(report.summary).toEqual({ documents: 0, issues: 0, files: 0 });
+    expect(report.summary).toEqual({
+      documents: 0,
+      issues: 0,
+      files: 0,
+      rules: 0,
+      teams: 0,
+      checks: 0
+    });
     expect(report.byRule).toEqual([]);
     expect(report.byFile).toEqual([]);
     expect(report.byTeam).toEqual([]);
+    expect(report.bySeverity).toEqual([]);
+    expect(report.byCheck).toEqual([]);
   });
 
   test("builds detailed file reports", () => {

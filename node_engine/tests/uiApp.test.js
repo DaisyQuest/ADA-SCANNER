@@ -9,9 +9,12 @@ const setupDom = () => {
     <div id="ruleCount"></div>
     <div id="teamCount"></div>
     <div id="fileCount"></div>
+    <div id="checkCount"></div>
     <table><tbody id="ruleTable"></tbody></table>
     <table><tbody id="fileTable"></tbody></table>
     <div id="issueFeed"></div>
+    <div id="severityBreakdown"></div>
+    <div id="checkBreakdown"></div>
   `;
 };
 
@@ -46,6 +49,14 @@ describe("Runtime listener UI app", () => {
     const app = require("../src/listener/ui/assets/app");
     app.state.report = {
       summary: { documents: 2, issues: 3, files: 1 },
+      bySeverity: [
+        { severity: "high", count: 2 },
+        { severity: "low", count: 1 }
+      ],
+      byCheck: [
+        { checkId: "check-a", count: 2 },
+        { checkId: "check-b", count: 1 }
+      ],
       byRule: [
         {
           ruleId: "rule-1",
@@ -100,6 +111,7 @@ describe("Runtime listener UI app", () => {
     expect(app.elements.ruleCount.textContent).toBe("2");
     expect(app.elements.teamCount.textContent).toBe("1");
     expect(app.elements.fileCount.textContent).toBe("1");
+    expect(app.elements.checkCount.textContent).toBe("2");
     expect(app.elements.ruleTable.innerHTML).toContain("rule-1");
     expect(app.elements.ruleTable.innerHTML).toContain("—");
     expect(app.elements.ruleTable.innerHTML).toContain("badge--team");
@@ -115,6 +127,8 @@ describe("Runtime listener UI app", () => {
     expect(app.elements.issueFeed.innerHTML).toContain("line ?");
     expect(app.elements.issueFeed.innerHTML).toContain("badge--severity-high");
     expect(app.elements.issueFeed.innerHTML).toContain("badge--team");
+    expect(app.elements.severityBreakdown.innerHTML).toContain("badge--severity-high");
+    expect(app.elements.checkBreakdown.innerHTML).toContain("check-a");
   });
 
   test("clears tables when report is missing", () => {
@@ -124,11 +138,13 @@ describe("Runtime listener UI app", () => {
     app.renderSummary();
     app.renderRules();
     app.renderFiles();
+    app.renderBreakdowns();
 
     expect(app.elements.documentCount.textContent).toBe("0");
     expect(app.elements.issueCount.textContent).toBe("0");
     expect(app.elements.ruleTable.innerHTML).toBe("");
     expect(app.elements.fileTable.innerHTML).toBe("");
+    expect(app.elements.severityBreakdown.innerHTML).toContain("—");
   });
 
   test("loads initial data and updates DOM", async () => {
@@ -137,10 +153,12 @@ describe("Runtime listener UI app", () => {
       .mockReturnValueOnce(createResponse({ documents: [{ url: "a" }] }))
       .mockReturnValueOnce(createResponse({ issues: [{ ruleId: "rule-1" }] }))
       .mockReturnValueOnce(createResponse({
-        summary: { documents: 1, issues: 1, files: 1 },
+        summary: { documents: 1, issues: 1, files: 1, rules: 0, teams: 0, checks: 0 },
         byRule: [],
         byFile: [],
-        byTeam: []
+        byTeam: [],
+        bySeverity: [],
+        byCheck: []
       }));
 
     await app.loadInitialData();
@@ -156,7 +174,14 @@ describe("Runtime listener UI app", () => {
     global.fetch = jest.fn()
       .mockReturnValueOnce(createResponse({}))
       .mockReturnValueOnce(createResponse({}))
-      .mockReturnValueOnce(createResponse({ summary: { documents: 0, issues: 0, files: 0 }, byRule: [], byFile: [], byTeam: [] }));
+      .mockReturnValueOnce(createResponse({
+        summary: { documents: 0, issues: 0, files: 0, rules: 0, teams: 0, checks: 0 },
+        byRule: [],
+        byFile: [],
+        byTeam: [],
+        bySeverity: [],
+        byCheck: []
+      }));
 
     await app.loadInitialData();
 
@@ -184,10 +209,12 @@ describe("Runtime listener UI app", () => {
         document: { url: "file-a" },
         issues: [{ ruleId: "rule-1" }],
         report: {
-          summary: { documents: 1, issues: 1, files: 1 },
+          summary: { documents: 1, issues: 1, files: 1, rules: 0, teams: 0, checks: 0 },
           byRule: [],
           byFile: [],
-          byTeam: []
+          byTeam: [],
+          bySeverity: [],
+          byCheck: []
         }
       })
     });
@@ -223,7 +250,14 @@ describe("Runtime listener UI app", () => {
     global.fetch = jest.fn()
       .mockReturnValueOnce(createResponse({ documents: [] }))
       .mockReturnValueOnce(createResponse({ issues: [] }))
-      .mockReturnValueOnce(createResponse({ summary: { documents: 0, issues: 0, files: 0 }, byRule: [], byFile: [], byTeam: [] }));
+      .mockReturnValueOnce(createResponse({
+        summary: { documents: 0, issues: 0, files: 0, rules: 0, teams: 0, checks: 0 },
+        byRule: [],
+        byFile: [],
+        byTeam: [],
+        bySeverity: [],
+        byCheck: []
+      }));
     const eventSourceSpy = jest.fn();
     global.EventSource = class {
       constructor() {

@@ -3,6 +3,7 @@ class ReportBuilder {
     const byRule = new Map();
     const byFile = new Map();
     const byTeam = new Map();
+    const counts = this.buildCountMaps(issues);
     const stylesheetIssuesByFile = this.buildStylesheetIssueMap({ documents, issues });
 
     for (const issue of issues) {
@@ -41,7 +42,10 @@ class ReportBuilder {
       summary: {
         documents: documents.length,
         issues: issues.length,
-        files: byFile.size
+        files: byFile.size,
+        rules: byRule.size,
+        teams: byTeam.size,
+        checks: counts.checks.size
       },
       byRule: this.sortByCount(byRule, (entry) => ({
         ruleId: entry.ruleId,
@@ -66,7 +70,9 @@ class ReportBuilder {
         teamName: entry.teamName,
         issueCount: entry.issueCount,
         rules: this.sortRuleCounts(entry.rules)
-      }))
+      })),
+      bySeverity: this.sortCountMap(counts.severities, "severity"),
+      byCheck: this.sortCountMap(counts.checks, "checkId")
     };
   }
 
