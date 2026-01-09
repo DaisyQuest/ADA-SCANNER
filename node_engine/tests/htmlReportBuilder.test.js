@@ -1,6 +1,9 @@
 const {
   HtmlReportBuilder,
   escapeHtml,
+  normalizeToken,
+  resolveSeverityVariant,
+  renderBadge,
   renderBadgeList,
   renderFileLinks,
   renderIssuesTable,
@@ -18,12 +21,32 @@ describe("HtmlReportBuilder", () => {
     expect(renderBadgeList([], "ruleId")).toContain("—");
     expect(renderFileLinks([])).toContain("—");
 
-    const badges = renderBadgeList([{ ruleId: "rule-a", count: 2 }], "ruleId");
+    const badges = renderBadgeList([{ ruleId: "rule-a", count: 2 }], "ruleId", { variant: "rule" });
     expect(badges).toContain("rule-a");
     expect(badges).toContain("2");
+    expect(badges).toContain("badge--rule");
+
+    const severityBadges = renderBadgeList(
+      [{ severity: "High", count: 1 }],
+      "severity",
+      { variantResolver: resolveSeverityVariant }
+    );
+    expect(severityBadges).toContain("badge--severity-high");
 
     const files = renderFileLinks(["file-a.html"]);
     expect(files).toContain("file-a.html");
+  });
+
+  test("normalizes tokens and renders standalone badges", () => {
+    expect(normalizeToken("High Priority")).toBe("high-priority");
+    expect(resolveSeverityVariant("High")).toBe("severity-high");
+    expect(resolveSeverityVariant("Medium")).toBe("severity-medium");
+    expect(resolveSeverityVariant("Low")).toBe("severity-low");
+    expect(resolveSeverityVariant("")).toBe("severity-unknown");
+
+    const badge = renderBadge("Team A", null, "team");
+    expect(badge).toContain("badge--team");
+    expect(badge).toContain("Team A");
   });
 
   test("renders issue table with details and empty state", () => {
@@ -41,6 +64,8 @@ describe("HtmlReportBuilder", () => {
 
     expect(html).toContain("Missing label");
     expect(html).toContain("Add a label");
+    expect(html).toContain("badge--severity-high");
+    expect(html).toContain("badge--team");
 
     const emptyHtml = renderIssuesTable([]);
     expect(emptyHtml).toContain("No issues found");
@@ -84,6 +109,7 @@ describe("HtmlReportBuilder", () => {
 
     expect(html).toContain("Runtime Accessibility Report");
     expect(html).toContain("rule-a");
+    expect(html).toContain("badge--severity-high");
   });
 
   test("builds a report with empty sections", () => {
@@ -166,6 +192,7 @@ describe("HtmlReportBuilder", () => {
     expect(html).toContain("Linked stylesheet issues");
     expect(html).toContain("styles.css");
     expect(html).toContain("theme.css");
+    expect(html).toContain("badge--file");
   });
 
   test("builds a file HTML report without rule data", () => {

@@ -44,6 +44,60 @@ const formatCounts = (items, label) => {
   return items.map((entry) => `${entry[label]} (${entry.count})`).join(", ");
 };
 
+const normalizeToken = (value) =>
+  String(value ?? "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "") || "unknown";
+
+const resolveSeverityVariant = (severity) => {
+  const normalized = normalizeToken(severity);
+  if (["critical", "high"].includes(normalized)) {
+    return "severity-high";
+  }
+  if (["medium", "moderate"].includes(normalized)) {
+    return "severity-medium";
+  }
+  if (["low", "minor"].includes(normalized)) {
+    return "severity-low";
+  }
+  return "severity-unknown";
+};
+
+const renderBadge = ({ label, count, variant = "rule" }) => {
+  const safeLabel = label?.toString().trim() || "Unknown";
+  const countHtml = Number.isFinite(count) ? `<span class="badge-count">${count}</span>` : "";
+  return `
+    <span class="badge badge--${variant}">
+      <span>${safeLabel}</span>
+      ${countHtml}
+    </span>
+  `;
+};
+
+const renderBadgeGroup = (items, labelKey, { countKey = "count", variant = "rule", variantResolver } = {}) => {
+  if (!Array.isArray(items) || !items.length) {
+    return `<span class="muted">—</span>`;
+  }
+
+  return `
+    <div class="badge-group">
+      ${items
+        .map((entry) => {
+          const resolvedVariant = variantResolver
+            ? variantResolver(entry[labelKey])
+            : variant;
+          return renderBadge({
+            label: entry[labelKey],
+            count: entry[countKey],
+            variant: resolvedVariant
+          });
+        })
+        .join("")}
+    </div>
+  `;
+};
+
 const buildDownloadName = (filePath, extension = "json") => {
   const safe = String(filePath)
     .replace(/[^a-z0-9_-]+/gi, "-")
@@ -61,12 +115,19 @@ const renderRules = () => {
   elements.ruleTable.innerHTML = state.report.byRule
     .map((rule) => {
       const files = rule.files.length ? rule.files.join(", ") : "—";
+      const severityVariant = resolveSeverityVariant(rule.severity || "");
+      const teamBadge = renderBadge({ label: rule.teamName || "Unassigned", variant: "team" });
+      const severityBadge = renderBadge({
+        label: rule.severity || "n/a",
+        variant: severityVariant
+      });
+      const countBadge = renderBadge({ label: "Issues", count: rule.count, variant: "count" });
       return `
         <tr>
           <td><strong>${rule.ruleId}</strong><br /><span class="muted">${rule.description}</span></td>
-          <td>${rule.teamName || "Unassigned"}</td>
-          <td>${rule.severity || "n/a"}</td>
-          <td>${rule.count}</td>
+          <td>${teamBadge}</td>
+          <td>${severityBadge}</td>
+          <td>${countBadge}</td>
           <td>${files}</td>
         </tr>
       `;
@@ -82,9 +143,14 @@ const renderFiles = () => {
 
   elements.fileTable.innerHTML = state.report.byFile
     .map((file) => {
-      const topRules = file.rules.slice(0, 3).map((rule) => `${rule.ruleId} (${rule.count})`).join(", ");
-      const severities = formatCounts(file.severities ?? [], "severity");
-      const stylesheetIssues = formatCounts(file.linkedStylesheetsWithIssues ?? [], "filePath");
+      const topRules = file.rules.length
+        ? renderBadgeGroup(file.rules.slice(0, 3), "ruleId", { variant: "rule" })
+        : null;
+      const severities = renderBadgeGroup(file.severities ?? [], "severity", {
+        variantResolver: resolveSeverityVariant
+      });
+      const stylesheetIssues = renderBadgeGroup(file.linkedStylesheetsWithIssues ?? [], "filePath", { variant: "file" });
+      const teams = renderBadgeGroup(file.teams ?? [], "teamName", { variant: "team" });
       const downloadUrl = `/report/file?path=${encodeURIComponent(file.filePath)}`;
       const downloadHtmlUrl = `/report/file?path=${encodeURIComponent(file.filePath)}&format=html`;
       const downloadName = buildDownloadName(file.filePath);
@@ -95,6 +161,7 @@ const renderFiles = () => {
           <td>${file.issueCount}</td>
           <td>${topRules || "—"}</td>
           <td>${severities}</td>
+          <td>${teams}</td>
           <td>${stylesheetIssues}</td>
           <td>
             <a class="pill-button" href="${downloadUrl}" download="${downloadName}">Save JSON</a>
@@ -109,17 +176,27 @@ const renderFiles = () => {
 const renderIssues = () => {
   const issues = state.issues.slice(-8).reverse();
   elements.issueFeed.innerHTML = issues
-    .map((issue) => `
-      <div class="issue-item">
+    .map((issue) => {
+      const severityVariant = resolveSeverityVariant(issue.severity || "");
+      const issueClass = `issue-item issue-item--${severityVariant}`;
+      const ruleBadge = renderBadge({ label: issue.ruleId, variant: "rule" });
+      const severityBadge = renderBadge({ label: issue.severity || "n/a", variant: severityVariant });
+      const teamBadge = renderBadge({ label: issue.teamName || "Unassigned", variant: "team" });
+      return `
+      <div class="${issueClass}">
         <div class="issue-title">
           ${issue.message}
-          <span class="badge">${issue.ruleId}</span>
+          ${ruleBadge}
         </div>
         <div class="issue-meta">
-          ${issue.filePath} • line ${issue.line ?? "?"} • ${issue.teamName || "Unassigned"}
+          ${issue.filePath} • line ${issue.line ?? "?"}
+        </div>
+        <div class="issue-meta">
+          ${severityBadge} ${teamBadge}
         </div>
       </div>
-    `)
+    `;
+    })
     .join("");
 };
 
@@ -187,6 +264,7 @@ if (shouldAutoBootstrap) {
   bootstrap();
 }
 
+/* istanbul ignore next */
 if (typeof module !== "undefined") {
   module.exports = {
     state,
@@ -200,6 +278,10 @@ if (typeof module !== "undefined") {
     renderIssues,
     renderAll,
     formatCounts,
+    normalizeToken,
+    resolveSeverityVariant,
+    renderBadge,
+    renderBadgeGroup,
     buildDownloadName,
     loadInitialData,
     connectStream,

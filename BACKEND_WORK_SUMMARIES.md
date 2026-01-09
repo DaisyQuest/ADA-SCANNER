@@ -42,3 +42,5 @@
 2026-01-09 - Enhance node engine reflow detection, extension spider mode, and popup controls with comprehensive tests. (SPEC-008, SPEC-013, SPEC-019)
 2026-01-09 - Expanded device-dependent event detection and improved runtime highlight tooltips in node engine. (SPEC-008, SPEC-013, SPEC-019)
 2026-01-09 - Enhanced iframe and freemarker static checks with expanded tests (SPEC-008, SPEC-013)
+2026-01-09 - Added iframe/AJAX capture metadata in node engine extension and listener with tests. (SPEC-019)
+2026-01-09 - Enhanced runtime listener UI/report styling with badge variants and tests. (SPEC-019)

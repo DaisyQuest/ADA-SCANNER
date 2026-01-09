@@ -71,6 +71,24 @@
       }
     };
 
+    const getFrameContext = () => {
+      const isTopFrame = windowObj.top === windowObj;
+      let topUrl = null;
+      if (!isTopFrame) {
+        try {
+          topUrl = windowObj.top?.location?.href ?? null;
+        } catch {
+          topUrl = null;
+        }
+      }
+      return {
+        isTopFrame,
+        frameUrl: windowObj.location?.href ?? null,
+        frameName: windowObj.name || null,
+        topUrl
+      };
+    };
+
     const isElementVisible = (element) => {
       if (!element) {
         return false;
@@ -123,7 +141,11 @@
     };
 
     const captureOnce = async () => {
-      const result = await forwarder.send({ force: true });
+      const result = await forwarder.send({
+        force: true,
+        changeSource: "manual",
+        frameContext: getFrameContext()
+      });
       if (result?.ok === false) {
         return { ok: false, error: result.error?.message ?? "Capture failed" };
       }
@@ -140,7 +162,7 @@
 
       observer = new windowObj.MutationObserver(() => {
         // schedule can be very chatty; keep log minimal
-        forwarder.schedule();
+        forwarder.schedule({ changeSource: "mutation", frameContext: getFrameContext() });
         scheduleRefresh();
       });
 
@@ -153,7 +175,7 @@
 
       // Force an immediate send on start and log failures
       Promise.resolve()
-          .then(() => forwarder.send())
+          .then(() => forwarder.send({ changeSource: "initial", frameContext: getFrameContext() }))
           .then((result) => {
             if (result?.ok === false) {
               console.warn("[ADA] initial send failed", result.error ?? result.status ?? "");

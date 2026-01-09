@@ -74,11 +74,15 @@ describe("Extension forwarder utilities", () => {
       title: "Title",
       contentType: "text/html",
       kind: "html",
+      changeSource: "initial",
+      frameContext: null,
       Url: "http://example",
       Html: html,
       Title: "Title",
       ContentType: "text/html",
-      StatusCode: 200
+      StatusCode: 200,
+      ChangeSource: "initial",
+      FrameContext: null
     });
 
     const hashA = createHash("abc");
@@ -106,9 +110,12 @@ describe("Extension forwarder utilities", () => {
     const firstSend = await forwarder.send();
     expect(fetchFn).toHaveBeenCalledTimes(1);
     expect(firstSend).toEqual({ ok: true });
+    const firstPayload = JSON.parse(fetchFn.mock.calls[0][1].body);
+    expect(firstPayload.changeSource).toBe("initial");
+    expect(firstPayload.frameContext).toBeNull();
 
     document.body.innerHTML = "<div>Changed</div>";
-    forwarder.schedule();
+    forwarder.schedule({ changeSource: "mutation", frameContext: { isTopFrame: true } });
 
     await new Promise((resolve) => setTimeout(resolve, 5));
     expect(fetchFn).toHaveBeenCalledTimes(2);
@@ -206,6 +213,31 @@ describe("Extension forwarder utilities", () => {
     await forwarder.send();
     await forwarder.send({ force: true });
     expect(fetchFn).toHaveBeenCalledTimes(2);
+  });
+
+  test("defaults scheduled sends to mutation change source", async () => {
+    jest.useFakeTimers();
+    const fetchFn = jest.fn().mockResolvedValue({ ok: true, json: jest.fn().mockResolvedValue({}) });
+    const getConfig = jest.fn().mockResolvedValue({ serverUrl: DEFAULT_SERVER_URL });
+
+    document.body.innerHTML = "<div>Stable</div>";
+    const forwarder = createForwarder({
+      fetchFn,
+      documentRoot: document,
+      location: window.location,
+      getConfig,
+      debounceMs: 5
+    });
+
+    await forwarder.send();
+    document.body.innerHTML = "<div>Changed</div>";
+    forwarder.schedule();
+    jest.runAllTimers();
+    await Promise.resolve();
+
+    const scheduledPayload = JSON.parse(fetchFn.mock.calls[1][1].body);
+    expect(scheduledPayload.changeSource).toBe("mutation");
+    jest.useRealTimers();
   });
 
   test("reads default config", async () => {
@@ -672,6 +704,128 @@ describe("Extension content script", () => {
     jest.useRealTimers();
   });
 
+  test("includes frame context for initial and mutation captures", async () => {
+    jest.resetModules();
+    const observers = [];
+    const send = jest.fn(() => Promise.resolve({ ok: true }));
+    const schedule = jest.fn();
+    const windowObj = {
+      location: { href: "http://frame.test/" },
+      top: { location: { href: "http://top.test/" } },
+      name: "frame-name",
+      innerWidth: 800,
+      innerHeight: 600,
+      getComputedStyle: () => ({ display: "block", visibility: "visible" }),
+      setTimeout: setTimeoutFn,
+      clearTimeout: clearTimeoutFn,
+      MutationObserver: jest.fn(function (callback) {
+        this.observe = jest.fn();
+        this.disconnect = jest.fn();
+        this.trigger = callback;
+        observers.push(this);
+      })
+    };
+
+    const chromeApi = {
+      runtime: { onMessage: { addListener: jest.fn() } },
+      storage: { local: { get: (defaults, callback) => callback({ enabled: false, serverUrl: DEFAULT_SERVER_URL }) } }
+    };
+    globalThis.AdaForwarder = {
+      createForwarder: jest.fn(() => ({ schedule, send })),
+      getDefaultConfig: jest.fn(() => Promise.resolve({ serverUrl: DEFAULT_SERVER_URL }))
+    };
+    globalThis.AdaHighlighter = {
+      createHighlighter: jest.fn(() => ({ applyHighlights: jest.fn(), clearHighlights: jest.fn() })),
+      filterIssuesForPage: jest.fn((issues) => issues ?? [])
+    };
+
+    const { createContentScript: reloadedCreateContentScript } = require("../extension/contentScript");
+    const script = reloadedCreateContentScript({
+      chromeApi,
+      documentRoot: document,
+      windowObj,
+      fetchFn: jest.fn()
+    });
+    script.start();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(send).toHaveBeenCalledWith({
+      changeSource: "initial",
+      frameContext: {
+        isTopFrame: false,
+        frameUrl: "http://frame.test/",
+        frameName: "frame-name",
+        topUrl: "http://top.test/"
+      }
+    });
+
+    observers[0].trigger([]);
+    expect(schedule).toHaveBeenCalledWith({
+      changeSource: "mutation",
+      frameContext: {
+        isTopFrame: false,
+        frameUrl: "http://frame.test/",
+        frameName: "frame-name",
+        topUrl: "http://top.test/"
+      }
+    });
+  });
+
+  test("handles blocked top frame access when building frame context", async () => {
+    jest.resetModules();
+    const send = jest.fn(() => Promise.resolve({ ok: true }));
+    const blockedTop = {};
+    Object.defineProperty(blockedTop, "location", {
+      get: () => {
+        throw new Error("blocked");
+      }
+    });
+
+    const windowObj = {
+      location: { href: "http://frame.test/" },
+      top: blockedTop,
+      name: "frame-name",
+      innerWidth: 800,
+      innerHeight: 600,
+      getComputedStyle: () => ({ display: "block", visibility: "visible" }),
+      setTimeout: setTimeoutFn,
+      clearTimeout: clearTimeoutFn,
+      MutationObserver: jest.fn(function (callback) {
+        this.observe = jest.fn();
+        this.disconnect = jest.fn();
+        this.trigger = callback;
+      })
+    };
+
+    const chromeApi = {
+      runtime: { onMessage: { addListener: jest.fn() } },
+      storage: { local: { get: (defaults, callback) => callback({ enabled: false, serverUrl: DEFAULT_SERVER_URL }) } }
+    };
+    globalThis.AdaForwarder = {
+      createForwarder: jest.fn(() => ({ schedule: jest.fn(), send })),
+      getDefaultConfig: jest.fn(() => Promise.resolve({ serverUrl: DEFAULT_SERVER_URL }))
+    };
+    globalThis.AdaHighlighter = {
+      createHighlighter: jest.fn(() => ({ applyHighlights: jest.fn(), clearHighlights: jest.fn() })),
+      filterIssuesForPage: jest.fn((issues) => issues ?? [])
+    };
+
+    const { createContentScript: reloadedCreateContentScript } = require("../extension/contentScript");
+    const script = reloadedCreateContentScript({
+      chromeApi,
+      documentRoot: document,
+      windowObj,
+      fetchFn: jest.fn()
+    });
+    script.start();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(send).toHaveBeenCalledWith({
+      changeSource: "initial",
+      frameContext: expect.objectContaining({ topUrl: null })
+    });
+  });
+
   test("logs when initial send fails", async () => {
     const errorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
     const chromeApi = {
@@ -1084,8 +1238,9 @@ describe("Extension content script", () => {
   });
 
   test("captures once when spider capture message arrives", async () => {
+    jest.resetModules();
     const messageListeners = [];
-    const fetchFn = jest.fn().mockResolvedValue({ ok: true, json: jest.fn().mockResolvedValue({}) });
+    const send = jest.fn(() => Promise.resolve({ ok: true }));
     const chromeApi = {
       runtime: {
         onMessage: {
@@ -1099,22 +1254,32 @@ describe("Extension content script", () => {
       }
     };
 
+    globalThis.AdaForwarder = {
+      createForwarder: jest.fn(() => ({ schedule: jest.fn(), send })),
+      getDefaultConfig: jest.fn(() => Promise.resolve({ serverUrl: DEFAULT_SERVER_URL }))
+    };
     globalThis.AdaHighlighter = {
       createHighlighter: jest.fn(() => ({ applyHighlights: jest.fn(), clearHighlights: jest.fn() })),
       filterIssuesForPage: jest.fn((issues) => issues ?? [])
     };
 
-    createContentScript({
+    const { createContentScript: reloadedCreateContentScript } = require("../extension/contentScript");
+    reloadedCreateContentScript({
       chromeApi,
       documentRoot: document,
       windowObj: window,
-      fetchFn
+      fetchFn: jest.fn()
     });
 
     const response = await new Promise((resolve) => {
       messageListeners[0]({ type: "spider-capture" }, null, resolve);
     });
     expect(response.ok).toBe(true);
+    expect(send).toHaveBeenCalledWith({
+      force: true,
+      changeSource: "manual",
+      frameContext: expect.objectContaining({ isTopFrame: true })
+    });
   });
 
   test("reports errors when spider capture fails", async () => {

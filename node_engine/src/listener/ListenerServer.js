@@ -238,6 +238,7 @@ class ListenerServer extends EventEmitter {
               return;
             }
 
+            const captureMetadata = this.buildCaptureMetadata(payload);
             const result = this.scanner.scanDocument({
               rulesRoot: this.rulesRoot,
               url: payload.url,
@@ -245,16 +246,17 @@ class ListenerServer extends EventEmitter {
               kind: payload.kind ?? "html",
               contentType: payload.contentType ?? "text/html"
             });
+            const document = { ...result.document, capture: captureMetadata };
 
             this.payloadHashes.add(payloadHash);
-            this.documents.push(result.document);
+            this.documents.push(document);
             this.addIssues(result.issues);
             const report = this.reportBuilder.build({
               documents: this.documents,
               issues: this.issues
             });
             const capturePayload = {
-              document: result.document,
+              document,
               issues: result.issues,
               report
             };
@@ -262,7 +264,7 @@ class ListenerServer extends EventEmitter {
             this.broadcastEvent("capture", capturePayload);
 
             this.writeJson(response, 200, {
-              document: result.document,
+              document,
               issues: result.issues,
               report
             }, request);
@@ -363,6 +365,15 @@ class ListenerServer extends EventEmitter {
     hash.update("::");
     hash.update(String(payload.html ?? ""));
     return hash.digest("hex");
+  }
+
+  buildCaptureMetadata(payload) {
+    const changeSource = payload?.changeSource ?? payload?.ChangeSource ?? "initial";
+    const frameContext = payload?.frameContext ?? payload?.FrameContext ?? null;
+    return {
+      changeSource,
+      frameContext
+    };
   }
 
   createReportFilename(filePath, extension = "json") {
