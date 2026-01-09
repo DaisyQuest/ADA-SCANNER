@@ -49,7 +49,9 @@ describe("ListenerServer", () => {
     const capture = await postJson(`${baseUrl}/capture`, {
       url: "http://example",
       html: "<input />",
-      kind: "html"
+      kind: "html",
+      changeSource: "initial",
+      frameContext: { isTopFrame: true }
     });
     expect(capture.status).toBe(200);
 
@@ -64,6 +66,10 @@ describe("ListenerServer", () => {
     const documents = await fetch(`${baseUrl}/documents`);
     const documentsPayload = await documents.json();
     expect(documentsPayload.documents).toHaveLength(1);
+    expect(documentsPayload.documents[0].capture).toEqual({
+      changeSource: "initial",
+      frameContext: { isTopFrame: true }
+    });
 
     const issues = await fetch(`${baseUrl}/issues`);
     const issuesPayload = await issues.json();
@@ -308,6 +314,11 @@ describe("ListenerServer", () => {
 
     const key = server.createIssueKey({});
     expect(key).toContain("::");
+
+    const metadata = server.buildCaptureMetadata({});
+    expect(metadata).toEqual({ changeSource: "initial", frameContext: null });
+    const pascalMetadata = server.buildCaptureMetadata({ ChangeSource: "mutation", FrameContext: { frameName: "frame" } });
+    expect(pascalMetadata).toEqual({ changeSource: "mutation", frameContext: { frameName: "frame" } });
   });
 
   test("matches wildcard origins and allows any when configured", () => {

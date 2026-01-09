@@ -8,20 +8,53 @@ const escapeHtml = (value) =>
 
 const normalizeList = (items) => (Array.isArray(items) ? items : []);
 
-const renderBadge = (label, count) => `
-  <span class="badge">
-    <span class="badge-label">${escapeHtml(label)}</span>
-    <span class="badge-count">${escapeHtml(count)}</span>
-  </span>
-`;
+const normalizeToken = (value) =>
+  String(value ?? "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "") || "unknown";
 
-const renderBadgeList = (items, labelKey) => {
+const resolveSeverityVariant = (severity) => {
+  const normalized = normalizeToken(severity);
+  if (["critical", "high"].includes(normalized)) {
+    return "severity-high";
+  }
+  if (["medium", "moderate"].includes(normalized)) {
+    return "severity-medium";
+  }
+  if (["low", "minor"].includes(normalized)) {
+    return "severity-low";
+  }
+  return "severity-unknown";
+};
+
+const renderBadge = (label, count, variant = "rule") => {
+  const safeLabel = label?.toString().trim() || "Unknown";
+  const countHtml = Number.isFinite(count)
+    ? `<span class="badge-count">${escapeHtml(count)}</span>`
+    : "";
+  return `
+    <span class="badge badge--${variant}">
+      <span class="badge-label">${escapeHtml(safeLabel)}</span>
+      ${countHtml}
+    </span>
+  `;
+};
+
+const renderBadgeList = (items, labelKey, { countKey = "count", variant = "rule", variantResolver } = {}) => {
   const list = normalizeList(items);
   if (!list.length) {
     return "<span class=\"muted\">—</span>";
   }
 
-  return list.map((item) => renderBadge(item[labelKey], item.count)).join("");
+  return list
+    .map((item) => {
+      const resolvedVariant = variantResolver
+        ? variantResolver(item[labelKey])
+        : variant;
+      return renderBadge(item[labelKey], item[countKey], resolvedVariant);
+    })
+    .join("");
 };
 
 const renderFileLinks = (files) => {
@@ -38,12 +71,18 @@ const renderIssuesTable = (issues) => {
     .map((issue) => {
       const evidence = issue.evidence ? escapeHtml(issue.evidence) : "—";
       const recommendation = issue.recommendation ? escapeHtml(issue.recommendation) : "—";
+      const teamBadge = renderBadge(issue.teamName ?? "unassigned", null, "team");
+      const severityBadge = renderBadge(
+        issue.severity ?? "unspecified",
+        null,
+        resolveSeverityVariant(issue.severity)
+      );
       return `
         <tr>
           <td>${escapeHtml(issue.ruleId ?? "unknown")}</td>
           <td>${escapeHtml(issue.message ?? "")}</td>
-          <td>${escapeHtml(issue.teamName ?? "unassigned")}</td>
-          <td>${escapeHtml(issue.severity ?? "unspecified")}</td>
+          <td>${teamBadge}</td>
+          <td>${severityBadge}</td>
           <td>${escapeHtml(issue.line ?? "—")}</td>
           <td>
             <details>
@@ -99,8 +138,12 @@ const buildHtmlPage = ({ title, summaryHtml, sectionsHtml }) => `
           --text: #1a1f2c;
           --muted: #5d6b82;
           --primary: #1f4fd6;
+          --primary-soft: #e0e9ff;
           --border: #e2e7f0;
           --shadow: 0 12px 24px rgba(23, 32, 49, 0.08);
+          --success: #16a34a;
+          --warning: #f59e0b;
+          --danger: #ef4444;
         }
 
         * { box-sizing: border-box; }
@@ -112,7 +155,7 @@ const buildHtmlPage = ({ title, summaryHtml, sectionsHtml }) => `
         }
         header {
           padding: 28px 40px 20px;
-          background: var(--panel);
+          background: linear-gradient(120deg, #ffffff 0%, #eef3ff 100%);
           border-bottom: 1px solid var(--border);
         }
         header h1 {
@@ -140,6 +183,16 @@ const buildHtmlPage = ({ title, summaryHtml, sectionsHtml }) => `
           border-radius: 12px;
           border: 1px solid var(--border);
           box-shadow: var(--shadow);
+          position: relative;
+          overflow: hidden;
+        }
+        .summary-card::after {
+          content: "";
+          position: absolute;
+          inset: 0;
+          border-top: 4px solid var(--primary);
+          opacity: 0.2;
+          pointer-events: none;
         }
         .summary-label {
           font-size: 13px;
@@ -186,11 +239,52 @@ const buildHtmlPage = ({ title, summaryHtml, sectionsHtml }) => `
           padding: 4px 10px;
           border-radius: 999px;
           border: 1px solid var(--border);
-          background: #f1f5ff;
+          background: var(--primary-soft);
           color: var(--primary);
           font-size: 12px;
           font-weight: 600;
           margin: 2px 4px 2px 0;
+        }
+        .badge--rule {
+          background: #e0f2fe;
+          color: #0369a1;
+          border-color: rgba(3, 105, 161, 0.2);
+        }
+        .badge--team {
+          background: #ede9fe;
+          color: #6d28d9;
+          border-color: rgba(109, 40, 217, 0.2);
+        }
+        .badge--file {
+          background: #fef9c3;
+          color: #a16207;
+          border-color: rgba(161, 98, 7, 0.2);
+        }
+        .badge--count {
+          background: #ecfccb;
+          color: #3f6212;
+          border-color: rgba(63, 98, 18, 0.2);
+        }
+        .badge--severity-high,
+        .badge--severity-critical {
+          background: #fee2e2;
+          color: #b91c1c;
+          border-color: rgba(185, 28, 28, 0.2);
+        }
+        .badge--severity-medium {
+          background: #fef3c7;
+          color: #b45309;
+          border-color: rgba(180, 83, 9, 0.2);
+        }
+        .badge--severity-low {
+          background: #dcfce7;
+          color: #15803d;
+          border-color: rgba(21, 128, 61, 0.2);
+        }
+        .badge--severity-unknown {
+          background: #e2e8f0;
+          color: #475569;
+          border-color: rgba(71, 85, 105, 0.2);
         }
         .badge-count {
           background: #e4e9fb;
@@ -285,9 +379,9 @@ class HtmlReportBuilder {
           <strong>${escapeHtml(rule.ruleId)}</strong>
           <div class="muted">${escapeHtml(rule.description)}</div>
         </td>
-        <td>${escapeHtml(rule.teamName || "Unassigned")}</td>
-        <td>${escapeHtml(rule.severity || "n/a")}</td>
-        <td>${escapeHtml(rule.count)}</td>
+        <td>${renderBadge(rule.teamName || "Unassigned", null, "team")}</td>
+        <td>${renderBadge(rule.severity || "n/a", null, resolveSeverityVariant(rule.severity))}</td>
+        <td>${renderBadge("Issues", rule.count, "count")}</td>
         <td>${renderFileLinks(rule.files)}</td>
       </tr>
     `).join("");
@@ -296,10 +390,10 @@ class HtmlReportBuilder {
       <tr>
         <td>${escapeHtml(file.filePath)}</td>
         <td>${escapeHtml(file.issueCount)}</td>
-        <td>${renderBadgeList(file.rules, "ruleId")}</td>
-        <td>${renderBadgeList(file.severities, "severity")}</td>
-        <td>${renderBadgeList(file.teams, "teamName")}</td>
-        <td>${renderBadgeList(file.linkedStylesheetsWithIssues, "filePath")}</td>
+        <td>${renderBadgeList(file.rules, "ruleId", { variant: "rule" })}</td>
+        <td>${renderBadgeList(file.severities, "severity", { variantResolver: resolveSeverityVariant })}</td>
+        <td>${renderBadgeList(file.teams, "teamName", { variant: "team" })}</td>
+        <td>${renderBadgeList(file.linkedStylesheetsWithIssues, "filePath", { variant: "file" })}</td>
       </tr>
     `).join("");
 
@@ -307,7 +401,7 @@ class HtmlReportBuilder {
       <tr>
         <td>${escapeHtml(team.teamName)}</td>
         <td>${escapeHtml(team.issueCount)}</td>
-        <td>${renderBadgeList(team.rules, "ruleId")}</td>
+        <td>${renderBadgeList(team.rules, "ruleId", { variant: "rule" })}</td>
       </tr>
     `).join("");
 
@@ -414,7 +508,7 @@ class HtmlReportBuilder {
       </section>
       <section>
         <h2>Linked stylesheet issues</h2>
-        ${renderBadgeList(report?.linkedStylesheetsWithIssues, "filePath")}
+        ${renderBadgeList(report?.linkedStylesheetsWithIssues, "filePath", { variant: "file" })}
       </section>
       <section>
         <h2>Rule breakdown</h2>
@@ -452,6 +546,9 @@ class HtmlReportBuilder {
 module.exports = {
   HtmlReportBuilder,
   escapeHtml,
+  normalizeToken,
+  resolveSeverityVariant,
+  renderBadge,
   renderBadgeList,
   renderFileLinks,
   renderIssuesTable,

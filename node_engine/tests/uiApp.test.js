@@ -80,16 +80,16 @@ describe("Runtime listener UI app", () => {
           filePath: "file-b",
           issueCount: 0,
           rules: [],
-          teams: [],
+          teams: undefined,
           severities: undefined,
           checks: [],
-          linkedStylesheetsWithIssues: []
+          linkedStylesheetsWithIssues: undefined
         }
       ],
       byTeam: [{ teamName: "team-a", issueCount: 3, rules: [{ ruleId: "rule-1", count: 3 }] }]
     };
     app.state.issues = [
-      { message: "Problem", ruleId: "rule-1", filePath: "file-a", line: 1, teamName: "team-a" },
+      { message: "Problem", ruleId: "rule-1", filePath: "file-a", line: 1, teamName: "team-a", severity: "high" },
       { message: "Other", ruleId: "rule-2", filePath: "file-b", line: null, teamName: "" }
     ];
 
@@ -102,13 +102,19 @@ describe("Runtime listener UI app", () => {
     expect(app.elements.fileCount.textContent).toBe("1");
     expect(app.elements.ruleTable.innerHTML).toContain("rule-1");
     expect(app.elements.ruleTable.innerHTML).toContain("—");
+    expect(app.elements.ruleTable.innerHTML).toContain("badge--team");
+    expect(app.elements.ruleTable.innerHTML).toContain("badge--severity-high");
     expect(app.elements.fileTable.innerHTML).toContain("Save JSON");
     expect(app.elements.fileTable.innerHTML).toContain("Save HTML");
     expect(app.elements.fileTable.innerHTML).toContain("report-file-b.json");
     expect(app.elements.fileTable.innerHTML).toContain("report-file-b.html");
-    expect(app.elements.fileTable.innerHTML).toContain("styles.css (2)");
+    expect(app.elements.fileTable.innerHTML).toContain("styles.css");
+    expect(app.elements.fileTable.innerHTML).toContain("badge--file");
+    expect(app.elements.fileTable.innerHTML).toContain("badge--team");
     expect(app.elements.issueFeed.innerHTML).toContain("Problem");
     expect(app.elements.issueFeed.innerHTML).toContain("line ?");
+    expect(app.elements.issueFeed.innerHTML).toContain("badge--severity-high");
+    expect(app.elements.issueFeed.innerHTML).toContain("badge--team");
   });
 
   test("clears tables when report is missing", () => {
@@ -239,5 +245,47 @@ describe("Runtime listener UI app", () => {
     expect(app.buildDownloadName("###")).toBe("report.json");
     expect(app.buildDownloadName("###", "html")).toBe("report.html");
     expect(app.buildDownloadName("file-a", "html")).toBe("report-file-a.html");
+  });
+
+  test("renders badge helpers with variants and empty states", () => {
+    const app = require("../src/listener/ui/assets/app");
+    expect(app.normalizeToken("High Priority")).toBe("high-priority");
+    expect(app.normalizeToken(null)).toBe("unknown");
+    expect(app.resolveSeverityVariant("High")).toBe("severity-high");
+    expect(app.resolveSeverityVariant("Medium")).toBe("severity-medium");
+    expect(app.resolveSeverityVariant("Low")).toBe("severity-low");
+    expect(app.resolveSeverityVariant("")).toBe("severity-unknown");
+
+    const badge = app.renderBadge({ label: "Rule-1", count: 2, variant: "rule" });
+    expect(badge).toContain("badge--rule");
+    expect(badge).toContain("Rule-1");
+    expect(badge).toContain("2");
+
+    const badgeNoCount = app.renderBadge({ label: "No Count", variant: "team" });
+    expect(badgeNoCount).toContain("badge--team");
+    expect(badgeNoCount).not.toContain("badge-count");
+
+    const badgeFallback = app.renderBadge({ label: null, variant: "rule" });
+    expect(badgeFallback).toContain("Unknown");
+
+    const group = app.renderBadgeGroup([{ ruleId: "rule-1", count: 1 }], "ruleId", { variant: "rule" });
+    expect(group).toContain("badge-group");
+    expect(group).toContain("badge--rule");
+
+    const emptyGroup = app.renderBadgeGroup([], "ruleId", { variant: "rule" });
+    expect(emptyGroup).toContain("—");
+
+    const nullGroup = app.renderBadgeGroup(null, "ruleId", { variant: "rule" });
+    expect(nullGroup).toContain("—");
+
+    const resolvedGroup = app.renderBadgeGroup(
+      [{ severity: "critical", count: 1 }],
+      "severity",
+      { variantResolver: app.resolveSeverityVariant }
+    );
+    expect(resolvedGroup).toContain("badge--severity-high");
+
+    expect(app.formatCounts([], "ruleId")).toBe("—");
+    expect(app.formatCounts([{ ruleId: "rule-1", count: 2 }], "ruleId")).toBe("rule-1 (2)");
   });
 });

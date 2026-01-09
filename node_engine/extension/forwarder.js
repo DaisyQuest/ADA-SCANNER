@@ -54,7 +54,9 @@
                            title = null,
                            contentType = "text/html",
                            statusCode = 200,
-                           kind = "html"
+                           kind = "html",
+                           changeSource = "initial",
+                           frameContext = null
                          }) => ({
     // Node listener (required)
     url,
@@ -62,13 +64,17 @@
     title,
     contentType,
     kind,
+    changeSource,
+    frameContext,
 
     // .NET listener (safe duplicates)
     Url: url,
     Html: html,
     Title: title,
     ContentType: contentType,
-    StatusCode: statusCode
+    StatusCode: statusCode,
+    ChangeSource: changeSource,
+    FrameContext: frameContext
   });
 
   const createHash = (value) => {
@@ -102,7 +108,7 @@
     let lastHash = null;
     let timeout = null;
 
-    const send = async ({ force = false } = {}) => {
+    const send = async ({ force = false, changeSource = "initial", frameContext = null } = {}) => {
       const html = normalizeHtml(documentRoot);
       const result = force ? { shouldSend: true, nextHash: createHash(html) } : shouldForwardUpdate(lastHash, html);
       lastHash = result.nextHash;
@@ -115,7 +121,9 @@
         url: location.href,
         html,
         contentType: "text/html; charset=utf-8",
-        statusCode: 200
+        statusCode: 200,
+        changeSource,
+        frameContext
       });
 
       let resp;
@@ -148,11 +156,11 @@
       return { ok: true };
     };
 
-    const schedule = () => {
+    const schedule = ({ changeSource = "mutation", frameContext = null } = {}) => {
       if (timeout) clearTimeout(timeout);
       timeout = setTimeout(() => {
         timeout = null;
-        send();
+        send({ changeSource, frameContext });
       }, debounceMs);
     };
 
