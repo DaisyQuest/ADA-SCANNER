@@ -12,13 +12,13 @@ const LayoutTableCheck = {
     const issues = [];
 
     for (const match of context.content.matchAll(tableRegex)) {
-      const attrs = match.groups?.attrs ?? "";
+      const { attrs, content } = match.groups;
       const role = getAttributeValue(attrs, "role");
-      if (role && (role.toLowerCase() === "presentation" || role.toLowerCase() === "none")) {
+      const normalizedRole = role ? role.toLowerCase() : "";
+      if (normalizedRole === "presentation" || normalizedRole === "none") {
         continue;
       }
 
-      const content = match.groups?.content ?? "";
       if (headerRegex.test(content) || captionRegex.test(content)) {
         continue;
       }

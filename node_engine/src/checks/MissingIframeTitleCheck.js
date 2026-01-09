@@ -1,8 +1,8 @@
 const { getAttributeValue } = require("./AttributeParser");
-const { getLineNumber } = require("./TextUtilities");
+const { collectFreemarkerMacros, macroNameMatches } = require("./FreemarkerUtilities");
+const { getLineNumber, getLineNumberForSnippet } = require("./TextUtilities");
 
 const iframeRegex = /<iframe\b(?<attrs>(?:[^>"']|"[^"]*"|'[^']*')*)\s*\/?>/gi;
-const freemarkerMacroRegex = /<@(?<name>[\w.-]+)\b(?<attrs>(?:[^>"']|"[^"]*"|'[^']*')*)\s*\/?>/gi;
 
 const MissingIframeTitleCheck = {
   id: "missing-iframe-title",
@@ -28,16 +28,39 @@ const MissingIframeTitleCheck = {
       });
     };
 
+    if (context.document?.querySelectorAll) {
+      for (const iframe of context.document.querySelectorAll("iframe")) {
+        const title = iframe.getAttribute("title");
+        if (title && title.trim()) {
+          continue;
+        }
+        const evidence = iframe.outerHTML;
+        issues.push({
+          ruleId: rule.id,
+          checkId: MissingIframeTitleCheck.id,
+          filePath: context.filePath,
+          line: getLineNumberForSnippet(context.content, evidence),
+          message: "Iframe missing title attribute.",
+          evidence
+        });
+      }
+
+      return issues;
+    }
+
     for (const match of context.content.matchAll(iframeRegex)) {
       recordIssue(match);
     }
 
-    for (const match of context.content.matchAll(freemarkerMacroRegex)) {
-      const macroName = match.groups?.name?.toLowerCase() ?? "";
-      if (macroName !== "iframe" && !macroName.endsWith(".iframe")) {
+    for (const macro of collectFreemarkerMacros(context.content)) {
+      if (!macroNameMatches(macro.name, ["iframe"])) {
         continue;
       }
-      recordIssue(match);
+      recordIssue({
+        groups: { attrs: macro.attrs },
+        index: macro.index,
+        0: macro.raw
+      });
     }
 
     return issues;

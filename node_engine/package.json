@@ -12,6 +12,9 @@
   "bin": {
     "static_analysis": "src/static/cli.js"
   },
+  "dependencies": {
+    "jsdom": "^24.0.0"
+  },
   "devDependencies": {
     "jest": "^29.7.0",
     "jest-environment-jsdom": "^29.7.0",

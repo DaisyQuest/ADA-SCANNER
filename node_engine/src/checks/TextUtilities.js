@@ -17,6 +17,19 @@ const getLineNumber = (content, index) => {
   return line;
 };
 
+const getLineNumberForSnippet = (content, snippet, fallbackIndex = 0) => {
+  if (!content) {
+    return 1;
+  }
+
+  const index = snippet ? content.indexOf(snippet) : -1;
+  if (index >= 0) {
+    return getLineNumber(content, index);
+  }
+
+  return getLineNumber(content, fallbackIndex);
+};
+
 const containsAttribute = (attributes, attributeName, allowBoolean = false) => {
   if (!attributes || !attributeName) {
     return false;
@@ -30,4 +43,4 @@ const containsAttribute = (attributes, attributeName, allowBoolean = false) => {
   return pattern.test(attributes);
 };
 
-module.exports = { getLineNumber, containsAttribute };
+module.exports = { getLineNumber, getLineNumberForSnippet, containsAttribute };

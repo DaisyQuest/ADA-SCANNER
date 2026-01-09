@@ -12,7 +12,8 @@ const MissingTableHeaderCheck = {
     for (const match of context.content.matchAll(tableRegex)) {
       const attrs = match.groups.attrs;
       const role = getAttributeValue(attrs, "role");
-      if (role && ["presentation", "none"].includes(role.toLowerCase())) {
+      const normalizedRole = role ? role.toLowerCase() : "";
+      if (["presentation", "none"].includes(normalizedRole)) {
         continue;
       }
 

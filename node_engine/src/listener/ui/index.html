@@ -47,6 +47,10 @@
           <div class="summary-label">Files with issues</div>
           <div class="summary-value" id="fileCount">0</div>
         </div>
+        <div class="summary-card">
+          <div class="summary-label">Checks triggered</div>
+          <div class="summary-value" id="checkCount">0</div>
+        </div>
       </section>
 
       <section class="panel-grid">
@@ -91,6 +95,28 @@
               </thead>
               <tbody id="fileTable"></tbody>
             </table>
+          </div>
+        </article>
+      </section>
+
+      <section class="panel-grid">
+        <article class="panel">
+          <header class="panel-header">
+            <h2>Severity mix</h2>
+            <p>Distribution of findings by severity across captures.</p>
+          </header>
+          <div class="panel-body">
+            <div id="severityBreakdown" class="badge-group muted">—</div>
+          </div>
+        </article>
+
+        <article class="panel">
+          <header class="panel-header">
+            <h2>Checks triggered</h2>
+            <p>Most frequently triggered checks during runtime analysis.</p>
+          </header>
+          <div class="panel-body">
+            <div id="checkBreakdown" class="badge-group muted">—</div>
           </div>
         </article>
       </section>

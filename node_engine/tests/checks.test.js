@@ -13,11 +13,24 @@ const {
 } = require("../src/checks/FixedWidthLayoutCheck");
 const { MissingLabelCheck } = require("../src/checks/MissingLabelCheck");
 const { MissingDocumentLanguageCheck } = require("../src/checks/MissingDocumentLanguageCheck");
-const { UnlabeledButtonCheck, hasButtonLabel, hasInputButtonLabel } = require("../src/checks/UnlabeledButtonCheck");
+const {
+  UnlabeledButtonCheck,
+  hasButtonLabel,
+  hasInputButtonLabel,
+  hasButtonLabelFromElement,
+  hasInputButtonLabelFromElement,
+  getMacroButtonLabel
+} = require("../src/checks/UnlabeledButtonCheck");
 const { MissingPageTitleCheck } = require("../src/checks/MissingPageTitleCheck");
 const { MissingTableHeaderCheck } = require("../src/checks/MissingTableHeaderCheck");
 const { MissingAltTextCheck } = require("../src/checks/MissingAltTextCheck");
-const { MissingLinkTextCheck, hasImageAltText } = require("../src/checks/MissingLinkTextCheck");
+const {
+  MissingLinkTextCheck,
+  hasImageAltText,
+  hasImageAltTextFromElement,
+  hasAccessibleLabelFromElement,
+  getMacroTextLabel
+} = require("../src/checks/MissingLinkTextCheck");
 const { EmptyFormLabelCheck } = require("../src/checks/EmptyFormLabelCheck");
 const { OrphanedFormLabelCheck } = require("../src/checks/OrphanedFormLabelCheck");
 const { EmptyLinkCheck, isLink } = require("../src/checks/EmptyLinkCheck");
@@ -32,7 +45,9 @@ const {
   MissingSkipLinkCheck,
   normalizeText,
   isSkipLabel,
-  isFocusable
+  isFocusable,
+  isFocusableElement,
+  getMacroLabelSource
 } = require("../src/checks/MissingSkipLinkCheck");
 const { NonWrappingContainerCheck, isNonWrappingValue } = require("../src/checks/NonWrappingContainerCheck");
 const { InvalidAriaRoleCheck } = require("../src/checks/InvalidAriaRoleCheck");
@@ -70,6 +85,7 @@ const {
 const { parseColor } = require("../src/checks/ColorContrastAnalyzer");
 const { XamlMissingNameCheck } = require("../src/checks/XamlMissingNameCheck");
 const { getAttributeValue } = require("../src/checks/AttributeParser");
+const { JSDOM } = require("jsdom");
 
 const createContext = (content, kind = "html") => ({
   filePath: "file",
@@ -208,6 +224,18 @@ describe("MissingDocumentLanguageCheck", () => {
 
     const noTag = createContext('<body></body>', "html");
     expect(MissingDocumentLanguageCheck.run(noTag, rule)).toHaveLength(0);
+
+    const domMissing = {
+      ...missing,
+      document: new JSDOM(missing.content).window.document
+    };
+    expect(MissingDocumentLanguageCheck.run(domMissing, rule)).toHaveLength(1);
+
+    const domPresent = {
+      ...present,
+      document: new JSDOM(present.content).window.document
+    };
+    expect(MissingDocumentLanguageCheck.run(domPresent, rule)).toHaveLength(0);
   });
 });
 
@@ -257,8 +285,118 @@ describe("UnlabeledButtonCheck", () => {
       true
     );
 
+    const dom = new JSDOM('<label for="save"></label><button id="save"></button>');
+    expect(hasButtonLabelFromElement(dom.window.document.querySelector("button"), new Set(), new Set(["save"]))).toBe(true);
+
+    const domInput = new JSDOM('<input type="submit" aria-label="Save" />');
+    expect(
+      hasInputButtonLabelFromElement(domInput.window.document.querySelector("input"), new Set(), new Set())
+    ).toBe(true);
+
+    expect(getMacroButtonLabel('label="Save"', "")).toBe("Save");
+    expect(getMacroButtonLabel("", "Body")).toBe("Body");
+
+    const domLabelledBy = new JSDOM('<span id="label">Save</span><button aria-labelledby="label"></button>');
+    expect(
+      hasButtonLabelFromElement(domLabelledBy.window.document.querySelector("button"), new Set(["label"]), new Set())
+    ).toBe(true);
+
+    const domTitle = new JSDOM('<button title="Save"></button>');
+    expect(
+      hasButtonLabelFromElement(domTitle.window.document.querySelector("button"), new Set(), new Set())
+    ).toBe(true);
+
+    const domWrapped = new JSDOM('<label><button></button></label>');
+    expect(
+      hasButtonLabelFromElement(domWrapped.window.document.querySelector("button"), new Set(), new Set())
+    ).toBe(true);
+
+    const domButtonMissing = new JSDOM("<button></button>");
+    expect(
+      hasButtonLabelFromElement(domButtonMissing.window.document.querySelector("button"), new Set(), new Set())
+    ).toBe(false);
+
+    const domInputValue = new JSDOM('<input type="submit" value="Go" />');
+    expect(
+      hasInputButtonLabelFromElement(domInputValue.window.document.querySelector("input"), new Set(), new Set())
+    ).toBe(true);
+
+    const domInputLabelledBy = new JSDOM('<span id="submit-label">Submit</span><input type="submit" aria-labelledby="submit-label" />');
+    expect(
+      hasInputButtonLabelFromElement(domInputLabelledBy.window.document.querySelector("input"), new Set(["submit-label"]), new Set())
+    ).toBe(true);
+
+    const domInputTitle = new JSDOM('<input type="submit" title="Send" />');
+    expect(
+      hasInputButtonLabelFromElement(domInputTitle.window.document.querySelector("input"), new Set(), new Set())
+    ).toBe(true);
+
+    const domInputLabelFor = new JSDOM('<label for="send"></label><input id="send" type="submit" />');
+    expect(
+      hasInputButtonLabelFromElement(domInputLabelFor.window.document.querySelector("input"), new Set(["send"]), new Set(["send"]))
+    ).toBe(true);
+
+    const domInputWrapped = new JSDOM('<label><input type="submit" /></label>');
+    expect(
+      hasInputButtonLabelFromElement(domInputWrapped.window.document.querySelector("input"), new Set(), new Set())
+    ).toBe(true);
+
+    const domInputMissing = new JSDOM('<input type="submit" />');
+    expect(
+      hasInputButtonLabelFromElement(domInputMissing.window.document.querySelector("input"), new Set(), new Set())
+    ).toBe(false);
+
+    const domImageMissingAlt = new JSDOM('<input type="image" />');
+    expect(
+      hasInputButtonLabelFromElement(domImageMissingAlt.window.document.querySelector("input"), new Set(), new Set())
+    ).toBe(false);
+
     const inputIgnored = createContext('<input type="text" />', "html");
     expect(UnlabeledButtonCheck.run(inputIgnored, rule)).toHaveLength(0);
+
+    const macroButton = createContext('<@button></@button><@input type="submit" />', "html");
+    expect(UnlabeledButtonCheck.run(macroButton, rule)).toHaveLength(2);
+
+    const macroLabeledButton = createContext('<@button label="Save" />', "html");
+    expect(UnlabeledButtonCheck.run(macroLabeledButton, rule)).toHaveLength(0);
+
+    const macroInputLabel = createContext('<@input type="submit" value="Go" />', "html");
+    expect(UnlabeledButtonCheck.run(macroInputLabel, rule)).toHaveLength(0);
+
+    const macroInputIgnored = createContext('<@input type="text" />', "html");
+    expect(UnlabeledButtonCheck.run(macroInputIgnored, rule)).toHaveLength(0);
+
+    const domUnlabeled = {
+      filePath: "file",
+      content: "<button></button><input type=\"submit\" />",
+      kind: "html",
+      document: new JSDOM('<button></button><input type="submit" />').window.document
+    };
+    expect(UnlabeledButtonCheck.run(domUnlabeled, rule)).toHaveLength(2);
+
+    const domLabeled = {
+      filePath: "file",
+      content: '<button aria-label="Save"></button><input type="image" alt="Save" />',
+      kind: "html",
+      document: new JSDOM('<button aria-label="Save"></button><input type="image" alt="Save" />').window.document
+    };
+    expect(UnlabeledButtonCheck.run(domLabeled, rule)).toHaveLength(0);
+
+    const domTextButton = {
+      filePath: "file",
+      content: "<button>Save</button>",
+      kind: "html",
+      document: new JSDOM("<button>Save</button>").window.document
+    };
+    expect(UnlabeledButtonCheck.run(domTextButton, rule)).toHaveLength(0);
+
+    const domTextInput = {
+      filePath: "file",
+      content: '<input type="text" />',
+      kind: "html",
+      document: new JSDOM('<input type="text" />').window.document
+    };
+    expect(UnlabeledButtonCheck.run(domTextInput, rule)).toHaveLength(0);
   });
 });
 
@@ -297,6 +435,48 @@ describe("MissingSkipLinkCheck", () => {
       "html"
     );
     expect(MissingSkipLinkCheck.run(skipSecond, rule)).toHaveLength(1);
+
+    const macroSkip = createContext(
+      '<@link href="#main" label="Skip to content" /><button>Menu</button>',
+      "html"
+    );
+    expect(MissingSkipLinkCheck.run(macroSkip, rule)).toHaveLength(0);
+
+    const domContext = { ...skipSecond, document: new JSDOM(skipSecond.content).window.document };
+    expect(MissingSkipLinkCheck.run(domContext, rule)).toHaveLength(1);
+
+    const domSkip = { ...skipFirst, document: new JSDOM(skipFirst.content).window.document };
+    expect(MissingSkipLinkCheck.run(domSkip, rule)).toHaveLength(0);
+
+    const domMissing = { ...missing, document: new JSDOM(missing.content).window.document };
+    expect(MissingSkipLinkCheck.run(domMissing, rule)).toHaveLength(1);
+
+    const domNoAnchor = {
+      filePath: "file",
+      content: "<button>Menu</button>",
+      kind: "html",
+      document: new JSDOM("<button>Menu</button>").window.document
+    };
+    expect(MissingSkipLinkCheck.run(domNoAnchor, rule)).toHaveLength(1);
+
+    const domWrongHref = {
+      filePath: "file",
+      content: '<a href="/home">Skip</a>',
+      kind: "html",
+      document: new JSDOM('<a href="/home">Skip</a>').window.document
+    };
+    expect(MissingSkipLinkCheck.run(domWrongHref, rule)).toHaveLength(1);
+
+    const macroNonSkip = createContext('<@link href="#main" label="Jump to main" />', "html");
+    expect(MissingSkipLinkCheck.run(macroNonSkip, rule)).toHaveLength(1);
+
+    const domAriaSkip = {
+      filePath: "file",
+      content: '<a href="#main" aria-label="Skip to content"></a>',
+      kind: "html",
+      document: new JSDOM('<a href="#main" aria-label="Skip to content"></a>').window.document
+    };
+    expect(MissingSkipLinkCheck.run(domAriaSkip, rule)).toHaveLength(0);
   });
 
   test("supports aria labels, title text, and focusability checks", () => {
@@ -310,6 +490,14 @@ describe("MissingSkipLinkCheck", () => {
     expect(isFocusable("input", 'type="hidden"')).toBe(false);
     expect(isFocusable("input", "")).toBe(true);
     expect(isFocusable("button", 'disabled')).toBe(false);
+    expect(isFocusableElement(new JSDOM('<input type="hidden" />').window.document.querySelector("input"))).toBe(false);
+    expect(getMacroLabelSource('label="Skip"', "")).toBe("Skip");
+    expect(getMacroLabelSource("", "Body")).toBe("Body");
+    expect(isFocusableElement(new JSDOM('<a href="#main"></a>').window.document.querySelector("a"))).toBe(true);
+    expect(isFocusableElement(new JSDOM('<a tabindex="0"></a>').window.document.querySelector("a"))).toBe(true);
+    expect(isFocusableElement(new JSDOM('<button disabled></button>').window.document.querySelector("button"))).toBe(
+      false
+    );
 
     const ariaLabel = createContext(
       '<a href="#main" aria-label="Skip to content"></a><main id="main"></main>',
@@ -503,6 +691,9 @@ describe("LayoutTableCheck", () => {
 
     const noneRole = createContext('<table role="none"><tr><td>Cell</td></tr></table>', "html");
     expect(LayoutTableCheck.run(noneRole, rule)).toHaveLength(0);
+
+    const gridRole = createContext('<table role="grid"><tr><td>Cell</td></tr></table>', "html");
+    expect(LayoutTableCheck.run(gridRole, rule)).toHaveLength(1);
   });
 });
 
@@ -532,6 +723,18 @@ describe("MissingAltTextCheck", () => {
 
     const present = createContext('<img alt="desc" src="x" />', "html");
     expect(MissingAltTextCheck.run(present, rule)).toHaveLength(0);
+
+    const macro = createContext('<@img src="x" />', "html");
+    expect(MissingAltTextCheck.run(macro, rule)).toHaveLength(1);
+
+    const macroPresent = createContext('<@img src="x" alt="desc" />', "html");
+    expect(MissingAltTextCheck.run(macroPresent, rule)).toHaveLength(0);
+
+    const domContext = { ...missing, document: new JSDOM(missing.content).window.document };
+    expect(MissingAltTextCheck.run(domContext, rule)).toHaveLength(1);
+
+    const domPresent = { ...present, document: new JSDOM(present.content).window.document };
+    expect(MissingAltTextCheck.run(domPresent, rule)).toHaveLength(0);
   });
 });
 
@@ -580,6 +783,56 @@ describe("MissingLinkTextCheck", () => {
     expect(hasImageAltText('<img alt="" />')).toBe(false);
     expect(hasImageAltText('<img alt="  " />')).toBe(false);
     expect(hasImageAltText('<img alt="Home" />')).toBe(true);
+
+    const macro = createContext('<@link href="/" label="Home" />', "html");
+    expect(MissingLinkTextCheck.run(macro, rule)).toHaveLength(0);
+
+    const macroMissing = createContext('<@link href="/" />', "html");
+    expect(MissingLinkTextCheck.run(macroMissing, rule)).toHaveLength(1);
+
+    const nonLinkMacro = createContext("<@button />", "html");
+    expect(MissingLinkTextCheck.run(nonLinkMacro, rule)).toHaveLength(0);
+
+    const dom = new JSDOM('<a href="/"><span>Home</span></a>');
+    const domContext = {
+      filePath: "file",
+      content: '<a href="/"><span>Home</span></a>',
+      kind: "html",
+      document: dom.window.document
+    };
+    expect(MissingLinkTextCheck.run(domContext, rule)).toHaveLength(0);
+
+    const domMissing = new JSDOM('<a href="/"><img src="x" /></a>');
+    const domMissingContext = {
+      filePath: "file",
+      content: '<a href="/"><img src="x" /></a>',
+      kind: "html",
+      document: domMissing.window.document
+    };
+    expect(MissingLinkTextCheck.run(domMissingContext, rule)).toHaveLength(1);
+    expect(hasImageAltTextFromElement(domMissing.window.document.querySelector("a"))).toBe(false);
+
+    const domImage = new JSDOM('<a href="/"><img alt="Home" src="x" /></a>');
+    expect(hasImageAltTextFromElement(domImage.window.document.querySelector("a"))).toBe(true);
+    expect(getMacroTextLabel("", "Body text")).toBe("Body text");
+    expect(
+      hasAccessibleLabelFromElement(dom.window.document.querySelector("a"), new Set())
+    ).toBe(true);
+
+    const domAriaLabel = new JSDOM('<a href="/" aria-label="Home"></a>');
+    expect(
+      hasAccessibleLabelFromElement(domAriaLabel.window.document.querySelector("a"), new Set())
+    ).toBe(true);
+
+    const domTitle = new JSDOM('<a href="/" title="Home"></a>');
+    expect(
+      hasAccessibleLabelFromElement(domTitle.window.document.querySelector("a"), new Set())
+    ).toBe(true);
+
+    const domLabelledBy = new JSDOM('<span id="label">Home</span><a href="/" aria-labelledby="label"></a>');
+    expect(
+      hasAccessibleLabelFromElement(domLabelledBy.window.document.querySelector("a"), new Set(["label"]))
+    ).toBe(true);
   });
 });
 
@@ -590,6 +843,12 @@ describe("MissingIframeTitleCheck", () => {
 
     const present = createContext('<iframe title="Video" src="video"></iframe>', "html");
     expect(MissingIframeTitleCheck.run(present, rule)).toHaveLength(0);
+
+    const domContext = { ...missing, document: new JSDOM(missing.content).window.document };
+    expect(MissingIframeTitleCheck.run(domContext, rule)).toHaveLength(1);
+
+    const domPresent = { ...present, document: new JSDOM(present.content).window.document };
+    expect(MissingIframeTitleCheck.run(domPresent, rule)).toHaveLength(0);
   });
 
   test("supports quoted and templated iframe titles", () => {
@@ -609,6 +868,12 @@ describe("MissingIframeTitleCheck", () => {
 
     const macroPresent = createContext("<@iframe title=\"Video\" src=\"video\" />", "html");
     expect(MissingIframeTitleCheck.run(macroPresent, rule)).toHaveLength(0);
+
+    const blockMacroMissing = createContext("<@iframe src=\"video\"></@iframe>", "html");
+    expect(MissingIframeTitleCheck.run(blockMacroMissing, rule)).toHaveLength(1);
+
+    const blockMacroPresent = createContext("<@iframe title=\"Video\" src=\"video\"></@iframe>", "html");
+    expect(MissingIframeTitleCheck.run(blockMacroPresent, rule)).toHaveLength(0);
 
     const namespacedMissing = createContext("<@ui.iframe src=\"video\" />", "html");
     expect(MissingIframeTitleCheck.run(namespacedMissing, rule)).toHaveLength(1);

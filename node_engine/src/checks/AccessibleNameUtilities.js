@@ -59,10 +59,38 @@ const hasLabelForId = (id, labelForIds) => Boolean(id && labelForIds.has(id.toLo
 
 const hasTextContent = (content) => Boolean(content.replace(tagRegex, "").trim());
 
+const collectElementIdsFromDocument = (document) => {
+  if (!document?.querySelectorAll) {
+    return new Set();
+  }
+
+  return new Set(
+    Array.from(document.querySelectorAll("[id]"))
+      .map((element) => element.getAttribute("id"))
+      .filter((id) => id && id.trim())
+      .map((id) => id.toLowerCase())
+  );
+};
+
+const collectLabelForIdsFromDocument = (document) => {
+  if (!document?.querySelectorAll) {
+    return new Set();
+  }
+
+  return new Set(
+    Array.from(document.querySelectorAll("label[for]"))
+      .map((label) => label.getAttribute("for"))
+      .filter((id) => id && id.trim())
+      .map((id) => id.toLowerCase())
+  );
+};
+
 module.exports = {
   collectLabelForIds,
   collectLabelRanges,
   collectElementIds,
+  collectElementIdsFromDocument,
+  collectLabelForIdsFromDocument,
   isWithinLabel,
   hasAriaLabel,
   hasValidAriaLabelledBy,

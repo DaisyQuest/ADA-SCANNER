@@ -12,9 +12,12 @@ const elements = {
   ruleCount: document.getElementById("ruleCount"),
   teamCount: document.getElementById("teamCount"),
   fileCount: document.getElementById("fileCount"),
+  checkCount: document.getElementById("checkCount"),
   ruleTable: document.getElementById("ruleTable"),
   fileTable: document.getElementById("fileTable"),
-  issueFeed: document.getElementById("issueFeed")
+  issueFeed: document.getElementById("issueFeed"),
+  severityBreakdown: document.getElementById("severityBreakdown"),
+  checkBreakdown: document.getElementById("checkBreakdown")
 };
 
 const formatTime = () => new Date().toLocaleTimeString();
@@ -32,9 +35,10 @@ const renderSummary = () => {
   const report = state.report;
   elements.documentCount.textContent = report ? report.summary.documents : 0;
   elements.issueCount.textContent = report ? report.summary.issues : 0;
-  elements.ruleCount.textContent = report ? report.byRule.length : 0;
-  elements.teamCount.textContent = report ? report.byTeam.length : 0;
+  elements.ruleCount.textContent = report ? report.summary.rules ?? report.byRule.length : 0;
+  elements.teamCount.textContent = report ? report.summary.teams ?? report.byTeam.length : 0;
   elements.fileCount.textContent = report ? report.summary.files : 0;
+  elements.checkCount.textContent = report ? report.summary.checks ?? report.byCheck?.length ?? 0 : 0;
 };
 
 const formatCounts = (items, label) => {
@@ -200,11 +204,31 @@ const renderIssues = () => {
     .join("");
 };
 
+const renderBreakdowns = () => {
+  if (!state.report) {
+    elements.severityBreakdown.innerHTML = "—";
+    elements.checkBreakdown.innerHTML = "—";
+    return;
+  }
+
+  elements.severityBreakdown.innerHTML = renderBadgeGroup(
+    state.report.bySeverity ?? [],
+    "severity",
+    { variantResolver: resolveSeverityVariant }
+  );
+  elements.checkBreakdown.innerHTML = renderBadgeGroup(
+    state.report.byCheck ?? [],
+    "checkId",
+    { variant: "rule" }
+  );
+};
+
 const renderAll = () => {
   renderSummary();
   renderRules();
   renderFiles();
   renderIssues();
+  renderBreakdowns();
   updateTimestamp();
 };
 
@@ -276,6 +300,7 @@ if (typeof module !== "undefined") {
     renderRules,
     renderFiles,
     renderIssues,
+    renderBreakdowns,
     renderAll,
     formatCounts,
     normalizeToken,

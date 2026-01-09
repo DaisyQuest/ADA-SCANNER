@@ -1,5 +1,5 @@
 const { getAttributeValue } = require("./AttributeParser");
-const { getLineNumber } = require("./TextUtilities");
+const { getLineNumber, getLineNumberForSnippet } = require("./TextUtilities");
 
 const htmlTagRegex = /<\s*html(?<attrs>[^>]*)>/i;
 
@@ -7,6 +7,26 @@ const MissingDocumentLanguageCheck = {
   id: "missing-document-language",
   applicableKinds: ["html", "htm"],
   run(context, rule) {
+    if (context.document?.documentElement) {
+      const root = context.document.documentElement;
+      const lang = root.getAttribute("lang");
+      const xmlLang = root.getAttribute("xml:lang");
+      if ((lang && lang.trim()) || (xmlLang && xmlLang.trim())) {
+        return [];
+      }
+      const evidence = root.outerHTML;
+      return [
+        {
+          ruleId: rule.id,
+          checkId: MissingDocumentLanguageCheck.id,
+          filePath: context.filePath,
+          line: getLineNumberForSnippet(context.content, evidence),
+          message: "Document language is missing or empty.",
+          evidence
+        }
+      ];
+    }
+
     const match = context.content.match(htmlTagRegex);
     if (!match) {
       return [];
