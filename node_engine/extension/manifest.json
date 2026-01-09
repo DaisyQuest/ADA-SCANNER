@@ -3,13 +3,14 @@
   "name": "ADA Scanner Forwarder",
   "version": "0.4.0",
   "description": "Auto-forwards HTML changes to the ADA scanner listener when enabled.",
-  "permissions": ["storage", "activeTab"],
+  "permissions": ["storage", "activeTab", "tabs"],
   "host_permissions": [
     "http://localhost:*/*",
     "http://127.0.0.1:*/*"
   ],
   "action": {
-    "default_title": "Toggle ADA Scanner Forwarder"
+    "default_title": "Toggle ADA Scanner Forwarder",
+    "default_popup": "popup.html"
   },
   "background": {
     "service_worker": "background.js",
