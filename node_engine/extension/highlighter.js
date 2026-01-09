@@ -18,8 +18,9 @@
       .${HIGHLIGHT_CLASS} {
         outline: 3px solid #e11d48 !important;
         outline-offset: 2px;
-        box-shadow: 0 0 0 4px rgba(225, 29, 72, 0.15);
+        box-shadow: 0 0 0 4px rgba(225, 29, 72, 0.2);
         position: relative;
+        border-radius: 4px;
       }
       .${HIGHLIGHT_CLASS}::after {
         content: attr(${ISSUE_COUNT_ATTR});
@@ -33,6 +34,36 @@
         font-size: 11px;
         font-weight: 700;
         pointer-events: none;
+      }
+      .${HIGHLIGHT_CLASS}::before {
+        content: attr(${ISSUE_MESSAGE_ATTR});
+        position: absolute;
+        left: 0;
+        bottom: calc(100% + 8px);
+        background: #111827;
+        color: #f9fafb;
+        padding: 6px 8px;
+        border-radius: 6px;
+        font-size: 12px;
+        line-height: 1.4;
+        max-width: 260px;
+        white-space: normal;
+        opacity: 0;
+        transform: translateY(4px);
+        transition: opacity 0.15s ease, transform 0.15s ease;
+        pointer-events: none;
+        z-index: 2147483647;
+        box-shadow: 0 10px 15px rgba(0, 0, 0, 0.25);
+      }
+      .${HIGHLIGHT_CLASS}:hover::before,
+      .${HIGHLIGHT_CLASS}:focus-visible::before {
+        opacity: 1;
+        transform: translateY(0);
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .${HIGHLIGHT_CLASS}::before {
+          transition: none;
+        }
       }
     `;
     documentRoot.head.appendChild(style);

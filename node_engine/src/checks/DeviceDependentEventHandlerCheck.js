@@ -2,9 +2,12 @@ const { getLineNumber, containsAttribute } = require("./TextUtilities");
 
 const elementRegex = /<(?<tag>[a-z0-9]+)(?<attrs>[^>]*)>/gi;
 const mouseClickEvents = ["onclick", "onmousedown", "onmouseup", "ondblclick"];
+const pointerClickEvents = ["onpointerdown", "onpointerup", "onpointercancel"];
+const touchEvents = ["ontouchstart", "ontouchend", "ontouchcancel", "ontouchmove"];
 const mouseHoverEvents = ["onmouseover", "onmouseout", "onmouseenter", "onmouseleave"];
+const pointerHoverEvents = ["onpointerover", "onpointerout", "onpointerenter", "onpointerleave"];
 const keyboardEvents = ["onkeydown", "onkeypress", "onkeyup"];
-const focusEvents = ["onfocus", "onblur"];
+const focusEvents = ["onfocus", "onblur", "onfocusin", "onfocusout"];
 
 const containsAny = (attributes, names) => names.some((name) => containsAttribute(attributes, name));
 
@@ -17,14 +20,19 @@ const DeviceDependentEventHandlerCheck = {
     for (const match of context.content.matchAll(elementRegex)) {
       const attrs = match.groups?.attrs ?? "";
       const hasMouseClick = containsAny(attrs, mouseClickEvents);
+      const hasPointerClick = containsAny(attrs, pointerClickEvents);
+      const hasTouch = containsAny(attrs, touchEvents);
       const hasMouseHover = containsAny(attrs, mouseHoverEvents);
-      if (!hasMouseClick && !hasMouseHover) {
+      const hasPointerHover = containsAny(attrs, pointerHoverEvents);
+      if (!hasMouseClick && !hasPointerClick && !hasTouch && !hasMouseHover && !hasPointerHover) {
         continue;
       }
 
       const hasKeyboard = containsAny(attrs, keyboardEvents);
       const hasFocus = containsAny(attrs, focusEvents);
-      if ((hasMouseClick && !hasKeyboard) || (hasMouseHover && !hasFocus)) {
+      const requiresKeyboard = hasMouseClick || hasPointerClick || hasTouch;
+      const requiresFocus = hasMouseHover || hasPointerHover;
+      if ((requiresKeyboard && !hasKeyboard) || (requiresFocus && !hasFocus)) {
         const line = getLineNumber(context.content, match.index);
         issues.push({
           ruleId: rule.id,

@@ -40,3 +40,4 @@
 2026-01-09 - Selected backend team; added node_engine sample_files fixtures for rule violations. (SPEC-008)
 2026-01-09 - Added additional sample_files fixtures for expanded rule coverage. (SPEC-008)
 2026-01-09 - Enhance node engine reflow detection, extension spider mode, and popup controls with comprehensive tests. (SPEC-008, SPEC-013, SPEC-019)
+2026-01-09 - Expanded device-dependent event detection and improved runtime highlight tooltips in node engine. (SPEC-008, SPEC-013, SPEC-019)

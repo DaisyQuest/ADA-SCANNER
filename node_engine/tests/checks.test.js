@@ -415,11 +415,26 @@ describe("DeviceDependentEventHandlerCheck", () => {
     const clickWithKey = createContext('<div onclick="go()" onkeydown="go()"></div>', "html");
     expect(DeviceDependentEventHandlerCheck.run(clickWithKey, rule)).toHaveLength(0);
 
+    const pointerOnly = createContext('<div onpointerdown="go()"></div>', "html");
+    expect(DeviceDependentEventHandlerCheck.run(pointerOnly, rule)).toHaveLength(1);
+
+    const pointerWithKey = createContext('<div onpointerdown="go()" onkeyup="go()"></div>', "html");
+    expect(DeviceDependentEventHandlerCheck.run(pointerWithKey, rule)).toHaveLength(0);
+
+    const touchOnly = createContext('<div ontouchstart="go()"></div>', "html");
+    expect(DeviceDependentEventHandlerCheck.run(touchOnly, rule)).toHaveLength(1);
+
     const hoverOnly = createContext('<div onmouseover="show()"></div>', "html");
     expect(DeviceDependentEventHandlerCheck.run(hoverOnly, rule)).toHaveLength(1);
 
     const hoverWithFocus = createContext('<div onmouseover="show()" onfocus="show()"></div>', "html");
     expect(DeviceDependentEventHandlerCheck.run(hoverWithFocus, rule)).toHaveLength(0);
+
+    const pointerHoverOnly = createContext('<div onpointerover="show()"></div>', "html");
+    expect(DeviceDependentEventHandlerCheck.run(pointerHoverOnly, rule)).toHaveLength(1);
+
+    const pointerHoverWithFocus = createContext('<div onpointerover="show()" onfocusin="show()"></div>', "html");
+    expect(DeviceDependentEventHandlerCheck.run(pointerHoverWithFocus, rule)).toHaveLength(0);
 
     const noHandlers = createContext("<div></div>", "html");
     expect(DeviceDependentEventHandlerCheck.run(noHandlers, rule)).toHaveLength(0);
