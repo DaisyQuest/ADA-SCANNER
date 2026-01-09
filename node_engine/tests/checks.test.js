@@ -69,6 +69,7 @@ const {
 } = require("../src/checks/InsufficientContrastCheck");
 const { parseColor } = require("../src/checks/ColorContrastAnalyzer");
 const { XamlMissingNameCheck } = require("../src/checks/XamlMissingNameCheck");
+const { getAttributeValue } = require("../src/checks/AttributeParser");
 
 const createContext = (content, kind = "html") => ({
   filePath: "file",
@@ -77,6 +78,23 @@ const createContext = (content, kind = "html") => ({
 });
 
 const rule = { id: "rule-1" };
+
+describe("AttributeParser", () => {
+  test("parses double, single, and unquoted attribute values", () => {
+    const attrs = 'title="Video" aria-label=\'Label\' data-id=${id} width=400';
+    expect(getAttributeValue(attrs, "title")).toBe("Video");
+    expect(getAttributeValue(attrs, "aria-label")).toBe("Label");
+    expect(getAttributeValue(attrs, "data-id")).toBe("${id}");
+    expect(getAttributeValue(attrs, "width")).toBe("400");
+  });
+
+  test("returns null when attribute is missing or has no value", () => {
+    const attrs = "disabled title";
+    expect(getAttributeValue(attrs, "disabled")).toBeNull();
+    expect(getAttributeValue(attrs, "title")).toBeNull();
+    expect(getAttributeValue(attrs, "missing")).toBeNull();
+  });
+});
 
 describe("AbsolutePositioningCheck", () => {
   test("detects absolute positioning in markup and xaml", () => {
@@ -572,6 +590,31 @@ describe("MissingIframeTitleCheck", () => {
 
     const present = createContext('<iframe title="Video" src="video"></iframe>', "html");
     expect(MissingIframeTitleCheck.run(present, rule)).toHaveLength(0);
+  });
+
+  test("supports quoted and templated iframe titles", () => {
+    const singleQuote = createContext("<iframe title='Video' src=\"video\"></iframe>", "html");
+    expect(MissingIframeTitleCheck.run(singleQuote, rule)).toHaveLength(0);
+
+    const unquoted = createContext("<iframe title=${title} src=\"video\"></iframe>", "html");
+    expect(MissingIframeTitleCheck.run(unquoted, rule)).toHaveLength(0);
+
+    const empty = createContext("<iframe title=\"\" src=\"video\"></iframe>", "html");
+    expect(MissingIframeTitleCheck.run(empty, rule)).toHaveLength(1);
+  });
+
+  test("detects freemarker iframe macros", () => {
+    const macroMissing = createContext("<@iframe src=\"video\" />", "html");
+    expect(MissingIframeTitleCheck.run(macroMissing, rule)).toHaveLength(1);
+
+    const macroPresent = createContext("<@iframe title=\"Video\" src=\"video\" />", "html");
+    expect(MissingIframeTitleCheck.run(macroPresent, rule)).toHaveLength(0);
+
+    const namespacedMissing = createContext("<@ui.iframe src=\"video\" />", "html");
+    expect(MissingIframeTitleCheck.run(namespacedMissing, rule)).toHaveLength(1);
+
+    const nonIframeMacro = createContext("<@layout.frame src=\"video\" />", "html");
+    expect(MissingIframeTitleCheck.run(nonIframeMacro, rule)).toHaveLength(0);
   });
 });
 

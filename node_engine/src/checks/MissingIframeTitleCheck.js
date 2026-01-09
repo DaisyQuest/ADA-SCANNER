@@ -1,7 +1,8 @@
 const { getAttributeValue } = require("./AttributeParser");
 const { getLineNumber } = require("./TextUtilities");
 
-const iframeRegex = /<iframe(?<attrs>[^>]*)>/gi;
+const iframeRegex = /<iframe\b(?<attrs>(?:[^>"']|"[^"]*"|'[^']*')*)\s*\/?>/gi;
+const freemarkerMacroRegex = /<@(?<name>[\w.-]+)\b(?<attrs>(?:[^>"']|"[^"]*"|'[^']*')*)\s*\/?>/gi;
 
 const MissingIframeTitleCheck = {
   id: "missing-iframe-title",
@@ -9,11 +10,11 @@ const MissingIframeTitleCheck = {
   run(context, rule) {
     const issues = [];
 
-    for (const match of context.content.matchAll(iframeRegex)) {
+    const recordIssue = (match) => {
       const attrs = match.groups?.attrs ?? "";
       const title = getAttributeValue(attrs, "title");
       if (title && title.trim()) {
-        continue;
+        return;
       }
 
       const line = getLineNumber(context.content, match.index);
@@ -25,6 +26,18 @@ const MissingIframeTitleCheck = {
         message: "Iframe missing title attribute.",
         evidence: match[0]
       });
+    };
+
+    for (const match of context.content.matchAll(iframeRegex)) {
+      recordIssue(match);
+    }
+
+    for (const match of context.content.matchAll(freemarkerMacroRegex)) {
+      const macroName = match.groups?.name?.toLowerCase() ?? "";
+      if (macroName !== "iframe" && !macroName.endsWith(".iframe")) {
+        continue;
+      }
+      recordIssue(match);
     }
 
     return issues;
