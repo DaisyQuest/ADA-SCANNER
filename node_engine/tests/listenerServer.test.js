@@ -21,6 +21,19 @@ const createTempRules = () => {
   return root;
 };
 
+const createTempRulesWithRules = (rules) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ada-listener-"));
+  const teamDir = path.join(root, "team");
+  fs.mkdirSync(teamDir, { recursive: true });
+  rules.forEach((rule, index) => {
+    fs.writeFileSync(
+      path.join(teamDir, `rule-${index}.json`),
+      JSON.stringify(rule)
+    );
+  });
+  return root;
+};
+
 const postJson = async (url, body) =>
   fetch(url, {
     method: "POST",
@@ -373,5 +386,57 @@ describe("ListenerServer", () => {
     expect(server.getServerOrigin({ headers: {} })).toBeNull();
     expect(server.isSelfCapture("http://example", { headers: {} })).toBe(false);
     expect(server.isSelfCapture("not a url", { headers: { host: "localhost" } })).toBe(false);
+  });
+
+  test("evaluates pasted snippets for supported kinds", async () => {
+    const rulesRoot = createTempRulesWithRules([
+      {
+        id: "rule-html",
+        description: "desc",
+        severity: "low",
+        checkId: "missing-label",
+        appliesTo: "html"
+      },
+      {
+        id: "rule-css",
+        description: "desc",
+        severity: "low",
+        checkId: "focus-visible",
+        appliesTo: "css"
+      },
+      {
+        id: "rule-ftl",
+        description: "desc",
+        severity: "low",
+        checkId: "missing-label",
+        appliesTo: "ftl"
+      }
+    ]);
+    const server = new ListenerServer({ rulesRoot });
+    const port = await server.start();
+    const baseUrl = `http://localhost:${port}`;
+
+    const htmlEval = await postJson(`${baseUrl}/evaluate`, {
+      content: "<input />",
+      kind: "html"
+    });
+    const htmlPayload = await htmlEval.json();
+    expect(htmlPayload.issues).toHaveLength(1);
+
+    const cssEval = await postJson(`${baseUrl}/evaluate`, {
+      content: "a:focus{outline:none}",
+      kind: "css"
+    });
+    const cssPayload = await cssEval.json();
+    expect(cssPayload.issues).toHaveLength(1);
+
+    const ftlEval = await postJson(`${baseUrl}/evaluate/freemarker`, {
+      content: "<input />"
+    });
+    const ftlPayload = await ftlEval.json();
+    expect(ftlPayload.issues).toHaveLength(2);
+    expect(ftlPayload.issues.map((issue) => issue.ruleId).sort()).toEqual(["rule-ftl", "rule-html"]);
+
+    await server.stop();
   });
 });

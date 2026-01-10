@@ -251,4 +251,104 @@ describe("RuntimeScanner", () => {
 
     expect(result.issues).toHaveLength(1);
   });
+
+  test("scans evaluated HTML content", () => {
+    const rulesRoot = createTempRules();
+    const scanner = new RuntimeScanner();
+    const result = scanner.scanEvaluatedContent({
+      rulesRoot,
+      url: "evaluator://html/1",
+      content: "<input />",
+      kind: "html"
+    });
+
+    expect(result.issues).toHaveLength(1);
+    expect(result.document.body).toContain("<input");
+  });
+
+  test("applies rules to freemarker evaluations via sourceKind", () => {
+    const rulesRoot = createTempRules({ appliesTo: "ftl" });
+    const scanner = new RuntimeScanner();
+    const result = scanner.scanEvaluatedContent({
+      rulesRoot,
+      url: "evaluator://ftl/1",
+      content: "<input />",
+      kind: "ftl"
+    });
+
+    expect(result.issues).toHaveLength(1);
+  });
+
+  test("evaluates css checks against evaluator input", () => {
+    const rulesRoot = createTempRules({ checkId: "focus-visible", appliesTo: "css" });
+    const scanner = new RuntimeScanner();
+    const result = scanner.scanEvaluatedContent({
+      rulesRoot,
+      url: "evaluator://css/1",
+      content: "a:focus{outline:none}",
+      kind: "css"
+    });
+
+    expect(result.issues).toHaveLength(1);
+  });
+
+  test("evaluates embedded HTML in JavaScript snippets", () => {
+    const rulesRoot = createTempRules({ checkId: "missing-alt-text", appliesTo: "html" });
+    const scanner = new RuntimeScanner();
+    const result = scanner.scanEvaluatedContent({
+      rulesRoot,
+      url: "evaluator://js/1",
+      content: "const template = `<img src=\"photo.jpg\">`;",
+      kind: "js"
+    });
+
+    expect(result.issues).toHaveLength(1);
+  });
+
+  test("evaluates embedded CSS in JavaScript snippets", () => {
+    const rulesRoot = createTempRules({ checkId: "focus-visible", appliesTo: "css" });
+    const scanner = new RuntimeScanner();
+    const result = scanner.scanEvaluatedContent({
+      rulesRoot,
+      url: "evaluator://js/2",
+      content: "const styles = `a:focus{outline:none}`;",
+      kind: "js"
+    });
+
+    expect(result.issues).toHaveLength(1);
+  });
+
+  test("throws when evaluator rules root missing", () => {
+    const scanner = new RuntimeScanner();
+    expect(() => scanner.scanEvaluatedContent({
+      rulesRoot: "",
+      url: "evaluator://html/1",
+      content: "<input />",
+      kind: "html"
+    })).toThrow("Rules root is required.");
+  });
+
+  test("builds evaluation contexts with defaults and fallbacks", () => {
+    const scanner = new RuntimeScanner();
+    const htmlContexts = scanner.buildEvaluationContexts({
+      content: "<div></div>",
+      url: "evaluator://html/2"
+    });
+    expect(htmlContexts[0].kind).toBe("html");
+    expect(htmlContexts[0].document).not.toBeNull();
+
+    const jsContexts = scanner.buildEvaluationContexts({
+      content: "const value = '<div></div>';",
+      kind: "js",
+      url: "evaluator://js/3"
+    });
+    expect(jsContexts[0].sourceKind).toBe("js");
+
+    const cssContexts = scanner.buildEvaluationContexts({
+      content: "a:focus{outline:none}",
+      kind: "css",
+      url: "evaluator://css/2"
+    });
+    expect(cssContexts[0].sourceKind).toBe("css");
+  });
 });

@@ -91,7 +91,7 @@ class ListenerServer extends EventEmitter {
     const pathname = requestUrl?.pathname ?? url;
 
     // CHANGE: handle preflight
-    if (method === "OPTIONS" && pathname === "/capture") {
+    if (method === "OPTIONS" && ["/capture", "/evaluate", "/evaluate/freemarker"].includes(pathname)) {
       this.addCors(response, request);
       response.statusCode = 204;
       response.end();
@@ -272,6 +272,58 @@ class ListenerServer extends EventEmitter {
           .catch((error) => {
             this.writeJson(response, 500, { error: error.message }, request);
           });
+      return;
+    }
+
+    if (method === "POST" && (pathname === "/evaluate" || pathname === "/evaluate/freemarker")) {
+      if (!this.isOriginAllowed(request)) {
+        this.writeJson(response, 403, { error: "Origin not allowed." }, request);
+        return;
+      }
+
+      this.readBody(request)
+        .then((payload) => {
+          const content = payload?.content ?? payload?.html ?? "";
+          if (!content) {
+            this.writeJson(response, 400, { error: "Payload must include content." }, request);
+            return;
+          }
+
+          const kind = pathname === "/evaluate/freemarker"
+            ? "ftl"
+            : (payload?.kind ?? "html");
+          const url = payload?.url ?? `evaluator://${kind}/${Date.now()}`;
+          const result = this.scanner.scanEvaluatedContent({
+            rulesRoot: this.rulesRoot,
+            url,
+            content,
+            kind
+          });
+          const captureMetadata = this.buildCaptureMetadata({
+            changeSource: payload?.changeSource ?? "evaluator",
+            frameContext: payload?.frameContext ?? null
+          });
+          const document = { ...result.document, capture: captureMetadata };
+
+          this.documents.push(document);
+          this.addIssues(result.issues);
+          const report = this.reportBuilder.build({
+            documents: this.documents,
+            issues: this.issues
+          });
+          const responsePayload = {
+            document,
+            issues: result.issues,
+            report
+          };
+          this.emit("capture", responsePayload);
+          this.broadcastEvent("capture", responsePayload);
+
+          this.writeJson(response, 200, responsePayload, request);
+        })
+        .catch((error) => {
+          this.writeJson(response, 500, { error: error.message }, request);
+        });
       return;
     }
 
