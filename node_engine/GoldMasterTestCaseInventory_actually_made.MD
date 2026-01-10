@@ -113,6 +113,7 @@ This file tracks GoldMaster documents that have been implemented in `node_engine
 | HTML-GM-100 | gm-html-100-full-regression-mix-contrast-labels-headings-nav-forms-iframe.html | ✅ | Full regression mix: contrast + labels + headings + nav + forms + iframe (Combo) | Generated starter GoldMaster case. |
 | HTML-GM-101 | gm-html-101-iframe-labyrinth-with-deep-nesting.html | ✅ | Iframe labyrinth with deep nesting and form errors (MissingIframeTitleCheck + MissingLabelCheck + DuplicateIdCheck) | Added complex nesting + iframe coverage. |
 | HTML-GM-102 | gm-html-102-pointer-gesture-motion-shortcuts.html | ✅ | Pointer gestures + motion actuation + character key shortcuts (InteractionLimitsCheck) | Added WCAG 2.1 AA interaction limits coverage. |
+| HTML-GM-103 | gm-html-103-aria-role-token-mix.html | ✅ | Multi-role attribute with invalid token (InvalidAriaRoleCheck) | Added coverage for multi-role validation. |
 
 ## HTM (.htm)
 

@@ -13,6 +13,7 @@ const {
 const { getLineNumber } = require("./TextUtilities");
 
 const inputRegex = /<(input|select|textarea)(?<attrs>[^>]*)>/gi;
+const buttonInputTypes = new Set(["button", "submit", "reset", "image"]);
 
 const MissingLabelCheck = {
   id: "missing-label",
@@ -31,6 +32,10 @@ const MissingLabelCheck = {
         positionIndex += 1;
         const type = control.getAttribute("type");
         if (type && type.toLowerCase() === "hidden") {
+          continue;
+        }
+
+        if (type && buttonInputTypes.has(type.toLowerCase())) {
           continue;
         }
 
@@ -75,6 +80,10 @@ const MissingLabelCheck = {
       const attrs = match.groups.attrs;
       const type = getAttributeValue(attrs, "type");
       if (type && type.toLowerCase() === "hidden") {
+        continue;
+      }
+
+      if (type && buttonInputTypes.has(type.toLowerCase())) {
         continue;
       }
 

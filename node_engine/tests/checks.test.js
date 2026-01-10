@@ -248,6 +248,9 @@ describe("MissingLabelCheck", () => {
     const wrappedLabel = createContext('<label><input /></label>', "html");
     expect(MissingLabelCheck.run(wrappedLabel, rule)).toHaveLength(0);
 
+    const submitInput = createContext('<input type="submit" value="Send" />', "html");
+    expect(MissingLabelCheck.run(submitInput, rule)).toHaveLength(0);
+
     const domMissing = {
       filePath: "file",
       content: '<input type="text" />',
@@ -295,6 +298,14 @@ describe("MissingLabelCheck", () => {
       document: new JSDOM('<span id="label">Name</span><input aria-labelledby="label" />').window.document
     };
     expect(MissingLabelCheck.run(domLabelledBy, rule)).toHaveLength(0);
+
+    const domSubmitInput = {
+      filePath: "file",
+      content: '<input type="submit" value="Send" />',
+      kind: "html",
+      document: new JSDOM('<input type="submit" value="Send" />').window.document
+    };
+    expect(MissingLabelCheck.run(domSubmitInput, rule)).toHaveLength(0);
   });
 });
 
@@ -742,6 +753,9 @@ describe("EmptyLinkCheck", () => {
     const titled = createContext('<a href="/home" title="Home"></a>', "html");
     expect(EmptyLinkCheck.run(titled, rule)).toHaveLength(0);
 
+    const imageAlt = createContext('<a href="/home"><img src="logo.png" alt="Home" /></a>', "html");
+    expect(EmptyLinkCheck.run(imageAlt, rule)).toHaveLength(0);
+
     const notLink = createContext("<a></a>", "html");
     expect(EmptyLinkCheck.run(notLink, rule)).toHaveLength(0);
 
@@ -792,6 +806,14 @@ describe("EmptyLinkCheck", () => {
       document: new JSDOM('<a href="/home" title="Home"></a>').window.document
     };
     expect(EmptyLinkCheck.run(domTitle, rule)).toHaveLength(0);
+
+    const domImageAlt = {
+      filePath: "file",
+      content: '<a href="/home"><img src="logo.png" alt="Home" /></a>',
+      kind: "html",
+      document: new JSDOM('<a href="/home"><img src="logo.png" alt="Home" /></a>').window.document
+    };
+    expect(EmptyLinkCheck.run(domImageAlt, rule)).toHaveLength(0);
 
     const domCaseMismatch = {
       filePath: "file",
@@ -1319,6 +1341,15 @@ describe("InvalidAriaRoleCheck", () => {
 
     const valid = createContext('<div role="banner"></div>', "html");
     expect(InvalidAriaRoleCheck.run(valid, rule)).toHaveLength(0);
+
+    const validPresentation = createContext('<div role="presentation"></div>', "html");
+    expect(InvalidAriaRoleCheck.run(validPresentation, rule)).toHaveLength(0);
+
+    const validMultiRole = createContext('<div role="banner region"></div>', "html");
+    expect(InvalidAriaRoleCheck.run(validMultiRole, rule)).toHaveLength(0);
+
+    const invalidMultiRole = createContext('<div role="banner badrole"></div>', "html");
+    expect(InvalidAriaRoleCheck.run(invalidMultiRole, rule)).toHaveLength(1);
 
     const noRole = createContext("<div></div>", "html");
     expect(InvalidAriaRoleCheck.run(noRole, rule)).toHaveLength(0);
