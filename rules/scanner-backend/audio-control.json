@@ -1,0 +1,10 @@
+{
+  "id": "audio-control-001",
+  "description": "Ensure autoplay audio provides user controls to stop or adjust volume.",
+  "severity": "medium",
+  "checkId": "audio-control",
+  "appliesTo": "html, htm, cshtml, razor",
+  "recommendation": "Provide controls for autoplay audio that exceeds three seconds. (WCAG 2.1 SC 1.4.2)",
+  "wcagCriteria": "1.4.2",
+  "problemTags": "audio-control"
+}

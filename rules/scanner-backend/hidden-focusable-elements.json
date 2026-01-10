@@ -4,7 +4,7 @@
   "severity": "high",
   "checkId": "hidden-focusable",
   "appliesTo": "html, htm, cshtml, razor",
-  "recommendation": "Avoid hiding focusable elements with display:none or visibility:hidden unless they are removed from tab order.",
+  "recommendation": "Avoid hiding focusable elements with display:none or visibility:hidden unless they are removed from tab order. (WCAG 2.1 SC 2.4.7)",
   "wcagCriteria": "2.4.7",
   "problemTags": "focus-visible, hidden-elements"
 }

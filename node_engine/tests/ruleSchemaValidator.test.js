@@ -78,4 +78,16 @@ describe("RuleSchemaValidator", () => {
 
     expect(errors).toEqual([]);
   });
+
+  test("accepts new interaction checks", () => {
+    const validator = new RuleSchemaValidator();
+    const errors = validator.validate({
+      id: "rule-5",
+      description: "desc",
+      severity: "medium",
+      checkId: "interaction-limits"
+    });
+
+    expect(errors).toEqual([]);
+  });
 });

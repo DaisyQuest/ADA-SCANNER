@@ -1,0 +1,10 @@
+{
+  "id": "language-of-parts-001",
+  "description": "Identify language changes within page content.",
+  "severity": "low",
+  "checkId": "language-of-parts",
+  "appliesTo": "html, htm, cshtml, razor",
+  "recommendation": "Apply lang attributes to content that changes language. (WCAG 2.1 SC 3.1.2)",
+  "wcagCriteria": "3.1.2",
+  "problemTags": "language-of-parts"
+}

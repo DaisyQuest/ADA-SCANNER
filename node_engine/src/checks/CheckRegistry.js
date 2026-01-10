@@ -26,6 +26,20 @@ const { RedundantTitleTextCheck } = require("./RedundantTitleTextCheck");
 const { LayoutTableCheck } = require("./LayoutTableCheck");
 const { MissingAutocompleteCheck } = require("./MissingAutocompleteCheck");
 const { LabelInNameCheck } = require("./LabelInNameCheck");
+const { MediaAlternativeCheck } = require("./MediaAlternativeCheck");
+const { SensoryCharacteristicsCheck } = require("./SensoryCharacteristicsCheck");
+const { OrientationLockCheck } = require("./OrientationLockCheck");
+const { AudioControlCheck } = require("./AudioControlCheck");
+const { TextResizeCheck } = require("./TextResizeCheck");
+const { ImagesOfTextCheck } = require("./ImagesOfTextCheck");
+const { TextSpacingCheck } = require("./TextSpacingCheck");
+const { HoverFocusContentCheck } = require("./HoverFocusContentCheck");
+const { InteractionLimitsCheck } = require("./InteractionLimitsCheck");
+const { NavigationStructureCheck } = require("./NavigationStructureCheck");
+const { FocusVisibleCheck } = require("./FocusVisibleCheck");
+const { LanguageOfPartsCheck } = require("./LanguageOfPartsCheck");
+const { ErrorHandlingCheck } = require("./ErrorHandlingCheck");
+const { DuplicateIdCheck } = require("./DuplicateIdCheck");
 
 class CheckRegistry {
   constructor(checks = []) {
@@ -79,7 +93,21 @@ const createDefaultCheckRegistry = () =>
     RedundantTitleTextCheck,
     LayoutTableCheck,
     MissingAutocompleteCheck,
-    LabelInNameCheck
+    LabelInNameCheck,
+    MediaAlternativeCheck,
+    SensoryCharacteristicsCheck,
+    OrientationLockCheck,
+    AudioControlCheck,
+    TextResizeCheck,
+    ImagesOfTextCheck,
+    TextSpacingCheck,
+    HoverFocusContentCheck,
+    InteractionLimitsCheck,
+    NavigationStructureCheck,
+    FocusVisibleCheck,
+    LanguageOfPartsCheck,
+    ErrorHandlingCheck,
+    DuplicateIdCheck
   ]);
 
 module.exports = { CheckRegistry, createDefaultCheckRegistry };

@@ -1,0 +1,10 @@
+{
+  "id": "text-spacing-001",
+  "description": "Ensure text spacing can be adjusted without loss of content.",
+  "severity": "low",
+  "checkId": "text-spacing",
+  "appliesTo": "html, htm, cshtml, razor, css",
+  "recommendation": "Avoid locking line height or spacing values that prevent user overrides. (WCAG 2.1 SC 1.4.12)",
+  "wcagCriteria": "1.4.12",
+  "problemTags": "text-spacing"
+}

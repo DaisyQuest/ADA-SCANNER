@@ -4,7 +4,7 @@
   "severity": "high",
   "checkId": "missing-link-text",
   "appliesTo": "html, htm, cshtml, razor",
-  "recommendation": "Provide visible link text or aria-labels that describe the destination.",
+  "recommendation": "Provide visible link text or aria-labels that describe the destination. (WCAG 2.1 SC 2.4.4)",
   "wcagCriteria": "2.4.4",
   "problemTags": "link-text, navigation"
 }

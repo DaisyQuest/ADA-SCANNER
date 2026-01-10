@@ -1,0 +1,10 @@
+{
+  "id": "interaction-limits-001",
+  "description": "Detect interaction patterns that may block keyboard, timing, or pointer accessibility.",
+  "severity": "medium",
+  "checkId": "interaction-limits",
+  "appliesTo": "html, htm, cshtml, razor, css",
+  "recommendation": "Provide keyboard alternatives, timing controls, and motion/pointer fallbacks. (WCAG 2.1 SC 2.1.2,2.1.4,2.2.1,2.2.2,2.3.1,2.5.1,2.5.2,2.5.4,3.2.1,3.2.2)",
+  "wcagCriteria": "2.1.2,2.1.4,2.2.1,2.2.2,2.3.1,2.5.1,2.5.2,2.5.4,3.2.1,3.2.2",
+  "problemTags": "interaction-limits"
+}

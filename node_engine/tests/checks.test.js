@@ -49,6 +49,20 @@ const {
   getAccessibleNameCandidate,
   isInteractiveCandidate
 } = require("../src/checks/LabelInNameCheck");
+const { MediaAlternativeCheck } = require("../src/checks/MediaAlternativeCheck");
+const { SensoryCharacteristicsCheck, extractText } = require("../src/checks/SensoryCharacteristicsCheck");
+const { OrientationLockCheck } = require("../src/checks/OrientationLockCheck");
+const { AudioControlCheck } = require("../src/checks/AudioControlCheck");
+const { TextResizeCheck } = require("../src/checks/TextResizeCheck");
+const { ImagesOfTextCheck } = require("../src/checks/ImagesOfTextCheck");
+const { TextSpacingCheck } = require("../src/checks/TextSpacingCheck");
+const { HoverFocusContentCheck } = require("../src/checks/HoverFocusContentCheck");
+const { InteractionLimitsCheck } = require("../src/checks/InteractionLimitsCheck");
+const { NavigationStructureCheck, collectNavSequences } = require("../src/checks/NavigationStructureCheck");
+const { FocusVisibleCheck } = require("../src/checks/FocusVisibleCheck");
+const { LanguageOfPartsCheck } = require("../src/checks/LanguageOfPartsCheck");
+const { ErrorHandlingCheck, hasConfirmationControl } = require("../src/checks/ErrorHandlingCheck");
+const { DuplicateIdCheck } = require("../src/checks/DuplicateIdCheck");
 const {
   MissingSkipLinkCheck,
   normalizeText,
@@ -299,6 +313,9 @@ describe("MissingAutocompleteCheck", () => {
 
     const hidden = createContext('<input type="hidden" name="email" />', "html");
     expect(MissingAutocompleteCheck.run(hidden, rule)).toHaveLength(0);
+
+    const checkbox = createContext('<input type="checkbox" name="email" />', "html");
+    expect(MissingAutocompleteCheck.run(checkbox, rule)).toHaveLength(0);
   });
 });
 
@@ -1487,5 +1504,351 @@ describe("XamlMissingNameCheck", () => {
 
     const present = createContext('<Button AutomationProperties.Name="Save" />', "xaml");
     expect(XamlMissingNameCheck.run(present, rule)).toHaveLength(0);
+  });
+});
+
+describe("MediaAlternativeCheck", () => {
+  test("flags media missing captions and descriptions", () => {
+    const content = '<video src="clip.mp4"></video><audio src="song.mp3"></audio>';
+    const document = new JSDOM(content).window.document;
+    const issues = MediaAlternativeCheck.run({ filePath: "file", content, kind: "html", document }, rule);
+    expect(issues).toHaveLength(3);
+  });
+
+  test("accepts tracks or transcript links", () => {
+    const content = '<div><video><track kind="captions" /><track kind="descriptions" /></video><a href="#">Transcript</a></div>';
+    const document = new JSDOM(content).window.document;
+    expect(MediaAlternativeCheck.run({ filePath: "file", content, kind: "html", document }, rule)).toHaveLength(0);
+  });
+
+  test("skips aria-hidden media", () => {
+    const content = '<video aria-hidden="true"></video>';
+    const document = new JSDOM(content).window.document;
+    expect(MediaAlternativeCheck.run({ filePath: "file", content, kind: "html", document }, rule)).toHaveLength(0);
+  });
+
+  test("returns no issues without a document", () => {
+    const context = createContext('<video src="clip.mp4"></video>');
+    expect(MediaAlternativeCheck.run(context, rule)).toHaveLength(0);
+  });
+
+  test("accepts captions on audio elements", () => {
+    const content = '<audio><track kind="captions" /></audio>';
+    const document = new JSDOM(content).window.document;
+    expect(MediaAlternativeCheck.run({ filePath: "file", content, kind: "html", document }, rule)).toHaveLength(0);
+  });
+
+  test("accepts transcript-only media", () => {
+    const content = '<div><audio></audio><a href="#">Transcript</a></div>';
+    const document = new JSDOM(content).window.document;
+    expect(MediaAlternativeCheck.run({ filePath: "file", content, kind: "html", document }, rule)).toHaveLength(0);
+  });
+
+  test("accepts descriptions without captions", () => {
+    const content = '<video><track kind="descriptions" /></video>';
+    const document = new JSDOM(content).window.document;
+    const issues = MediaAlternativeCheck.run({ filePath: "file", content, kind: "html", document }, rule);
+    expect(issues).toHaveLength(1);
+    expect(issues[0].message).toContain("captions");
+  });
+});
+
+describe("SensoryCharacteristicsCheck", () => {
+  test("detects sensory-based instructions", () => {
+    const context = createContext("<p>Click the red button on the left.</p>");
+    expect(SensoryCharacteristicsCheck.run(context, rule)).toHaveLength(1);
+    expect(extractText("<script>ignore</script><p>Text</p>")).toContain("Text");
+  });
+
+  test("ignores non-instructional color mentions", () => {
+    const context = createContext("<p>The red fox jumps.</p>");
+    expect(SensoryCharacteristicsCheck.run(context, rule)).toHaveLength(0);
+  });
+
+  test("ignores content without sensory cues", () => {
+    const context = createContext("<p>Submit the form to continue.</p>");
+    expect(SensoryCharacteristicsCheck.run(context, rule)).toHaveLength(0);
+  });
+});
+
+describe("OrientationLockCheck", () => {
+  test("detects orientation locks", () => {
+    const context = createContext("screen.orientation.lock('portrait');", "js");
+    expect(OrientationLockCheck.run(context, rule)).toHaveLength(1);
+  });
+
+  test("ignores content without orientation locks", () => {
+    const context = createContext("console.log('ok');", "js");
+    expect(OrientationLockCheck.run(context, rule)).toHaveLength(0);
+  });
+});
+
+describe("AudioControlCheck", () => {
+  test("flags autoplay media without controls", () => {
+    const content = '<audio autoplay src="song.mp3"></audio>';
+    const document = new JSDOM(content).window.document;
+    expect(AudioControlCheck.run({ filePath: "file", content, kind: "html", document }, rule)).toHaveLength(1);
+  });
+
+  test("allows muted or controlled autoplay", () => {
+    const content = '<audio autoplay controls src="song.mp3"></audio>';
+    const document = new JSDOM(content).window.document;
+    expect(AudioControlCheck.run({ filePath: "file", content, kind: "html", document }, rule)).toHaveLength(0);
+  });
+
+  test("ignores non-autoplay media", () => {
+    const content = '<audio src="song.mp3"></audio>';
+    const document = new JSDOM(content).window.document;
+    expect(AudioControlCheck.run({ filePath: "file", content, kind: "html", document }, rule)).toHaveLength(0);
+  });
+
+  test("returns no issues without a document", () => {
+    const context = createContext('<audio autoplay src="song.mp3"></audio>');
+    expect(AudioControlCheck.run(context, rule)).toHaveLength(0);
+  });
+});
+
+describe("TextResizeCheck", () => {
+  test("detects text-size-adjust restrictions", () => {
+    const context = createContext(".text { text-size-adjust: none; }", "css");
+    expect(TextResizeCheck.run(context, rule)).toHaveLength(1);
+  });
+});
+
+describe("ImagesOfTextCheck", () => {
+  test("detects image classes that imply text", () => {
+    const context = createContext('<img class="text-image" src="text.png" />');
+    expect(ImagesOfTextCheck.run(context, rule)).toHaveLength(1);
+  });
+
+  test("ignores images without text hints", () => {
+    const context = createContext('<img class="hero" src="banner.png" />');
+    expect(ImagesOfTextCheck.run(context, rule)).toHaveLength(0);
+  });
+
+  test("detects data-image-text markers", () => {
+    const context = createContext('<img data-image-text="text" src="text.png" />');
+    expect(ImagesOfTextCheck.run(context, rule)).toHaveLength(1);
+  });
+
+  test("detects id-based text hints", () => {
+    const context = createContext('<img id="button-text" src="text.png" />');
+    expect(ImagesOfTextCheck.run(context, rule)).toHaveLength(1);
+  });
+});
+
+describe("TextSpacingCheck", () => {
+  test("flags spacing overrides and nowrap", () => {
+    const context = createContext(
+      '.text { line-height: 1.2 !important; white-space: nowrap; }',
+      "css"
+    );
+    expect(TextSpacingCheck.run(context, rule)).toHaveLength(2);
+  });
+
+  test("ignores flexible spacing rules", () => {
+    const context = createContext('.text { line-height: 1.5; }', "css");
+    expect(TextSpacingCheck.run(context, rule)).toHaveLength(0);
+  });
+});
+
+describe("HoverFocusContentCheck", () => {
+  test("detects hover or focus content toggles", () => {
+    const context = createContext('.tooltip:hover { display: block; }', "css");
+    expect(HoverFocusContentCheck.run(context, rule)).toHaveLength(1);
+  });
+
+  test("ignores hover styles without visibility changes", () => {
+    const context = createContext('.tooltip:hover { color: red; }', "css");
+    expect(HoverFocusContentCheck.run(context, rule)).toHaveLength(0);
+  });
+});
+
+describe("InteractionLimitsCheck", () => {
+  test("detects interaction patterns", () => {
+    const context = createContext(
+      '<div accesskey="s" onkeydown="if (event.keyCode === 9) { event.preventDefault(); }"></div>' +
+        '<meta http-equiv="refresh" content="5" />' +
+        '<script>setTimeout(() => {}, 1000); window.addEventListener("deviceorientation", () => {});</script>' +
+        '<marquee>scroll</marquee>' +
+        '<div ontouchstart="go()"></div>' +
+        '<input onchange="location.href=\"/next\"" />',
+      "html"
+    );
+    const issues = InteractionLimitsCheck.run(context, rule);
+    expect(issues.length).toBeGreaterThan(5);
+  });
+});
+
+describe("NavigationStructureCheck", () => {
+  test("collects nav sequences", () => {
+    const dom = new JSDOM('<nav><a href="#a">Home</a></nav>');
+    const sequences = collectNavSequences(dom.window.document);
+    expect(sequences).toEqual([["home"]]);
+  });
+
+  test("flags focus order and missing navigation aids", () => {
+    const context = createContext('<button tabindex="2">Go</button>');
+    const issues = NavigationStructureCheck.run({ ...context, document: new JSDOM(context.content).window.document }, rule);
+    expect(issues).toHaveLength(2);
+  });
+
+  test("flags inconsistent nav labels", () => {
+    const content =
+      '<nav><a href="/home">Home</a></nav>' +
+      '<nav><a href="/home">Start</a></nav>';
+    const document = new JSDOM(content).window.document;
+    const issues = NavigationStructureCheck.run({ filePath: "file", content, kind: "html", document }, rule);
+    expect(issues.some((issue) => issue.message.includes("inconsistent labels"))).toBe(true);
+  });
+
+  test("recognizes search inputs for multiple ways", () => {
+    const content = '<input type="search" aria-label="Search site" />';
+    const document = new JSDOM(content).window.document;
+    const issues = NavigationStructureCheck.run({ filePath: "file", content, kind: "html", document }, rule);
+    expect(issues.some((issue) => issue.message.includes("multiple ways"))).toBe(false);
+  });
+
+  test("allows consistent navigation sequences", () => {
+    const content =
+      '<nav><a href="/home">Home</a><a href="/about">About</a></nav>' +
+      '<nav><a href="/home">Home</a><a href="/about">About</a></nav>';
+    const document = new JSDOM(content).window.document;
+    const issues = NavigationStructureCheck.run({ filePath: "file", content, kind: "html", document }, rule);
+    expect(issues.some((issue) => issue.message.includes("Navigation order"))).toBe(false);
+  });
+
+  test("skips links without text or href", () => {
+    const content = '<nav><a href=""></a><a>Label</a></nav>';
+    const document = new JSDOM(content).window.document;
+    const issues = NavigationStructureCheck.run({ filePath: "file", content, kind: "html", document }, rule);
+    expect(issues.some((issue) => issue.message.includes("inconsistent labels"))).toBe(false);
+  });
+
+  test("accepts site map links as navigation alternatives", () => {
+    const content = '<a href="/sitemap">Site map</a>';
+    const document = new JSDOM(content).window.document;
+    const issues = NavigationStructureCheck.run({ filePath: "file", content, kind: "html", document }, rule);
+    expect(issues.some((issue) => issue.message.includes("multiple ways"))).toBe(false);
+  });
+
+  test("returns no issues without a document", () => {
+    const context = createContext("<nav></nav>");
+    expect(NavigationStructureCheck.run(context, rule)).toHaveLength(0);
+  });
+});
+
+describe("FocusVisibleCheck", () => {
+  test("flags removed focus indicators", () => {
+    const context = createContext('a:focus { outline: none; }', "css");
+    expect(FocusVisibleCheck.run(context, rule)).toHaveLength(1);
+  });
+
+  test("ignores focus styling that preserves indicators", () => {
+    const context = createContext('a:focus { outline: 2px solid #000; }', "css");
+    expect(FocusVisibleCheck.run(context, rule)).toHaveLength(0);
+  });
+});
+
+describe("LanguageOfPartsCheck", () => {
+  test("detects data-language without lang", () => {
+    const context = createContext('<span data-lang="fr">Bonjour</span>');
+    expect(LanguageOfPartsCheck.run(context, rule)).toHaveLength(1);
+  });
+
+  test("ignores elements that already define lang", () => {
+    const context = createContext('<span data-lang="fr" lang="fr">Bonjour</span>');
+    expect(LanguageOfPartsCheck.run(context, rule)).toHaveLength(0);
+  });
+
+  test("ignores elements without language metadata", () => {
+    const context = createContext("<span>Hello</span>");
+    expect(LanguageOfPartsCheck.run(context, rule)).toHaveLength(0);
+  });
+
+  test("detects data-language attributes", () => {
+    const context = createContext('<span data-language="es">Hola</span>');
+    expect(LanguageOfPartsCheck.run(context, rule)).toHaveLength(1);
+  });
+
+  test("returns no issues for empty content", () => {
+    const context = createContext("");
+    expect(LanguageOfPartsCheck.run(context, rule)).toHaveLength(0);
+  });
+});
+
+describe("ErrorHandlingCheck", () => {
+  test("detects missing error messaging, suggestions, and confirmation", () => {
+    const content =
+      '<input aria-invalid="true" />' +
+      '<input pattern="[A-Z]+" />' +
+      '<form data-destructive="true"><input type="text" name="name" /></form>' +
+      '<div class="toast">Saved</div>';
+    const document = new JSDOM(content).window.document;
+    const issues = ErrorHandlingCheck.run({ filePath: "file", content, kind: "html", document }, rule);
+    expect(issues.length).toBeGreaterThanOrEqual(4);
+  });
+
+  test("confirmation helper detects confirm inputs", () => {
+    const dom = new JSDOM('<form><input type="checkbox" name="confirm" /></form>');
+    expect(hasConfirmationControl(dom.window.document.querySelector("form"))).toBe(true);
+  });
+
+  test("accepts error messaging when hints are present", () => {
+    const content =
+      '<input aria-invalid="true" aria-errormessage="err" />' +
+      '<input pattern="[A-Z]+" title="Only uppercase" />' +
+      '<form data-destructive="true"><input type="text" name="confirm" /></form>' +
+      '<div class="status" role="status">Saved</div>';
+    const document = new JSDOM(content).window.document;
+    const issues = ErrorHandlingCheck.run({ filePath: "file", content, kind: "html", document }, rule);
+    expect(issues).toHaveLength(0);
+  });
+
+  test("ignores non-status classes", () => {
+    const content = '<div class="card">Saved</div>';
+    const document = new JSDOM(content).window.document;
+    const issues = ErrorHandlingCheck.run({ filePath: "file", content, kind: "html", document }, rule);
+    expect(issues).toHaveLength(0);
+  });
+
+  test("returns no issues without a document", () => {
+    const context = createContext('<input aria-invalid="true" />');
+    expect(ErrorHandlingCheck.run(context, rule)).toHaveLength(0);
+  });
+});
+
+describe("DuplicateIdCheck", () => {
+  test("detects duplicate ids", () => {
+    const content = '<div id="dup"></div><span id="dup"></span>';
+    const document = new JSDOM(content).window.document;
+    const issues = DuplicateIdCheck.run({ filePath: "file", content, kind: "html", document }, rule);
+    expect(issues).toHaveLength(1);
+  });
+
+  test("ignores unique ids", () => {
+    const content = '<div id="one"></div><span id="two"></span>';
+    const document = new JSDOM(content).window.document;
+    const issues = DuplicateIdCheck.run({ filePath: "file", content, kind: "html", document }, rule);
+    expect(issues).toHaveLength(0);
+  });
+
+  test("ignores empty id values", () => {
+    const content = '<div id=""></div>';
+    const document = new JSDOM(content).window.document;
+    const issues = DuplicateIdCheck.run({ filePath: "file", content, kind: "html", document }, rule);
+    expect(issues).toHaveLength(0);
+  });
+
+  test("handles multiple duplicates", () => {
+    const content = '<div id="dup"></div><span id="unique"></span><p id="dup"></p>';
+    const document = new JSDOM(content).window.document;
+    const issues = DuplicateIdCheck.run({ filePath: "file", content, kind: "html", document }, rule);
+    expect(issues).toHaveLength(1);
+  });
+
+  test("returns no issues without a document", () => {
+    const context = createContext('<div id="dup"></div><span id="dup"></span>');
+    expect(DuplicateIdCheck.run(context, rule)).toHaveLength(0);
   });
 });

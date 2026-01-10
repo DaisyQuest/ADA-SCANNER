@@ -1,0 +1,10 @@
+{
+  "id": "orientation-001",
+  "description": "Avoid locking content to a single display orientation unless essential.",
+  "severity": "low",
+  "checkId": "orientation-lock",
+  "appliesTo": "html, htm, cshtml, razor",
+  "recommendation": "Support both portrait and landscape orientations when possible. (WCAG 2.1 SC 1.3.4)",
+  "wcagCriteria": "1.3.4",
+  "problemTags": "orientation"
+}

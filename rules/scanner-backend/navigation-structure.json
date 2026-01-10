@@ -1,0 +1,10 @@
+{
+  "id": "navigation-structure-001",
+  "description": "Ensure navigation and focus order remain predictable and offer multiple ways to locate pages.",
+  "severity": "medium",
+  "checkId": "navigation-structure",
+  "appliesTo": "html, htm, cshtml, razor",
+  "recommendation": "Keep focus order logical, offer multiple navigation paths, and label destinations consistently. (WCAG 2.1 SC 2.4.3,2.4.5,3.2.3,3.2.4)",
+  "wcagCriteria": "2.4.3,2.4.5,3.2.3,3.2.4",
+  "problemTags": "navigation"
+}

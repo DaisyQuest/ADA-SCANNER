@@ -1,0 +1,10 @@
+{
+  "id": "images-of-text-001",
+  "description": "Prefer real text over images of text when possible.",
+  "severity": "low",
+  "checkId": "images-of-text",
+  "appliesTo": "html, htm, cshtml, razor",
+  "recommendation": "Use actual text instead of images of text unless essential. (WCAG 2.1 SC 1.4.5)",
+  "wcagCriteria": "1.4.5",
+  "problemTags": "images-of-text"
+}

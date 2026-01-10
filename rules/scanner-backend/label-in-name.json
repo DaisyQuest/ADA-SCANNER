@@ -4,7 +4,7 @@
   "severity": "medium",
   "checkId": "label-in-name",
   "appliesTo": "html, htm, cshtml, razor",
-  "recommendation": "Keep aria-label or aria-labelledby text in sync with the visible label.",
+  "recommendation": "Keep aria-label or aria-labelledby text in sync with the visible label. (WCAG 2.1 SC 2.5.3)",
   "wcagCriteria": "2.5.3",
   "problemTags": "label-in-name, accessible-name"
 }

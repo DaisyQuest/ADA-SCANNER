@@ -1,0 +1,10 @@
+{
+  "id": "focus-visible-001",
+  "description": "Ensure focus indicators remain visible for keyboard users.",
+  "severity": "medium",
+  "checkId": "focus-visible",
+  "appliesTo": "html, htm, cshtml, razor, css",
+  "recommendation": "Do not remove focus outlines without providing an alternative indicator. (WCAG 2.1 SC 2.4.7)",
+  "wcagCriteria": "2.4.7",
+  "problemTags": "focus-visible"
+}

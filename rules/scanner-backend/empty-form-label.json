@@ -4,7 +4,7 @@
   "severity": "medium",
   "checkId": "empty-form-label",
   "appliesTo": "html, htm, cshtml, razor",
-  "recommendation": "Add visible text or an accessible name to the label element.",
-  "wcagCriteria": "1.3.1",
+  "recommendation": "Add visible text or an accessible name to the label element. (WCAG 2.1 SC 1.3.1,3.3.2)",
+  "wcagCriteria": "1.3.1,3.3.2",
   "problemTags": "form-labels"
 }

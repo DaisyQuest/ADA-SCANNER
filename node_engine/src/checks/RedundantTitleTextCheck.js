@@ -23,7 +23,7 @@ const RedundantTitleTextCheck = {
     const issues = [];
 
     for (const match of context.content.matchAll(elementRegex)) {
-      const attrs = match.groups?.attrs ?? "";
+      const attrs = match.groups.attrs;
       const title = getAttributeValue(attrs, "title");
       if (!hasTitle(title)) {
         continue;
@@ -48,7 +48,7 @@ const RedundantTitleTextCheck = {
         continue;
       }
 
-      const textContent = (match.groups?.content ?? "").replace(tagRegex, "");
+      const textContent = match.groups.content.replace(tagRegex, "");
       if (textMatches(normalizedTitle, textContent)) {
         const line = getLineNumber(context.content, match.index);
         issues.push({

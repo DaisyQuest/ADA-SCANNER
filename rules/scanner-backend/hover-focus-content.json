@@ -1,0 +1,10 @@
+{
+  "id": "hover-focus-001",
+  "description": "Hover or focus content should be dismissible and persistent while needed.",
+  "severity": "medium",
+  "checkId": "hover-focus-content",
+  "appliesTo": "html, htm, cshtml, razor, css",
+  "recommendation": "Ensure hover or focus content can be dismissed and remains visible for users. (WCAG 2.1 SC 1.4.13)",
+  "wcagCriteria": "1.4.13",
+  "problemTags": "hover-focus"
+}
