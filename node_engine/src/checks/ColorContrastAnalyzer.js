@@ -33,10 +33,6 @@ const parseHexColor = (value, { alphaPosition = "end" } = {}) => {
     }
   }
 
-  if (trimmed.length !== 6) {
-    return null;
-  }
-
   const r = parseHexChannel(trimmed.slice(0, 2));
   const g = parseHexChannel(trimmed.slice(2, 4));
   const b = parseHexChannel(trimmed.slice(4, 6));
@@ -81,25 +77,32 @@ const parseAlphaValue = (value) => {
   return Number.isNaN(numeric) ? null : clamp01(numeric);
 };
 
+const splitFunctionalColor = (body) => {
+  const [channelsRaw, alphaRaw] = body.split("/").map((segment) => segment.trim());
+  const channelTokens = channelsRaw.split(/[\s,]+/).filter(Boolean);
+  const alphaToken = alphaRaw || (channelTokens.length > 3 ? channelTokens[3] : null);
+  return { channelTokens, alphaToken };
+};
+
 const parseRgbColor = (value) => {
   const match = value.trim().match(/^rgba?\(([^)]+)\)$/i);
   if (!match) {
     return null;
   }
 
-  const parts = match[1].split(/[,/]/).map((part) => part.trim()).filter(Boolean);
-  if (parts.length < 3) {
+  const { channelTokens, alphaToken } = splitFunctionalColor(match[1]);
+  if (channelTokens.length < 3) {
     return null;
   }
 
-  const r = parseRgbValue(parts[0]);
-  const g = parseRgbValue(parts[1]);
-  const b = parseRgbValue(parts[2]);
+  const r = parseRgbValue(channelTokens[0]);
+  const g = parseRgbValue(channelTokens[1]);
+  const b = parseRgbValue(channelTokens[2]);
   if ([r, g, b].some((component) => component === null)) {
     return null;
   }
 
-  const alpha = parts.length >= 4 ? parseAlphaValue(parts[3]) : 1;
+  const alpha = alphaToken ? parseAlphaValue(alphaToken) : 1;
   if (alpha === null) {
     return null;
   }
@@ -109,8 +112,22 @@ const parseRgbColor = (value) => {
 
 const parseHue = (value) => {
   const normalized = value.trim().toLowerCase();
-  const numeric = Number.parseFloat(normalized.replace(/deg$/, ""));
-  return Number.isNaN(numeric) ? null : ((numeric % 360) + 360) % 360;
+  const numeric = Number.parseFloat(normalized);
+  if (Number.isNaN(numeric)) {
+    return null;
+  }
+
+  if (normalized.endsWith("turn")) {
+    return ((numeric * 360) % 360 + 360) % 360;
+  }
+
+  if (normalized.endsWith("rad")) {
+    return (((numeric * 180) / Math.PI) % 360 + 360) % 360;
+  }
+
+  const degrees = normalized.replace(/deg$/, "");
+  const parsed = Number.parseFloat(degrees);
+  return Number.isNaN(parsed) ? null : ((parsed % 360) + 360) % 360;
 };
 
 const parseHslChannel = (value) => {
@@ -163,19 +180,19 @@ const parseHslColor = (value) => {
     return null;
   }
 
-  const parts = match[1].split(/[,/]/).map((part) => part.trim()).filter(Boolean);
-  if (parts.length < 3) {
+  const { channelTokens, alphaToken } = splitFunctionalColor(match[1]);
+  if (channelTokens.length < 3) {
     return null;
   }
 
-  const hue = parseHue(parts[0]);
-  const saturation = parseHslChannel(parts[1]);
-  const lightness = parseHslChannel(parts[2]);
+  const hue = parseHue(channelTokens[0]);
+  const saturation = parseHslChannel(channelTokens[1]);
+  const lightness = parseHslChannel(channelTokens[2]);
   if ([hue, saturation, lightness].some((component) => component === null)) {
     return null;
   }
 
-  const alpha = parts.length >= 4 ? parseAlphaValue(parts[3]) : 1;
+  const alpha = alphaToken ? parseAlphaValue(alphaToken) : 1;
   if (alpha === null) {
     return null;
   }
@@ -235,4 +252,13 @@ const contrastRatio = (foreground, background) => {
   return (lighter + 0.05) / (darker + 0.05);
 };
 
-module.exports = { parseHexColor, parseColor, contrastRatio, clamp01 };
+module.exports = {
+  parseHexColor,
+  parseRgbValue,
+  parseAlphaValue,
+  parseRgbColor,
+  parseHslColor,
+  parseColor,
+  contrastRatio,
+  clamp01
+};

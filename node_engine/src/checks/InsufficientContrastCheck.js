@@ -218,6 +218,48 @@ const getRequiredContrastRatio = ({ fontSizePx, isBold }) => {
   return largeText ? 3.0 : 4.5;
 };
 
+const DEFAULT_BACKGROUND = "#ffffff";
+
+const extractCssVarName = (value) => {
+  if (!value || !value.trim()) {
+    return null;
+  }
+
+  const match = value.trim().match(/^var\(\s*(--[^,\s)]+)\s*(?:,.*)?\)$/i);
+  return match ? match[1] : null;
+};
+
+const resolveCssVarFromStyle = (value, style) => {
+  if (!style) {
+    return null;
+  }
+
+  const varName = extractCssVarName(value);
+  if (!varName) {
+    return null;
+  }
+
+  const varValue = parseCssValue(style, varName);
+  return varValue ? normalizeColorValue(varValue) : null;
+};
+
+const resolveColorWithContext = (value, style) => {
+  const resolved = resolveStaticColor(value);
+  if (resolved) {
+    return resolved;
+  }
+
+  if (!value || !value.trim()) {
+    return null;
+  }
+
+  const fallback = resolveCssVarFromStyle(value, style);
+  return fallback ? resolveStaticColor(fallback) ?? fallback : null;
+};
+
+const shouldDefaultBackground = (kind) =>
+  ["html", "htm", "cshtml", "razor", "css"].includes(kind.toLowerCase());
+
 const getCandidates = (context) => {
   const kind = context.kind.toLowerCase();
   if (kind === "xaml") {
@@ -236,7 +278,8 @@ const getCandidates = (context) => {
           fontSizePx: parseFontSize(parseXmlAttribute(attrs, "FontSize")),
           isBold: parseFontWeight(parseXmlAttribute(attrs, "FontWeight")),
           index: match.index,
-          snippet: match[0]
+          snippet: match[0],
+          style: null
         };
       })
       .filter(Boolean);
@@ -248,7 +291,7 @@ const getCandidates = (context) => {
         const body = match.groups.body;
         const foreground = parseCssColor(body, "color");
         const backgroundColors = parseCssBackgroundColors(body);
-        if (!foreground || backgroundColors.length === 0) {
+        if (!foreground) {
           return null;
         }
 
@@ -258,7 +301,8 @@ const getCandidates = (context) => {
           fontSizePx: parseCssFontSize(body),
           isBold: parseFontWeight(parseCssValue(body, "font-weight")),
           index: match.index,
-          snippet: match[0]
+          snippet: match[0],
+          style: body
         };
       })
       .filter(Boolean);
@@ -269,7 +313,7 @@ const getCandidates = (context) => {
       const style = match.groups.style;
       const foreground = parseCssColor(style, "color");
       const backgroundColors = parseCssBackgroundColors(style);
-      if (!foreground || backgroundColors.length === 0) {
+      if (!foreground) {
         return null;
       }
 
@@ -279,7 +323,8 @@ const getCandidates = (context) => {
         fontSizePx: parseCssFontSize(style),
         isBold: parseFontWeight(parseCssValue(style, "font-weight")),
         index: match.index,
-        snippet: match[0]
+        snippet: match[0],
+        style
       };
     })
     .filter(Boolean);
@@ -292,7 +337,7 @@ const InsufficientContrastCheck = {
     const issues = [];
     const candidates = getCandidates(context);
     for (const candidate of candidates) {
-      const foreground = resolveStaticColor(candidate.foreground);
+      const foreground = resolveColorWithContext(candidate.foreground, candidate.style);
       if (!foreground) {
         continue;
       }
@@ -304,15 +349,19 @@ const InsufficientContrastCheck = {
       }
 
       const backgroundColors = candidate.backgroundColors
-        .map((color) => resolveStaticColor(color))
+        .map((color) => resolveColorWithContext(color, candidate.style))
         .filter(Boolean);
-      if (backgroundColors.length === 0) {
-        continue;
-      }
 
       const parsedBackgrounds = backgroundColors
         .map((color) => parseColor(color, { alphaPosition }))
         .filter(Boolean);
+      if (parsedBackgrounds.length === 0 && shouldDefaultBackground(context.kind)) {
+        const fallback = parseColor(DEFAULT_BACKGROUND, { alphaPosition });
+        if (fallback) {
+          parsedBackgrounds.push(fallback);
+        }
+      }
+
       if (parsedBackgrounds.length === 0) {
         continue;
       }
@@ -371,10 +420,14 @@ module.exports = {
   extractCssVarFallback,
   extractXamlFallback,
   normalizeColorValue,
+  extractCssVarName,
+  resolveCssVarFromStyle,
+  resolveColorWithContext,
   parseFontSize,
   parseCssFontSize,
   parseFontWeight,
   getRequiredContrastRatio,
   getCandidates,
-  blendColors
+  blendColors,
+  shouldDefaultBackground
 };
