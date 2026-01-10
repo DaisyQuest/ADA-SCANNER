@@ -36,6 +36,7 @@
         justify-content: space-between;
         padding: 12px 16px;
         border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        gap: 8px;
       }
       #${SIDEBAR_ID} .ada-report-title {
         font-size: 14px;
@@ -49,6 +50,20 @@
         padding: 2px 8px;
         font-size: 12px;
         font-weight: 700;
+      }
+      #${SIDEBAR_ID} .ada-report-toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 11px;
+        color: #d1d5db;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+      #${SIDEBAR_ID} .ada-report-toggle input {
+        accent-color: #38bdf8;
+        width: 16px;
+        height: 16px;
       }
       #${SIDEBAR_ID} .ada-report-body {
         overflow-y: auto;
@@ -119,7 +134,7 @@
 
   const normalizeList = (items) => (Array.isArray(items) ? items : []);
 
-  const buildElements = (documentRoot) => {
+  const buildElements = (documentRoot, { initialSidebarEnabled = true, onToggleSidebar } = {}) => {
     const container = documentRoot.createElement("aside");
     container.id = SIDEBAR_ID;
     container.setAttribute(REPORT_SIDEBAR_ATTR, "true");
@@ -137,7 +152,27 @@
     count.className = "ada-report-count";
     count.textContent = "0";
 
+    const toggleLabel = documentRoot.createElement("label");
+    toggleLabel.className = "ada-report-toggle";
+
+    const toggleInput = documentRoot.createElement("input");
+    toggleInput.type = "checkbox";
+    toggleInput.checked = !!initialSidebarEnabled;
+    toggleInput.setAttribute("aria-label", "Show report sidebar");
+    toggleInput.addEventListener("change", () => {
+      if (typeof onToggleSidebar === "function") {
+        onToggleSidebar(toggleInput.checked);
+      }
+    });
+
+    const toggleText = documentRoot.createElement("span");
+    toggleText.textContent = "Sidebar";
+
+    toggleLabel.appendChild(toggleInput);
+    toggleLabel.appendChild(toggleText);
+
     header.appendChild(title);
+    header.appendChild(toggleLabel);
     header.appendChild(count);
 
     const body = documentRoot.createElement("div");
@@ -160,7 +195,14 @@
     };
   };
 
-  const createReportSidebar = ({ documentRoot, windowObj, resolveTargets }) => {
+  const createReportSidebar = ({
+    documentRoot,
+    windowObj,
+    resolveTargets,
+    onIssueSelect,
+    onToggleSidebar,
+    initialSidebarEnabled = true
+  }) => {
     let elements = null;
     let lastIssues = [];
 
@@ -169,7 +211,7 @@
         return;
       }
       ensureStyles(documentRoot);
-      elements = buildElements(documentRoot);
+      elements = buildElements(documentRoot, { initialSidebarEnabled, onToggleSidebar });
     };
 
     const getIssueLabel = (issue) => {
@@ -239,6 +281,9 @@
           /* istanbul ignore next */
           if (target?.focus) {
             target.focus({ preventScroll: true });
+          }
+          if (typeof onIssueSelect === "function") {
+            onIssueSelect(issue);
           }
         });
 

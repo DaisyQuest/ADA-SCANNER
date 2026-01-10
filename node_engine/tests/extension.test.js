@@ -327,9 +327,11 @@ describe("Extension report sidebar", () => {
 
   test("handles missing target resolver and metadata", () => {
     document.body.innerHTML = "";
+    const onIssueSelect = jest.fn();
     const sidebar = createReportSidebar({
       documentRoot: document,
-      windowObj: window
+      windowObj: window,
+      onIssueSelect
     });
 
     sidebar.render([
@@ -341,16 +343,21 @@ describe("Extension report sidebar", () => {
     const staleItem = document.querySelector(".ada-report-issue--stale");
     expect(staleItem).not.toBeNull();
     staleItem.querySelector("button").click();
+    expect(onIssueSelect).not.toHaveBeenCalled();
     sidebar.destroy();
   });
 
   test("reuses styles and focuses targets on click", () => {
     document.body.innerHTML = '<div id="target"></div>';
     const highlighter = createHighlighter({ documentRoot: document });
+    const onIssueSelect = jest.fn();
+    const onToggleSidebar = jest.fn();
     const sidebar = createReportSidebar({
       documentRoot: document,
       windowObj: window,
-      resolveTargets: highlighter.resolveTargets
+      resolveTargets: highlighter.resolveTargets,
+      onIssueSelect,
+      onToggleSidebar
     });
 
     const target = document.getElementById("target");
@@ -367,9 +374,14 @@ describe("Extension report sidebar", () => {
 
     const button = document.querySelector("#ada-report-sidebar button");
     button.click();
+    const toggle = document.querySelector(".ada-report-toggle input");
+    toggle.checked = false;
+    toggle.dispatchEvent(new window.Event("change"));
 
     expect(target.scrollIntoView).toHaveBeenCalled();
     expect(target.focus).toHaveBeenCalled();
+    expect(onIssueSelect).toHaveBeenCalledWith({ selector: "#target", ruleId: "rule-x" });
+    expect(onToggleSidebar).toHaveBeenCalledWith(false);
     expect(document.querySelectorAll("#ada-report-sidebar-style")).toHaveLength(1);
     sidebar.destroy();
     sidebar2.destroy();
@@ -478,6 +490,23 @@ describe("Extension report sidebar", () => {
     expect(empty).not.toBeNull();
     sidebar.destroy();
   });
+
+  test("ignores toggle changes when no sidebar handler is provided", () => {
+    document.body.innerHTML = "<div></div>";
+    const sidebar = createReportSidebar({
+      documentRoot: document,
+      windowObj: window,
+      resolveTargets: () => [],
+      initialSidebarEnabled: false
+    });
+
+    sidebar.render([{ selector: "#missing", ruleId: "rule-a" }]);
+    const toggle = document.querySelector(".ada-report-toggle input");
+    toggle.checked = true;
+    toggle.dispatchEvent(new window.Event("change"));
+    expect(document.querySelector("#ada-report-sidebar")).not.toBeNull();
+    sidebar.destroy();
+  });
 });
 
 describe("Extension background", () => {
@@ -581,6 +610,7 @@ describe("Extension background", () => {
 
     expect(chromeApi.storage.local.set).toHaveBeenCalledWith({
       enabled: false,
+      sidebarEnabled: true,
       spiderEnabled: false,
       serverUrl: DEFAULT_SERVER_URL,
       spiderRequestDelayMs: 0
@@ -871,7 +901,7 @@ describe("Extension content script", () => {
     };
 
     globalThis.AdaHighlighter = {
-      createHighlighter: jest.fn(() => ({ applyHighlights: jest.fn(), clearHighlights: jest.fn() })),
+      createHighlighter: jest.fn(() => ({ applyHighlights: jest.fn(), focusIssue: jest.fn(), clearHighlights: jest.fn() })),
       filterIssuesForPage: jest.fn((issues) => issues ?? [])
     };
     const script = createContentScript({ chromeApi, documentRoot: document, windowObj: window, fetchFn });
@@ -921,7 +951,7 @@ describe("Extension content script", () => {
       getDefaultConfig: jest.fn(() => Promise.resolve({ serverUrl: DEFAULT_SERVER_URL }))
     };
     globalThis.AdaHighlighter = {
-      createHighlighter: jest.fn(() => ({ applyHighlights: jest.fn(), clearHighlights: jest.fn() })),
+      createHighlighter: jest.fn(() => ({ applyHighlights: jest.fn(), focusIssue: jest.fn(), clearHighlights: jest.fn() })),
       filterIssuesForPage: jest.fn((issues) => issues ?? [])
     };
 
@@ -986,7 +1016,7 @@ describe("Extension content script", () => {
       getDefaultConfig: jest.fn(() => Promise.resolve({ serverUrl: DEFAULT_SERVER_URL }))
     };
     globalThis.AdaHighlighter = {
-      createHighlighter: jest.fn(() => ({ applyHighlights: jest.fn(), clearHighlights: jest.fn() })),
+      createHighlighter: jest.fn(() => ({ applyHighlights: jest.fn(), focusIssue: jest.fn(), clearHighlights: jest.fn() })),
       filterIssuesForPage: jest.fn((issues) => issues ?? [])
     };
 
@@ -1039,7 +1069,7 @@ describe("Extension content script", () => {
       getDefaultConfig: jest.fn(() => Promise.resolve({ serverUrl: DEFAULT_SERVER_URL }))
     };
     globalThis.AdaHighlighter = {
-      createHighlighter: jest.fn(() => ({ applyHighlights: jest.fn(), clearHighlights: jest.fn() })),
+      createHighlighter: jest.fn(() => ({ applyHighlights: jest.fn(), focusIssue: jest.fn(), clearHighlights: jest.fn() })),
       filterIssuesForPage: jest.fn((issues) => issues ?? [])
     };
 
@@ -1099,7 +1129,7 @@ describe("Extension content script", () => {
       getDefaultConfig: jest.fn(() => Promise.resolve({ serverUrl: DEFAULT_SERVER_URL }))
     };
     globalThis.AdaHighlighter = {
-      createHighlighter: jest.fn(() => ({ applyHighlights: jest.fn(), clearHighlights: jest.fn() })),
+      createHighlighter: jest.fn(() => ({ applyHighlights: jest.fn(), focusIssue: jest.fn(), clearHighlights: jest.fn() })),
       filterIssuesForPage: jest.fn((issues) => issues ?? [])
     };
 
@@ -1151,7 +1181,7 @@ describe("Extension content script", () => {
       getDefaultConfig: jest.fn(() => Promise.resolve({ serverUrl: DEFAULT_SERVER_URL }))
     };
     globalThis.AdaHighlighter = {
-      createHighlighter: jest.fn(() => ({ applyHighlights: jest.fn(), clearHighlights: jest.fn(), resolveTargets: jest.fn() })),
+      createHighlighter: jest.fn(() => ({ applyHighlights: jest.fn(), focusIssue: jest.fn(), clearHighlights: jest.fn(), resolveTargets: jest.fn() })),
       filterIssuesForPage: jest.fn((issues) => issues ?? [])
     };
     const createReportSidebarMock = jest.fn();
@@ -1184,7 +1214,7 @@ describe("Extension content script", () => {
       getDefaultConfig: jest.fn(() => Promise.resolve({ serverUrl: DEFAULT_SERVER_URL }))
     };
     globalThis.AdaHighlighter = {
-      createHighlighter: jest.fn(() => ({ applyHighlights: jest.fn(), clearHighlights: jest.fn() })),
+      createHighlighter: jest.fn(() => ({ applyHighlights: jest.fn(), focusIssue: jest.fn(), clearHighlights: jest.fn() })),
       filterIssuesForPage: jest.fn((issues) => issues ?? [])
     };
 
@@ -1210,7 +1240,7 @@ describe("Extension content script", () => {
       getDefaultConfig: jest.fn(() => Promise.resolve({ serverUrl: DEFAULT_SERVER_URL }))
     };
     globalThis.AdaHighlighter = {
-      createHighlighter: jest.fn(() => ({ applyHighlights: jest.fn(), clearHighlights: jest.fn() })),
+      createHighlighter: jest.fn(() => ({ applyHighlights: jest.fn(), focusIssue: jest.fn(), clearHighlights: jest.fn() })),
       filterIssuesForPage: jest.fn((issues) => issues ?? [])
     };
 
@@ -1270,7 +1300,7 @@ describe("Extension content script", () => {
       getDefaultConfig: jest.fn(() => Promise.resolve({ serverUrl: DEFAULT_SERVER_URL }))
     };
     globalThis.AdaHighlighter = {
-      createHighlighter: jest.fn(() => ({ applyHighlights: jest.fn(), clearHighlights: jest.fn(), resolveTargets: jest.fn() })),
+      createHighlighter: jest.fn(() => ({ applyHighlights: jest.fn(), focusIssue: jest.fn(), clearHighlights: jest.fn(), resolveTargets: jest.fn() })),
       filterIssuesForPage: jest.fn((issues) => issues ?? [])
     };
 
@@ -1340,7 +1370,7 @@ describe("Extension content script", () => {
       getDefaultConfig: jest.fn(() => Promise.resolve({ serverUrl: DEFAULT_SERVER_URL }))
     };
     globalThis.AdaHighlighter = {
-      createHighlighter: jest.fn(() => ({ applyHighlights: jest.fn(), clearHighlights: jest.fn(), resolveTargets: jest.fn() })),
+      createHighlighter: jest.fn(() => ({ applyHighlights: jest.fn(), focusIssue: jest.fn(), clearHighlights: jest.fn(), resolveTargets: jest.fn() })),
       filterIssuesForPage: jest.fn((issues) => issues ?? [])
     };
     globalThis.AdaReportSidebar = {
@@ -1380,7 +1410,7 @@ describe("Extension content script", () => {
     };
 
     globalThis.AdaHighlighter = {
-      createHighlighter: jest.fn(() => ({ applyHighlights: jest.fn(), clearHighlights: jest.fn() })),
+      createHighlighter: jest.fn(() => ({ applyHighlights: jest.fn(), focusIssue: jest.fn(), clearHighlights: jest.fn() })),
       filterIssuesForPage: jest.fn((issues) => issues ?? [])
     };
     const script = createContentScript({ chromeApi, documentRoot: document, windowObj: window, fetchFn: jest.fn() });
@@ -1395,7 +1425,7 @@ describe("Extension content script", () => {
       storage: { local: { get: (defaults, callback) => callback({ enabled: true, serverUrl: DEFAULT_SERVER_URL }) } }
     };
     globalThis.AdaHighlighter = {
-      createHighlighter: jest.fn(() => ({ applyHighlights: jest.fn(), clearHighlights: jest.fn() })),
+      createHighlighter: jest.fn(() => ({ applyHighlights: jest.fn(), focusIssue: jest.fn(), clearHighlights: jest.fn() })),
       filterIssuesForPage: jest.fn((issues) => issues ?? [])
     };
 
@@ -1543,6 +1573,92 @@ describe("Extension content script", () => {
     jest.useRealTimers();
   });
 
+  test("toggles report sidebar when sidebar config changes", () => {
+    jest.resetModules();
+    const destroy = jest.fn();
+    const render = jest.fn();
+    const refresh = jest.fn();
+    let storageListener = null;
+
+    globalThis.AdaHighlighter = {
+      createHighlighter: jest.fn(() => ({ applyHighlights: jest.fn(), focusIssue: jest.fn(), clearHighlights: jest.fn(), resolveTargets: jest.fn() })),
+      filterIssuesForPage: jest.fn((issues) => issues ?? [])
+    };
+    let sidebarOptions = null;
+    const createReportSidebarMock = jest.fn((options) => {
+      sidebarOptions = options;
+      return { render, refresh, destroy };
+    });
+    globalThis.AdaReportSidebar = { createReportSidebar: createReportSidebarMock };
+    globalThis.AdaForwarder = {
+      createForwarder: jest.fn(() => ({ schedule: jest.fn(), send: jest.fn(() => Promise.resolve({ ok: true })) })),
+      getDefaultConfig: jest.fn(() => Promise.resolve({ serverUrl: DEFAULT_SERVER_URL }))
+    };
+
+    const chromeApi = {
+      runtime: { onMessage: { addListener: jest.fn() } },
+      storage: {
+        local: {
+          get: (defaults, callback) => callback({ enabled: true, sidebarEnabled: true, serverUrl: DEFAULT_SERVER_URL }),
+          set: jest.fn()
+        },
+        onChanged: {
+          addListener: (listener) => {
+            storageListener = listener;
+          }
+        }
+      }
+    };
+
+    const { createContentScript: reloadedCreateContentScript } = require("../extension/contentScript");
+    reloadedCreateContentScript({ chromeApi, documentRoot: document, windowObj: window, fetchFn: jest.fn() });
+
+    expect(createReportSidebarMock).toHaveBeenCalledTimes(1);
+    sidebarOptions.onToggleSidebar(false);
+    expect(chromeApi.storage.local.set).toHaveBeenCalledWith({ sidebarEnabled: false });
+    storageListener({ sidebarEnabled: { newValue: false } });
+    expect(destroy).toHaveBeenCalled();
+    storageListener({ sidebarEnabled: { newValue: true } });
+    expect(createReportSidebarMock).toHaveBeenCalledTimes(2);
+  });
+
+  test("does not create sidebar when disabled and sidebar is toggled on", () => {
+    jest.resetModules();
+    let storageListener = null;
+
+    globalThis.AdaHighlighter = {
+      createHighlighter: jest.fn(() => ({ applyHighlights: jest.fn(), focusIssue: jest.fn(), clearHighlights: jest.fn(), resolveTargets: jest.fn() })),
+      filterIssuesForPage: jest.fn((issues) => issues ?? [])
+    };
+    const createReportSidebarMock = jest.fn();
+    globalThis.AdaReportSidebar = { createReportSidebar: createReportSidebarMock };
+    globalThis.AdaForwarder = {
+      createForwarder: jest.fn(() => ({ schedule: jest.fn(), send: jest.fn(() => Promise.resolve({ ok: true })) })),
+      getDefaultConfig: jest.fn(() => Promise.resolve({ serverUrl: DEFAULT_SERVER_URL }))
+    };
+
+    const chromeApi = {
+      runtime: { onMessage: { addListener: jest.fn() } },
+      storage: {
+        local: {
+          get: (defaults, callback) => callback({ enabled: false, sidebarEnabled: false, serverUrl: DEFAULT_SERVER_URL }),
+          set: jest.fn()
+        },
+        onChanged: {
+          addListener: (listener) => {
+            storageListener = listener;
+          }
+        }
+      }
+    };
+
+    const { createContentScript: reloadedCreateContentScript } = require("../extension/contentScript");
+    reloadedCreateContentScript({ chromeApi, documentRoot: document, windowObj: window, fetchFn: jest.fn() });
+
+    storageListener({ sidebarEnabled: { newValue: true } });
+    expect(createReportSidebarMock).not.toHaveBeenCalled();
+  });
+
   test("schedules captures after fetch and xhr activity", async () => {
     jest.resetModules();
     const schedule = jest.fn();
@@ -1583,7 +1699,7 @@ describe("Extension content script", () => {
     windowObj.XMLHttpRequest = MockXHR;
 
     globalThis.AdaHighlighter = {
-      createHighlighter: jest.fn(() => ({ applyHighlights: jest.fn(), clearHighlights: jest.fn(), resolveTargets: jest.fn() })),
+      createHighlighter: jest.fn(() => ({ applyHighlights: jest.fn(), focusIssue: jest.fn(), clearHighlights: jest.fn(), resolveTargets: jest.fn() })),
       filterIssuesForPage: jest.fn((issues) => issues ?? [])
     };
     globalThis.AdaForwarder = {
@@ -1651,7 +1767,7 @@ describe("Extension content script", () => {
     windowObj.XMLHttpRequest = MockXHR;
 
     globalThis.AdaHighlighter = {
-      createHighlighter: jest.fn(() => ({ applyHighlights: jest.fn(), clearHighlights: jest.fn(), resolveTargets: jest.fn() })),
+      createHighlighter: jest.fn(() => ({ applyHighlights: jest.fn(), focusIssue: jest.fn(), clearHighlights: jest.fn(), resolveTargets: jest.fn() })),
       filterIssuesForPage: jest.fn((issues) => issues ?? [])
     };
     globalThis.AdaForwarder = {
@@ -1713,7 +1829,7 @@ describe("Extension content script", () => {
     windowObj.XMLHttpRequest = MockXHR;
 
     globalThis.AdaHighlighter = {
-      createHighlighter: jest.fn(() => ({ applyHighlights: jest.fn(), clearHighlights: jest.fn(), resolveTargets: jest.fn() })),
+      createHighlighter: jest.fn(() => ({ applyHighlights: jest.fn(), focusIssue: jest.fn(), clearHighlights: jest.fn(), resolveTargets: jest.fn() })),
       filterIssuesForPage: jest.fn((issues) => issues ?? [])
     };
     globalThis.AdaForwarder = {
@@ -1794,7 +1910,7 @@ describe("Extension content script", () => {
       storage: { local: { get: (defaults, callback) => callback({ enabled: false, serverUrl: DEFAULT_SERVER_URL }) } }
     };
     globalThis.AdaHighlighter = {
-      createHighlighter: jest.fn(() => ({ applyHighlights: jest.fn(), clearHighlights: jest.fn() })),
+      createHighlighter: jest.fn(() => ({ applyHighlights: jest.fn(), focusIssue: jest.fn(), clearHighlights: jest.fn() })),
       filterIssuesForPage: jest.fn((issues) => issues ?? [])
     };
 
@@ -1822,7 +1938,7 @@ describe("Extension content script", () => {
       storage: { local: { get: (defaults, callback) => callback({ enabled: false, serverUrl: DEFAULT_SERVER_URL }) } }
     };
     globalThis.AdaHighlighter = {
-      createHighlighter: jest.fn(() => ({ applyHighlights: jest.fn(), clearHighlights: jest.fn() })),
+      createHighlighter: jest.fn(() => ({ applyHighlights: jest.fn(), focusIssue: jest.fn(), clearHighlights: jest.fn() })),
       filterIssuesForPage: jest.fn((issues) => issues ?? [])
     };
 
@@ -1886,7 +2002,7 @@ describe("Extension content script", () => {
       storage: { local: { get: (defaults, callback) => callback({ enabled: false, serverUrl: DEFAULT_SERVER_URL }) } }
     };
     globalThis.AdaHighlighter = {
-      createHighlighter: jest.fn(() => ({ applyHighlights: jest.fn(), clearHighlights: jest.fn() })),
+      createHighlighter: jest.fn(() => ({ applyHighlights: jest.fn(), focusIssue: jest.fn(), clearHighlights: jest.fn() })),
       filterIssuesForPage: jest.fn((issues) => issues ?? [])
     };
 
@@ -1919,7 +2035,7 @@ describe("Extension content script", () => {
       storage: { local: { get: (defaults, callback) => callback({ enabled: false, serverUrl: DEFAULT_SERVER_URL }) } }
     };
     globalThis.AdaHighlighter = {
-      createHighlighter: jest.fn(() => ({ applyHighlights: jest.fn(), clearHighlights: jest.fn() })),
+      createHighlighter: jest.fn(() => ({ applyHighlights: jest.fn(), focusIssue: jest.fn(), clearHighlights: jest.fn() })),
       filterIssuesForPage: jest.fn((issues) => issues ?? [])
     };
 
@@ -1949,7 +2065,7 @@ describe("Extension content script", () => {
       storage: { local: { get: (defaults, callback) => callback({ enabled: false, serverUrl: DEFAULT_SERVER_URL }) } }
     };
     globalThis.AdaHighlighter = {
-      createHighlighter: jest.fn(() => ({ applyHighlights: jest.fn(), clearHighlights: jest.fn() })),
+      createHighlighter: jest.fn(() => ({ applyHighlights: jest.fn(), focusIssue: jest.fn(), clearHighlights: jest.fn() })),
       filterIssuesForPage: jest.fn((issues) => issues ?? [])
     };
 
@@ -2000,7 +2116,7 @@ describe("Extension content script", () => {
       getDefaultConfig: jest.fn(() => Promise.resolve({ serverUrl: DEFAULT_SERVER_URL }))
     };
     globalThis.AdaHighlighter = {
-      createHighlighter: jest.fn(() => ({ applyHighlights: jest.fn(), clearHighlights: jest.fn() })),
+      createHighlighter: jest.fn(() => ({ applyHighlights: jest.fn(), focusIssue: jest.fn(), clearHighlights: jest.fn() })),
       filterIssuesForPage: jest.fn((issues) => issues ?? [])
     };
 
@@ -2036,7 +2152,7 @@ describe("Extension content script", () => {
     };
 
     globalThis.AdaHighlighter = {
-      createHighlighter: jest.fn(() => ({ applyHighlights: jest.fn(), clearHighlights: jest.fn() })),
+      createHighlighter: jest.fn(() => ({ applyHighlights: jest.fn(), focusIssue: jest.fn(), clearHighlights: jest.fn() })),
       filterIssuesForPage: jest.fn((issues) => issues ?? [])
     };
 
@@ -2073,7 +2189,7 @@ describe("Extension content script", () => {
       getDefaultConfig: jest.fn(() => Promise.resolve({ serverUrl: DEFAULT_SERVER_URL }))
     };
     globalThis.AdaHighlighter = {
-      createHighlighter: jest.fn(() => ({ applyHighlights: jest.fn(), clearHighlights: jest.fn() })),
+      createHighlighter: jest.fn(() => ({ applyHighlights: jest.fn(), focusIssue: jest.fn(), clearHighlights: jest.fn() })),
       filterIssuesForPage: jest.fn((issues) => issues ?? [])
     };
 
@@ -2111,7 +2227,7 @@ describe("Extension content script", () => {
       getDefaultConfig: jest.fn(() => Promise.resolve({ serverUrl: DEFAULT_SERVER_URL }))
     };
     globalThis.AdaHighlighter = {
-      createHighlighter: jest.fn(() => ({ applyHighlights: jest.fn(), clearHighlights: jest.fn() })),
+      createHighlighter: jest.fn(() => ({ applyHighlights: jest.fn(), focusIssue: jest.fn(), clearHighlights: jest.fn() })),
       filterIssuesForPage: jest.fn((issues) => issues ?? [])
     };
 
@@ -2188,7 +2304,7 @@ describe("Extension content script", () => {
     const mockFetch = jest.fn().mockResolvedValue({ ok: true });
     global.window.fetch = mockFetch;
     globalThis.AdaHighlighter = {
-      createHighlighter: jest.fn(() => ({ applyHighlights: jest.fn(), clearHighlights: jest.fn() })),
+      createHighlighter: jest.fn(() => ({ applyHighlights: jest.fn(), focusIssue: jest.fn(), clearHighlights: jest.fn() })),
       filterIssuesForPage: jest.fn((issues) => issues ?? [])
     };
     require("../extension/contentScript");
@@ -2234,7 +2350,7 @@ describe("Extension content script", () => {
       getDefaultConfig: jest.fn(() => Promise.resolve({ serverUrl: DEFAULT_SERVER_URL }))
     };
     globalThis.AdaHighlighter = {
-      createHighlighter: jest.fn(() => ({ applyHighlights: jest.fn(), clearHighlights: jest.fn() })),
+      createHighlighter: jest.fn(() => ({ applyHighlights: jest.fn(), focusIssue: jest.fn(), clearHighlights: jest.fn() })),
       filterIssuesForPage: jest.fn((issues) => issues ?? [])
     };
     global.chrome = {
@@ -2259,6 +2375,7 @@ describe("Extension popup", () => {
   const createChromeApi = () => {
     const state = {
       enabled: false,
+      sidebarEnabled: true,
       spiderEnabled: false,
       serverUrl: DEFAULT_SERVER_URL,
       spiderRequestDelayMs: 0
@@ -2290,16 +2407,18 @@ describe("Extension popup", () => {
   });
 
   test("updates toggles and server url", async () => {
-    document.body.innerHTML = "\n      <input id=\"enabled-toggle\" type=\"checkbox\" />\n      <input id=\"spider-toggle\" type=\"checkbox\" />\n      <input id=\"spider-delay\" type=\"number\" />\n      <input id=\"server-url\" type=\"text\" />\n      <div id=\"status-text\"></div>\n      <div id=\"server-status\"></div>\n    ";
+    document.body.innerHTML = "\n      <input id=\"enabled-toggle\" type=\"checkbox\" />\n      <input id=\"sidebar-toggle\" type=\"checkbox\" />\n      <input id=\"spider-toggle\" type=\"checkbox\" />\n      <input id=\"spider-delay\" type=\"number\" />\n      <input id=\"server-url\" type=\"text\" />\n      <div id=\"status-text\"></div>\n      <div id=\"server-status\"></div>\n    ";
     const chromeApi = createChromeApi();
     const popup = createPopup({ documentRoot: document, chromeApi });
 
     await popup.updateEnabled(true);
+    await popup.updateSidebar(true);
     await popup.updateSpider(true);
     await popup.updateSpiderDelay(250);
     await popup.updateServerUrl("http://localhost:9999/capture");
 
     expect(chromeApi.storage.local.set).toHaveBeenCalledWith({ enabled: true });
+    expect(chromeApi.storage.local.set).toHaveBeenCalledWith({ sidebarEnabled: true });
     expect(chromeApi.storage.local.set).toHaveBeenCalledWith({ spiderEnabled: true });
     expect(chromeApi.storage.local.set).toHaveBeenCalledWith({ spiderRequestDelayMs: 250 });
     expect(chromeApi.storage.local.set).toHaveBeenCalledWith({ serverUrl: "http://localhost:9999/capture" });
@@ -2307,13 +2426,17 @@ describe("Extension popup", () => {
   });
 
   test("responds to popup change events", async () => {
-    document.body.innerHTML = "\n      <input id=\"enabled-toggle\" type=\"checkbox\" />\n      <input id=\"spider-toggle\" type=\"checkbox\" />\n      <input id=\"spider-delay\" type=\"number\" />\n      <input id=\"server-url\" type=\"text\" />\n      <div id=\"status-text\"></div>\n      <div id=\"server-status\"></div>\n    ";
+    document.body.innerHTML = "\n      <input id=\"enabled-toggle\" type=\"checkbox\" />\n      <input id=\"sidebar-toggle\" type=\"checkbox\" />\n      <input id=\"spider-toggle\" type=\"checkbox\" />\n      <input id=\"spider-delay\" type=\"number\" />\n      <input id=\"server-url\" type=\"text\" />\n      <div id=\"status-text\"></div>\n      <div id=\"server-status\"></div>\n    ";
     const chromeApi = createChromeApi();
     createPopup({ documentRoot: document, chromeApi });
 
     const enabledToggle = document.getElementById("enabled-toggle");
     enabledToggle.checked = true;
     enabledToggle.dispatchEvent(new Event("change"));
+
+    const sidebarToggle = document.getElementById("sidebar-toggle");
+    sidebarToggle.checked = false;
+    sidebarToggle.dispatchEvent(new Event("change"));
 
     const spiderToggle = document.getElementById("spider-toggle");
     spiderToggle.checked = true;
@@ -2329,13 +2452,14 @@ describe("Extension popup", () => {
 
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(chromeApi.storage.local.set).toHaveBeenCalledWith({ enabled: true });
+    expect(chromeApi.storage.local.set).toHaveBeenCalledWith({ sidebarEnabled: false });
     expect(chromeApi.storage.local.set).toHaveBeenCalledWith({ spiderEnabled: true });
     expect(chromeApi.storage.local.set).toHaveBeenCalledWith({ spiderRequestDelayMs: 200 });
     expect(chromeApi.storage.local.set).toHaveBeenCalledWith({ serverUrl: "http://localhost:7777/capture" });
   });
 
   test("rejects invalid server urls", async () => {
-    document.body.innerHTML = "\n      <input id=\"enabled-toggle\" type=\"checkbox\" />\n      <input id=\"spider-toggle\" type=\"checkbox\" />\n      <input id=\"spider-delay\" type=\"number\" />\n      <input id=\"server-url\" type=\"text\" />\n      <div id=\"status-text\"></div>\n      <div id=\"server-status\"></div>\n    ";
+    document.body.innerHTML = "\n      <input id=\"enabled-toggle\" type=\"checkbox\" />\n      <input id=\"sidebar-toggle\" type=\"checkbox\" />\n      <input id=\"spider-toggle\" type=\"checkbox\" />\n      <input id=\"spider-delay\" type=\"number\" />\n      <input id=\"server-url\" type=\"text\" />\n      <div id=\"status-text\"></div>\n      <div id=\"server-status\"></div>\n    ";
     const chromeApi = createChromeApi();
     const popup = createPopup({ documentRoot: document, chromeApi });
     await popup.updateServerUrl("bad url");
@@ -2344,7 +2468,7 @@ describe("Extension popup", () => {
   });
 
   test("uses default server url when blank and shows warning", async () => {
-    document.body.innerHTML = "\n      <input id=\"enabled-toggle\" type=\"checkbox\" />\n      <input id=\"spider-toggle\" type=\"checkbox\" />\n      <input id=\"spider-delay\" type=\"number\" />\n      <input id=\"server-url\" type=\"text\" />\n      <div id=\"status-text\"></div>\n      <div id=\"server-status\"></div>\n    ";
+    document.body.innerHTML = "\n      <input id=\"enabled-toggle\" type=\"checkbox\" />\n      <input id=\"sidebar-toggle\" type=\"checkbox\" />\n      <input id=\"spider-toggle\" type=\"checkbox\" />\n      <input id=\"spider-delay\" type=\"number\" />\n      <input id=\"server-url\" type=\"text\" />\n      <div id=\"status-text\"></div>\n      <div id=\"server-status\"></div>\n    ";
     const chromeApi = createChromeApi();
     const popup = createPopup({ documentRoot: document, chromeApi });
     await popup.updateServerUrl(" ");
@@ -2353,34 +2477,36 @@ describe("Extension popup", () => {
   });
 
   test("applies state defaults and error hints", () => {
-    document.body.innerHTML = "\n      <input id=\"enabled-toggle\" type=\"checkbox\" />\n      <input id=\"spider-toggle\" type=\"checkbox\" />\n      <input id=\"spider-delay\" type=\"number\" />\n      <input id=\"server-url\" type=\"text\" />\n      <div id=\"status-text\"></div>\n      <div id=\"server-status\"></div>\n    ";
+    document.body.innerHTML = "\n      <input id=\"enabled-toggle\" type=\"checkbox\" />\n      <input id=\"sidebar-toggle\" type=\"checkbox\" />\n      <input id=\"spider-toggle\" type=\"checkbox\" />\n      <input id=\"spider-delay\" type=\"number\" />\n      <input id=\"server-url\" type=\"text\" />\n      <div id=\"status-text\"></div>\n      <div id=\"server-status\"></div>\n    ";
     const chromeApi = createChromeApi();
     const popup = createPopup({ documentRoot: document, chromeApi });
 
-    popup.applyState({ enabled: true, spiderEnabled: true });
+    popup.applyState({ enabled: true, sidebarEnabled: true, spiderEnabled: true });
     popup.setServerHint("Bad URL", true);
     expect(document.getElementById("server-status").classList.contains("error")).toBe(true);
     popup.setServerHint(null, false);
 
     expect(document.getElementById("server-url").value).toBe(DEFAULT_SERVER_URL);
     expect(document.getElementById("spider-delay").value).toBe("0");
+    expect(document.getElementById("sidebar-toggle").checked).toBe(true);
     expect(document.getElementById("status-text").textContent).toContain("Spider on");
     expect(document.getElementById("server-status").classList.contains("error")).toBe(false);
   });
 
   test("applies disabled state and clears status", () => {
-    document.body.innerHTML = "\n      <input id=\"enabled-toggle\" type=\"checkbox\" />\n      <input id=\"spider-toggle\" type=\"checkbox\" />\n      <input id=\"spider-delay\" type=\"number\" />\n      <input id=\"server-url\" type=\"text\" />\n      <div id=\"status-text\"></div>\n      <div id=\"server-status\"></div>\n    ";
+    document.body.innerHTML = "\n      <input id=\"enabled-toggle\" type=\"checkbox\" />\n      <input id=\"sidebar-toggle\" type=\"checkbox\" />\n      <input id=\"spider-toggle\" type=\"checkbox\" />\n      <input id=\"spider-delay\" type=\"number\" />\n      <input id=\"server-url\" type=\"text\" />\n      <div id=\"status-text\"></div>\n      <div id=\"server-status\"></div>\n    ";
     const chromeApi = createChromeApi();
     const popup = createPopup({ documentRoot: document, chromeApi });
 
-    popup.applyState({ enabled: false, spiderEnabled: false, serverUrl: null });
+    popup.applyState({ enabled: false, sidebarEnabled: false, spiderEnabled: false, serverUrl: null });
 
     expect(document.getElementById("status-text").textContent).toContain("Forwarding off");
     expect(document.getElementById("server-url").value).toBe(DEFAULT_SERVER_URL);
+    expect(document.getElementById("sidebar-toggle").checked).toBe(false);
   });
 
   test("ignores unrelated storage changes", () => {
-    document.body.innerHTML = "\n      <input id=\"enabled-toggle\" type=\"checkbox\" />\n      <input id=\"spider-toggle\" type=\"checkbox\" />\n      <input id=\"spider-delay\" type=\"number\" />\n      <input id=\"server-url\" type=\"text\" />\n      <div id=\"status-text\"></div>\n      <div id=\"server-status\"></div>\n    ";
+    document.body.innerHTML = "\n      <input id=\"enabled-toggle\" type=\"checkbox\" />\n      <input id=\"sidebar-toggle\" type=\"checkbox\" />\n      <input id=\"spider-toggle\" type=\"checkbox\" />\n      <input id=\"spider-delay\" type=\"number\" />\n      <input id=\"server-url\" type=\"text\" />\n      <div id=\"status-text\"></div>\n      <div id=\"server-status\"></div>\n    ";
     const chromeApi = createChromeApi();
     let listener = null;
     chromeApi.storage.onChanged.addListener.mockImplementation((cb) => {
@@ -2395,7 +2521,7 @@ describe("Extension popup", () => {
   });
 
   test("refreshes state when storage changes", async () => {
-    document.body.innerHTML = "\n      <input id=\"enabled-toggle\" type=\"checkbox\" />\n      <input id=\"spider-toggle\" type=\"checkbox\" />\n      <input id=\"spider-delay\" type=\"number\" />\n      <input id=\"server-url\" type=\"text\" />\n      <div id=\"status-text\"></div>\n      <div id=\"server-status\"></div>\n    ";
+    document.body.innerHTML = "\n      <input id=\"enabled-toggle\" type=\"checkbox\" />\n      <input id=\"sidebar-toggle\" type=\"checkbox\" />\n      <input id=\"spider-toggle\" type=\"checkbox\" />\n      <input id=\"spider-delay\" type=\"number\" />\n      <input id=\"server-url\" type=\"text\" />\n      <div id=\"status-text\"></div>\n      <div id=\"server-status\"></div>\n    ";
     const chromeApi = createChromeApi();
     let listener = null;
     chromeApi.storage.onChanged.addListener.mockImplementation((cb) => {
@@ -2403,17 +2529,19 @@ describe("Extension popup", () => {
     });
     createPopup({ documentRoot: document, chromeApi });
 
-    chromeApi.storage.local.set({ enabled: true, spiderEnabled: true, serverUrl: "http://updated" });
-    listener({ enabled: { newValue: true } });
+    chromeApi.storage.local.set({ enabled: true, sidebarEnabled: false, spiderEnabled: true, serverUrl: "http://updated" });
+    listener({ sidebarEnabled: { newValue: false } });
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(document.getElementById("enabled-toggle").checked).toBe(true);
+    expect(document.getElementById("sidebar-toggle").checked).toBe(false);
   });
 
   test("reads storage when get returns a promise", async () => {
-    document.body.innerHTML = "\n      <input id=\"enabled-toggle\" type=\"checkbox\" />\n      <input id=\"spider-toggle\" type=\"checkbox\" />\n      <input id=\"spider-delay\" type=\"number\" />\n      <input id=\"server-url\" type=\"text\" />\n      <div id=\"status-text\"></div>\n      <div id=\"server-status\"></div>\n    ";
+    document.body.innerHTML = "\n      <input id=\"enabled-toggle\" type=\"checkbox\" />\n      <input id=\"sidebar-toggle\" type=\"checkbox\" />\n      <input id=\"spider-toggle\" type=\"checkbox\" />\n      <input id=\"spider-delay\" type=\"number\" />\n      <input id=\"server-url\" type=\"text\" />\n      <div id=\"status-text\"></div>\n      <div id=\"server-status\"></div>\n    ";
     const chromeApi = createChromeApi();
     chromeApi.storage.local.get = jest.fn(() => Promise.resolve({
       enabled: true,
+      sidebarEnabled: false,
       spiderEnabled: true,
       serverUrl: "http://example",
       spiderRequestDelayMs: 150
@@ -2422,11 +2550,12 @@ describe("Extension popup", () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(document.getElementById("spider-toggle").checked).toBe(true);
     expect(document.getElementById("spider-delay").value).toBe("150");
+    expect(document.getElementById("sidebar-toggle").checked).toBe(false);
   });
 
   test("auto-bootstraps when chrome is available", () => {
     jest.resetModules();
-    document.body.innerHTML = "\n      <input id=\"enabled-toggle\" type=\"checkbox\" />\n      <input id=\"spider-toggle\" type=\"checkbox\" />\n      <input id=\"spider-delay\" type=\"number\" />\n      <input id=\"server-url\" type=\"text\" />\n      <div id=\"status-text\"></div>\n      <div id=\"server-status\"></div>\n    ";
+    document.body.innerHTML = "\n      <input id=\"enabled-toggle\" type=\"checkbox\" />\n      <input id=\"sidebar-toggle\" type=\"checkbox\" />\n      <input id=\"spider-toggle\" type=\"checkbox\" />\n      <input id=\"spider-delay\" type=\"number\" />\n      <input id=\"server-url\" type=\"text\" />\n      <div id=\"status-text\"></div>\n      <div id=\"server-status\"></div>\n    ";
     global.chrome = {
       runtime: { sendMessage: jest.fn() },
       storage: {
@@ -2443,7 +2572,7 @@ describe("Extension popup", () => {
   });
 
   test("skips storage change wiring when onChanged is missing", () => {
-    document.body.innerHTML = "\n      <input id=\"enabled-toggle\" type=\"checkbox\" />\n      <input id=\"spider-toggle\" type=\"checkbox\" />\n      <input id=\"spider-delay\" type=\"number\" />\n      <input id=\"server-url\" type=\"text\" />\n      <div id=\"status-text\"></div>\n      <div id=\"server-status\"></div>\n    ";
+    document.body.innerHTML = "\n      <input id=\"enabled-toggle\" type=\"checkbox\" />\n      <input id=\"sidebar-toggle\" type=\"checkbox\" />\n      <input id=\"spider-toggle\" type=\"checkbox\" />\n      <input id=\"spider-delay\" type=\"number\" />\n      <input id=\"server-url\" type=\"text\" />\n      <div id=\"status-text\"></div>\n      <div id=\"server-status\"></div>\n    ";
     const chromeApi = createChromeApi();
     delete chromeApi.storage.onChanged;
     expect(() => createPopup({ documentRoot: document, chromeApi })).not.toThrow();
@@ -2452,6 +2581,7 @@ describe("Extension popup", () => {
 
 describe("Extension highlighter", () => {
   test("applies and clears highlights using selectors", () => {
+    document.head.innerHTML = "";
     document.body.innerHTML = "<button id=\"save\" title=\"Original\">Save</button>";
     const highlighter = createHighlighter({ documentRoot: document });
 
@@ -2472,6 +2602,38 @@ describe("Extension highlighter", () => {
     const highlighter = createHighlighter({ documentRoot: document });
     highlighter.applyHighlights([{ selector: "#save", message: "Missing label" }]);
     expect(document.querySelectorAll("#ada-highlight-style")).toHaveLength(1);
+  });
+
+  test("focuses an issue target and clears active highlights", () => {
+    document.body.innerHTML = "<button id=\"save\">Save</button><button id=\"next\">Next</button>";
+    const highlighter = createHighlighter({ documentRoot: document });
+
+    const result = highlighter.focusIssue({ selector: "#save" });
+    const save = document.getElementById("save");
+    const next = document.getElementById("next");
+    expect(result).toBe(true);
+    expect(save.classList.contains("ada-highlight-active")).toBe(true);
+
+    const result2 = highlighter.focusIssue({ selector: "#next" });
+    expect(result2).toBe(true);
+    expect(save.classList.contains("ada-highlight-active")).toBe(false);
+    expect(next.classList.contains("ada-highlight-active")).toBe(true);
+
+    const missingResult = highlighter.focusIssue({ selector: "#missing" });
+    expect(missingResult).toBe(false);
+
+    highlighter.clearHighlights();
+    expect(next.classList.contains("ada-highlight-active")).toBe(false);
+  });
+
+  test("falls back to issue label when messages are empty", () => {
+    document.head.innerHTML = "";
+    document.body.innerHTML = "<div id=\"target\"></div>";
+    const highlighter = createHighlighter({ documentRoot: document });
+
+    highlighter.applyHighlights([{ selector: "#target", message: "", ruleId: "" }]);
+    const target = document.getElementById("target");
+    expect(target.getAttribute("title")).toBe("Issue");
   });
 
   test("stores issue messages and restores original titles", () => {
