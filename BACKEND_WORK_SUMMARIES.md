@@ -60,3 +60,7 @@
 2026-01-10 - Enhance tab order overlay iframe/AJAX detection with expanded tests (SPEC-019, SPEC-013)
 
 2026-01-10 - Added complex node_engine sample fixtures and expanded check coverage tests. (SPEC-008)
+
+2026-01-10 - Define node_engine GoldMaster testing inventories and ADA coverage requirements. (SPEC-013, SPEC-008)
+
+2026-01-10 - Add GoldMaster CLI, fixtures, and inventories with test coverage and npm integration. (SPEC-013, SPEC-007, SPEC-014)

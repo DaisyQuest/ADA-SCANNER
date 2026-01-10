@@ -1,0 +1,12 @@
+<UserControl xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+<!-- Scenario: Deep nesting 20 levels with lists and links (NavigationStructureCheck) -->
+<Grid>
+  <TextBox x:Name="InputBox" />
+  <StackPanel>
+    <StackPanel>
+      <TextBlock Text="Deep" />
+    </StackPanel>
+  </StackPanel>
+</Grid>
+</UserControl>

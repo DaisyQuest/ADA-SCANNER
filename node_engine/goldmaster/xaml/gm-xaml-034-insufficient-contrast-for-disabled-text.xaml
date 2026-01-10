@@ -1,0 +1,8 @@
+<UserControl xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+<!-- Scenario: Insufficient contrast for disabled text (InsufficientContrastCheck) -->
+<Grid>
+  <TextBox x:Name="InputBox" />
+  <TextBlock Foreground="#777777" Background="#888888" Text="Low contrast" />
+</Grid>
+</UserControl>

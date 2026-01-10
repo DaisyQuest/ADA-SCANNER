@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>GoldMaster Case</title>
+<style>
+.hidden{display:none;} .nowrap{white-space:nowrap;} .fixed{width:1200px;}
+</style>
+</head>
+<body>
+<!-- Scenario: Multi-iframe 3-level nesting (MissingIframeTitleCheck) -->
+<div id="content">
+<main id="main">
+<h1>GoldMaster Case</h1>
+<iframe srcdoc="<p>Inner frame</p>"></iframe>
+<iframe srcdoc="<iframe srcdoc='Nested'></iframe>"></iframe>
+</main>
+</div>
+</body>
+</html>
