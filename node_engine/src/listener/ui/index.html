@@ -25,186 +25,227 @@
       </div>
     </header>
 
-    <main class="app-main">
-      <section class="summary-grid">
-        <div class="summary-card">
-          <div class="summary-label">Documents scanned</div>
-          <div class="summary-value" id="documentCount">0</div>
-        </div>
-        <div class="summary-card">
-          <div class="summary-label">Total issues</div>
-          <div class="summary-value" id="issueCount">0</div>
-        </div>
-        <div class="summary-card">
-          <div class="summary-label">Rules triggered</div>
-          <div class="summary-value" id="ruleCount">0</div>
-        </div>
-        <div class="summary-card">
-          <div class="summary-label">Teams impacted</div>
-          <div class="summary-value" id="teamCount">0</div>
-        </div>
-        <div class="summary-card">
-          <div class="summary-label">Files with issues</div>
-          <div class="summary-value" id="fileCount">0</div>
-        </div>
-        <div class="summary-card">
-          <div class="summary-label">Checks triggered</div>
-          <div class="summary-value" id="checkCount">0</div>
-        </div>
-      </section>
+    <main class="app-main tab-shell" data-tab-shell data-active-tab="home">
+      <nav class="tab-bar" role="tablist" aria-label="Runtime analysis views">
+        <button class="tab-button" id="tab-home" role="tab" aria-selected="true" data-tab-target="home" type="button">
+          Home
+        </button>
+        <button class="tab-button" id="tab-rules" role="tab" aria-selected="false" data-tab-target="rules" type="button">
+          Rule violations
+        </button>
+        <button class="tab-button" id="tab-files" role="tab" aria-selected="false" data-tab-target="files" type="button">
+          Files with violations
+        </button>
+        <button
+          class="tab-button"
+          id="tab-severity"
+          role="tab"
+          aria-selected="false"
+          data-tab-target="severity"
+          type="button"
+        >
+          Severity mix
+        </button>
+        <button
+          class="tab-button"
+          id="tab-checks"
+          role="tab"
+          aria-selected="false"
+          data-tab-target="checks"
+          type="button"
+        >
+          Checks triggered
+        </button>
+        <button class="tab-button" id="tab-issues" role="tab" aria-selected="false" data-tab-target="issues" type="button">
+          Latest issues
+        </button>
+      </nav>
 
-      <section class="panel filter-panel">
-        <header class="panel-header">
-          <div>
-            <h2>Filter runtime insights</h2>
-            <p>Focus on rule IDs, file paths, domains, and severity levels that need attention.</p>
+      <div class="tab-panels">
+        <section class="summary-grid" id="panel-summary" data-tab-panel="shared">
+          <div class="summary-card">
+            <div class="summary-label">Documents scanned</div>
+            <div class="summary-value" id="documentCount">0</div>
           </div>
-          <button class="ghost-button" id="clearFilters" type="button">Clear filters</button>
-        </header>
-        <div class="filter-grid">
-          <label class="field">
-            <span>Rule search</span>
-            <input id="ruleSearchInput" type="search" placeholder="Filter by rule ID or description" spellcheck="false" />
-          </label>
-          <label class="field">
-            <span>File search</span>
-            <input id="fileSearchInput" type="search" placeholder="Filter by file path" spellcheck="false" />
-          </label>
-          <label class="field">
-            <span>Domain filter</span>
-            <input
-              id="domainSearchInput"
-              type="search"
-              placeholder="Filter by domain (e.g., *.example.com)"
-              list="domainSuggestions"
-              spellcheck="false"
-            />
-            <datalist id="domainSuggestions">
-              <option value="localhost"></option>
-              <option value="*.example.com"></option>
-              <option value="*.internal"></option>
-            </datalist>
-          </label>
-          <label class="field">
-            <span>Severity focus</span>
-            <select id="severityFilterSelect">
-              <option value="all">All severities</option>
-              <option value="critical">Critical</option>
-              <option value="high">High</option>
-              <option value="medium">Medium</option>
-              <option value="low">Low</option>
-              <option value="unknown">Unknown</option>
-            </select>
-          </label>
-        </div>
-        <div class="filter-helper">
-          <div>
-            <div class="helper-title">Quick tips</div>
-            <p class="muted">
-              Use wildcards for domains, combine multiple filters to isolate noisy sources,
-              and reset to view the full runtime timeline.
-            </p>
+          <div class="summary-card">
+            <div class="summary-label">Total issues</div>
+            <div class="summary-value" id="issueCount">0</div>
           </div>
-          <div class="helper-chips">
-            <span class="chip">*.example.com</span>
-            <span class="chip">Severity: High</span>
-            <span class="chip">Rule: missing-label</span>
+          <div class="summary-card">
+            <div class="summary-label">Rules triggered</div>
+            <div class="summary-value" id="ruleCount">0</div>
           </div>
-        </div>
-      </section>
+          <div class="summary-card">
+            <div class="summary-label">Teams impacted</div>
+            <div class="summary-value" id="teamCount">0</div>
+          </div>
+          <div class="summary-card">
+            <div class="summary-label">Files with issues</div>
+            <div class="summary-value" id="fileCount">0</div>
+          </div>
+          <div class="summary-card">
+            <div class="summary-label">Checks triggered</div>
+            <div class="summary-value" id="checkCount">0</div>
+          </div>
+        </section>
 
-      <section class="panel-grid">
-        <article class="panel">
+        <section class="panel filter-panel" id="panel-filters" data-tab-panel="shared">
           <header class="panel-header">
             <div>
-              <h2>Rule violations</h2>
-              <p>Top offending rules, severity, and affected files.</p>
+              <h2>Filter runtime insights</h2>
+              <p>Focus on rule IDs, file paths, domains, and severity levels that need attention.</p>
             </div>
-            <div class="panel-meta">
-              <span class="meta-chip">Showing <strong id="ruleResultCount">0</strong></span>
-            </div>
+            <button class="ghost-button" id="clearFilters" type="button">Clear filters</button>
           </header>
-          <div class="panel-body">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>Rule</th>
-                  <th>Team</th>
-                  <th>Severity</th>
-                  <th>Issues</th>
-                  <th>Files</th>
-                </tr>
-              </thead>
-              <tbody id="ruleTable"></tbody>
-            </table>
+          <div class="filter-grid">
+            <label class="field">
+              <span>Rule search</span>
+              <input id="ruleSearchInput" type="search" placeholder="Filter by rule ID or description" spellcheck="false" />
+            </label>
+            <label class="field">
+              <span>File search</span>
+              <input id="fileSearchInput" type="search" placeholder="Filter by file path" spellcheck="false" />
+            </label>
+            <label class="field">
+              <span>Domain filter</span>
+              <input
+                id="domainSearchInput"
+                type="search"
+                placeholder="Filter by domain (e.g., *.example.com)"
+                list="domainSuggestions"
+                spellcheck="false"
+              />
+              <datalist id="domainSuggestions">
+                <option value="localhost"></option>
+                <option value="*.example.com"></option>
+                <option value="*.internal"></option>
+              </datalist>
+            </label>
+            <label class="field">
+              <span>Severity focus</span>
+              <select id="severityFilterSelect">
+                <option value="all">All severities</option>
+                <option value="critical">Critical</option>
+                <option value="high">High</option>
+                <option value="medium">Medium</option>
+                <option value="low">Low</option>
+                <option value="unknown">Unknown</option>
+              </select>
+            </label>
           </div>
-        </article>
+          <div class="filter-helper">
+            <div>
+              <div class="helper-title">Quick tips</div>
+              <p class="muted">
+                Use wildcards for domains, combine multiple filters to isolate noisy sources,
+                and reset to view the full runtime timeline.
+              </p>
+            </div>
+            <div class="helper-chips">
+              <span class="chip">*.example.com</span>
+              <span class="chip">Severity: High</span>
+              <span class="chip">Rule: missing-label</span>
+            </div>
+          </div>
+        </section>
 
-        <article class="panel">
+        <section class="panel-grid" id="panel-rules" data-tab-panel="rules">
+          <article class="panel">
+            <header class="panel-header">
+              <div>
+                <h2>Rule violations</h2>
+                <p>Top offending rules, severity, and affected files.</p>
+              </div>
+              <div class="panel-meta">
+                <span class="meta-chip">Showing <strong id="ruleResultCount">0</strong></span>
+              </div>
+            </header>
+            <div class="panel-body">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Rule</th>
+                    <th>Team</th>
+                    <th>Severity</th>
+                    <th>Issues</th>
+                    <th>Files</th>
+                  </tr>
+                </thead>
+                <tbody id="ruleTable"></tbody>
+              </table>
+            </div>
+          </article>
+        </section>
+
+        <section class="panel-grid" id="panel-files" data-tab-panel="files">
+          <article class="panel">
+            <header class="panel-header">
+              <div>
+                <h2>Files with violations</h2>
+                <p>Where issues are concentrated in the captured documents.</p>
+              </div>
+              <div class="panel-meta">
+                <span class="meta-chip">Showing <strong id="fileResultCount">0</strong></span>
+              </div>
+            </header>
+            <div class="panel-body">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>File</th>
+                    <th>Issues</th>
+                    <th>Top rules</th>
+                    <th>Severities</th>
+                    <th>Teams</th>
+                    <th>Stylesheet issues</th>
+                    <th>Report</th>
+                  </tr>
+                </thead>
+                <tbody id="fileTable"></tbody>
+              </table>
+            </div>
+          </article>
+        </section>
+
+        <section class="panel-grid" id="panel-severity" data-tab-panel="severity">
+          <article class="panel">
+            <header class="panel-header">
+              <h2>Severity mix</h2>
+              <p>Distribution of findings by severity across captures.</p>
+            </header>
+            <div class="panel-body">
+              <div id="severityBreakdown" class="badge-group muted">—</div>
+            </div>
+          </article>
+        </section>
+
+        <section class="panel-grid" id="panel-checks" data-tab-panel="checks">
+          <article class="panel">
+            <header class="panel-header">
+              <h2>Checks triggered</h2>
+              <p>Most frequently triggered checks during runtime analysis.</p>
+            </header>
+            <div class="panel-body">
+              <div id="checkBreakdown" class="badge-group muted">—</div>
+            </div>
+          </article>
+        </section>
+
+        <section class="panel" id="panel-issues" data-tab-panel="issues">
           <header class="panel-header">
             <div>
-              <h2>Files with violations</h2>
-              <p>Where issues are concentrated in the captured documents.</p>
+              <h2>Latest issues</h2>
+              <p>Live feed of the most recent rule violations.</p>
             </div>
             <div class="panel-meta">
-              <span class="meta-chip">Showing <strong id="fileResultCount">0</strong></span>
+              <span class="meta-chip">Showing <strong id="issueResultCount">0</strong></span>
             </div>
           </header>
           <div class="panel-body">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>File</th>
-                  <th>Issues</th>
-                  <th>Top rules</th>
-                  <th>Severities</th>
-                  <th>Teams</th>
-                  <th>Stylesheet issues</th>
-                  <th>Report</th>
-                </tr>
-              </thead>
-              <tbody id="fileTable"></tbody>
-            </table>
+            <div id="issueFeed" class="issue-feed"></div>
           </div>
-        </article>
-      </section>
-
-      <section class="panel-grid">
-        <article class="panel">
-          <header class="panel-header">
-            <h2>Severity mix</h2>
-            <p>Distribution of findings by severity across captures.</p>
-          </header>
-          <div class="panel-body">
-            <div id="severityBreakdown" class="badge-group muted">—</div>
-          </div>
-        </article>
-
-        <article class="panel">
-          <header class="panel-header">
-            <h2>Checks triggered</h2>
-            <p>Most frequently triggered checks during runtime analysis.</p>
-          </header>
-          <div class="panel-body">
-            <div id="checkBreakdown" class="badge-group muted">—</div>
-          </div>
-        </article>
-      </section>
-
-      <section class="panel">
-        <header class="panel-header">
-          <div>
-            <h2>Latest issues</h2>
-            <p>Live feed of the most recent rule violations.</p>
-          </div>
-          <div class="panel-meta">
-            <span class="meta-chip">Showing <strong id="issueResultCount">0</strong></span>
-          </div>
-        </header>
-        <div class="panel-body">
-          <div id="issueFeed" class="issue-feed"></div>
-        </div>
-      </section>
+        </section>
+      </div>
     </main>
 
     <footer class="app-footer">

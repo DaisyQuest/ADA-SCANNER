@@ -2,6 +2,21 @@
 
 const setupDom = () => {
   document.body.innerHTML = `
+    <div data-tab-shell data-active-tab="home">
+      <button data-tab-target="home" aria-selected="true"></button>
+      <button data-tab-target="rules" aria-selected="false"></button>
+      <button data-tab-target="files" aria-selected="false"></button>
+      <button data-tab-target="severity" aria-selected="false"></button>
+      <button data-tab-target="checks" aria-selected="false"></button>
+      <button data-tab-target="issues" aria-selected="false"></button>
+      <section data-tab-panel="shared"></section>
+      <section data-tab-panel="rules"></section>
+      <section data-tab-panel="files"></section>
+      <section data-tab-panel="severity"></section>
+      <section data-tab-panel="checks"></section>
+      <section data-tab-panel="issues"></section>
+      <section data-tab-panel="home"></section>
+    </div>
     <div id="connectionStatus"></div>
     <span id="lastUpdated"></span>
     <div id="documentCount"></div>
@@ -622,6 +637,77 @@ describe("Runtime listener UI app", () => {
     expect(fileSpy).toHaveBeenCalledTimes(1);
     ruleSpy.mockRestore();
     fileSpy.mockRestore();
+  });
+
+  test("setActiveTab toggles runtime panels", () => {
+    const app = require("../src/listener/ui/assets/app");
+    const rulesButton = app.elements.tabButtons.find((button) => button.dataset.tabTarget === "rules");
+    const rulesPanel = app.elements.tabPanels.find((panel) => panel.dataset.tabPanel === "rules");
+    const issuesPanel = app.elements.tabPanels.find((panel) => panel.dataset.tabPanel === "issues");
+    const sharedPanel = app.elements.tabPanels.find((panel) => panel.dataset.tabPanel === "shared");
+
+    app.setActiveTab("rules");
+
+    expect(rulesButton.getAttribute("aria-selected")).toBe("true");
+    expect(rulesPanel.hidden).toBe(false);
+    expect(sharedPanel.hidden).toBe(false);
+    expect(issuesPanel.hidden).toBe(true);
+
+    app.setActiveTab("home");
+    expect(issuesPanel.hidden).toBe(false);
+  });
+
+  test("setActiveTab returns early without a tab shell", () => {
+    const app = require("../src/listener/ui/assets/app");
+    app.elements.tabShell = null;
+
+    expect(() => app.setActiveTab("rules")).not.toThrow();
+  });
+
+  test("setActiveTab falls back to default tab IDs", () => {
+    const app = require("../src/listener/ui/assets/app");
+    app.elements.tabShell.dataset.activeTab = "";
+    app.elements.tabButtons = [];
+
+    app.setActiveTab();
+    expect(app.elements.tabShell.dataset.activeTab).toBe("home");
+
+    app.elements.tabShell.dataset.activeTab = "";
+    app.elements.tabButtons = [{ dataset: { tabTarget: "rules" }, setAttribute: jest.fn() }];
+    app.setActiveTab();
+    expect(app.elements.tabShell.dataset.activeTab).toBe("rules");
+  });
+
+  test("setActiveTab handles missing tab panels", () => {
+    const app = require("../src/listener/ui/assets/app");
+    app.elements.tabPanels = null;
+
+    expect(() => app.setActiveTab("rules")).not.toThrow();
+  });
+
+  test("setActiveTab tolerates null tab buttons", () => {
+    const app = require("../src/listener/ui/assets/app");
+    app.elements.tabButtons = null;
+
+    expect(() => app.setActiveTab("rules")).not.toThrow();
+  });
+
+  test("bindEvents attaches tab handlers", () => {
+    const app = require("../src/listener/ui/assets/app");
+    const tabButton = app.elements.tabButtons[0];
+    const buttonSpy = jest.spyOn(tabButton, "addEventListener");
+
+    app.bindEvents();
+
+    expect(buttonSpy).toHaveBeenCalledWith("click", expect.any(Function));
+    buttonSpy.mockRestore();
+  });
+
+  test("bindEvents allows missing tab buttons", () => {
+    const app = require("../src/listener/ui/assets/app");
+    app.elements.tabButtons = null;
+
+    expect(() => app.bindEvents()).not.toThrow();
   });
 
   test("renderIssues skips missing result count element", () => {

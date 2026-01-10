@@ -2,6 +2,17 @@
 
 const setupDom = () => {
   document.body.innerHTML = `
+    <div data-tab-shell data-active-tab="home">
+      <button data-tab-target="home" aria-selected="true"></button>
+      <button data-tab-target="files" aria-selected="false"></button>
+      <button data-tab-target="issues" aria-selected="false"></button>
+      <button data-tab-target="coverage" aria-selected="false"></button>
+      <section data-tab-panel="shared"></section>
+      <section data-tab-panel="files"></section>
+      <section data-tab-panel="issues"></section>
+      <section data-tab-panel="coverage"></section>
+      <section data-tab-panel="home"></section>
+    </div>
     <div id="connectionStatus"></div>
     <span id="lastUpdated"></span>
     <div id="documentCount"></div>
@@ -439,6 +450,77 @@ describe("Static analysis UI app", () => {
     app.bindEvents();
     expect(app.bindEvents.bound).toBe(true);
     expect(firstState).toBe(true);
+  });
+
+  test("setActiveTab updates panel visibility and aria state", () => {
+    const app = require("../src/static/ui/assets/app");
+    const filesButton = app.elements.tabButtons.find((button) => button.dataset.tabTarget === "files");
+    const issuesPanel = app.elements.tabPanels.find((panel) => panel.dataset.tabPanel === "issues");
+    const filesPanel = app.elements.tabPanels.find((panel) => panel.dataset.tabPanel === "files");
+    const sharedPanel = app.elements.tabPanels.find((panel) => panel.dataset.tabPanel === "shared");
+
+    app.setActiveTab("files");
+
+    expect(filesButton.getAttribute("aria-selected")).toBe("true");
+    expect(filesPanel.hidden).toBe(false);
+    expect(sharedPanel.hidden).toBe(false);
+    expect(issuesPanel.hidden).toBe(true);
+
+    app.setActiveTab("home");
+    expect(issuesPanel.hidden).toBe(false);
+  });
+
+  test("setActiveTab exits when tab shell is missing", () => {
+    const app = require("../src/static/ui/assets/app");
+    app.elements.tabShell = null;
+
+    expect(() => app.setActiveTab("files")).not.toThrow();
+  });
+
+  test("setActiveTab falls back to first tab or home", () => {
+    const app = require("../src/static/ui/assets/app");
+    app.elements.tabShell.dataset.activeTab = "";
+    app.elements.tabButtons = [];
+
+    app.setActiveTab();
+    expect(app.elements.tabShell.dataset.activeTab).toBe("home");
+
+    app.elements.tabShell.dataset.activeTab = "";
+    app.elements.tabButtons = [{ dataset: { tabTarget: "files" }, setAttribute: jest.fn() }];
+    app.setActiveTab();
+    expect(app.elements.tabShell.dataset.activeTab).toBe("files");
+  });
+
+  test("setActiveTab tolerates missing tab panels", () => {
+    const app = require("../src/static/ui/assets/app");
+    app.elements.tabPanels = null;
+
+    expect(() => app.setActiveTab("files")).not.toThrow();
+  });
+
+  test("setActiveTab handles null tab buttons", () => {
+    const app = require("../src/static/ui/assets/app");
+    app.elements.tabButtons = null;
+
+    expect(() => app.setActiveTab("files")).not.toThrow();
+  });
+
+  test("bindEvents wires tab buttons", () => {
+    const app = require("../src/static/ui/assets/app");
+    const tabButton = app.elements.tabButtons[0];
+    const buttonSpy = jest.spyOn(tabButton, "addEventListener");
+
+    app.bindEvents();
+
+    expect(buttonSpy).toHaveBeenCalledWith("click", expect.any(Function));
+    buttonSpy.mockRestore();
+  });
+
+  test("bindEvents tolerates missing tab buttons", () => {
+    const app = require("../src/static/ui/assets/app");
+    app.elements.tabButtons = null;
+
+    expect(() => app.bindEvents()).not.toThrow();
   });
 
   test("filters files and issues by rule and query", () => {
