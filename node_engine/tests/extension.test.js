@@ -11,6 +11,7 @@ const {
   getDefaultConfig
 } = require("../extension/forwarder");
 const { createHighlighter, filterIssuesForPage } = require("../extension/highlighter");
+const { createReportSidebar } = require("../extension/reportSidebar");
 const {
   registerBackground,
   toggleExtension,
@@ -40,7 +41,7 @@ describe("Extension forwarder utilities", () => {
     expect(normalizeHtml(null)).toBe("");
 
     document.head.innerHTML = '<style id="ada-highlight-style">.ada-highlight{}</style>';
-    document.body.innerHTML = '<div class="ada-highlight" data-ada-issue-count="1" title="Issue">Hi</div>';
+    document.body.innerHTML = '\n      <div class="ada-highlight" data-ada-issue-count="1" title="Issue">Hi</div>\n      <div data-ada-report-sidebar="true">Sidebar</div>\n    ';
     const clone = document.documentElement.cloneNode(true);
     stripHighlights(clone);
     expect(clone.querySelector(".ada-highlight")).toBeNull();
@@ -55,6 +56,7 @@ describe("Extension forwarder utilities", () => {
     expect(stripHighlights(null)).toBeUndefined();
     const strippedHtml = normalizeHtml(document);
     expect(strippedHtml).not.toContain("ada-highlight");
+    expect(strippedHtml).not.toContain("ada-report-sidebar");
 
     const fallbackDoc = {
       documentElement: {
@@ -291,6 +293,190 @@ describe("Extension forwarder utilities", () => {
     await forwarder.send();
     expect(warnSpy).toHaveBeenCalled();
     warnSpy.mockRestore();
+  });
+});
+
+describe("Extension report sidebar", () => {
+  test("renders issues and marks items missing from the DOM", () => {
+    document.body.innerHTML = '<div id="existing"></div>';
+    const highlighter = createHighlighter({ documentRoot: document });
+    const sidebar = createReportSidebar({
+      documentRoot: document,
+      windowObj: window,
+      resolveTargets: highlighter.resolveTargets
+    });
+
+    sidebar.render([
+      { selector: "#existing", ruleId: "rule-a", message: "Missing label" },
+      { selector: "#missing", ruleId: "rule-b", message: "Missing alt" }
+    ]);
+
+    const items = Array.from(document.querySelectorAll(".ada-report-item"));
+    expect(items).toHaveLength(2);
+    expect(items[1].classList.contains("ada-report-issue--stale")).toBe(true);
+
+    const missing = document.createElement("div");
+    missing.id = "missing";
+    document.body.appendChild(missing);
+    sidebar.refresh();
+
+    const updatedItems = Array.from(document.querySelectorAll(".ada-report-item"));
+    expect(updatedItems[1].classList.contains("ada-report-issue--stale")).toBe(false);
+    sidebar.destroy();
+  });
+
+  test("handles missing target resolver and metadata", () => {
+    document.body.innerHTML = "";
+    const sidebar = createReportSidebar({
+      documentRoot: document,
+      windowObj: window
+    });
+
+    sidebar.render([
+      { selector: "#missing", ruleId: "rule-c", message: "Missing name", filePath: "/page", line: 12 }
+    ]);
+
+    const meta = document.querySelector(".ada-report-meta");
+    expect(meta?.textContent).toContain("/page");
+    const staleItem = document.querySelector(".ada-report-issue--stale");
+    expect(staleItem).not.toBeNull();
+    staleItem.querySelector("button").click();
+    sidebar.destroy();
+  });
+
+  test("reuses styles and focuses targets on click", () => {
+    document.body.innerHTML = '<div id="target"></div>';
+    const highlighter = createHighlighter({ documentRoot: document });
+    const sidebar = createReportSidebar({
+      documentRoot: document,
+      windowObj: window,
+      resolveTargets: highlighter.resolveTargets
+    });
+
+    const target = document.getElementById("target");
+    target.scrollIntoView = jest.fn();
+    target.focus = jest.fn();
+
+    sidebar.render([{ selector: "#target", ruleId: "rule-x" }]);
+    const sidebar2 = createReportSidebar({
+      documentRoot: document,
+      windowObj: window,
+      resolveTargets: highlighter.resolveTargets
+    });
+    sidebar2.render([{ selector: "#target", ruleId: "rule-x" }]);
+
+    const button = document.querySelector("#ada-report-sidebar button");
+    button.click();
+
+    expect(target.scrollIntoView).toHaveBeenCalled();
+    expect(target.focus).toHaveBeenCalled();
+    expect(document.querySelectorAll("#ada-report-sidebar-style")).toHaveLength(1);
+    sidebar.destroy();
+    sidebar2.destroy();
+  });
+
+  test("clicking issues scrolls to the target element", () => {
+    document.body.innerHTML = '<div id="target"></div>';
+    const highlighter = createHighlighter({ documentRoot: document });
+    const sidebar = createReportSidebar({
+      documentRoot: document,
+      windowObj: window,
+      resolveTargets: highlighter.resolveTargets
+    });
+
+    const target = document.getElementById("target");
+    target.scrollIntoView = jest.fn();
+    target.focus = jest.fn();
+
+    sidebar.render([{ selector: "#target", ruleId: "rule-scroll" }]);
+    document.querySelector("#ada-report-sidebar button").dispatchEvent(new window.Event("click"));
+
+    expect(target.scrollIntoView).toHaveBeenCalled();
+    expect(target.focus).toHaveBeenCalled();
+    sidebar.destroy();
+  });
+
+  test("handles targets without scroll or focus methods", () => {
+    document.body.innerHTML = '<div id="target"></div>';
+    const highlighter = createHighlighter({ documentRoot: document });
+    const sidebar = createReportSidebar({
+      documentRoot: document,
+      windowObj: window,
+      resolveTargets: highlighter.resolveTargets
+    });
+
+    const target = document.getElementById("target");
+    target.scrollIntoView = undefined;
+    target.focus = undefined;
+
+    sidebar.render([{ selector: "#target", ruleId: "rule-plain" }]);
+    document.querySelector("#ada-report-sidebar button").dispatchEvent(new window.Event("click"));
+
+    expect(document.querySelector(".ada-report-status")?.textContent).toBe("In DOM");
+    sidebar.destroy();
+  });
+
+  test("treats resolver errors as missing targets", () => {
+    document.body.innerHTML = "";
+    const sidebar = createReportSidebar({
+      documentRoot: document,
+      windowObj: window,
+      resolveTargets: () => {
+        throw new Error("bad selector");
+      }
+    });
+
+    sidebar.render([{ selector: "#bad", ruleId: "rule-y" }]);
+    expect(document.querySelector(".ada-report-issue--stale")).not.toBeNull();
+    sidebar.destroy();
+  });
+
+  test("reuses existing sidebar and falls back to rule id labels", () => {
+    document.body.innerHTML = "";
+    const sidebar = createReportSidebar({
+      documentRoot: document,
+      windowObj: window,
+      resolveTargets: () => []
+    });
+
+    sidebar.render([{ selector: "#missing", ruleId: "rule-only" }]);
+    sidebar.render([{ selector: "#missing", ruleId: "rule-only" }]);
+
+    const message = document.querySelector(".ada-report-message");
+    expect(message?.textContent).toBe("rule-only");
+    sidebar.destroy();
+  });
+
+  test("falls back to default issue label and ignores non-array input", () => {
+    document.body.innerHTML = "";
+    const sidebar = createReportSidebar({
+      documentRoot: document,
+      windowObj: window,
+      resolveTargets: () => []
+    });
+
+    sidebar.render(null);
+    sidebar.render([{ selector: "#missing", ruleId: "" }]);
+
+    const message = document.querySelector(".ada-report-message");
+    expect(message?.textContent).toBe("Issue");
+    sidebar.destroy();
+  });
+
+  test("renders empty state when no issues are provided", () => {
+    document.body.innerHTML = "";
+    const highlighter = createHighlighter({ documentRoot: document });
+    const sidebar = createReportSidebar({
+      documentRoot: document,
+      windowObj: window,
+      resolveTargets: highlighter.resolveTargets
+    });
+
+    sidebar.refresh();
+    sidebar.render([]);
+    const empty = document.querySelector(".ada-report-empty");
+    expect(empty).not.toBeNull();
+    sidebar.destroy();
   });
 });
 
@@ -771,6 +957,113 @@ describe("Extension content script", () => {
     });
   });
 
+  test("uses null topUrl when running in the top frame", async () => {
+    jest.resetModules();
+    const send = jest.fn(() => Promise.resolve({ ok: true }));
+    const windowObj = {
+      location: { href: "http://top.test/" },
+      top: null,
+      name: "top-frame",
+      innerWidth: 800,
+      innerHeight: 600,
+      getComputedStyle: () => ({ display: "block", visibility: "visible" }),
+      setTimeout: setTimeoutFn,
+      clearTimeout: clearTimeoutFn,
+      MutationObserver: jest.fn(function (callback) {
+        this.observe = jest.fn();
+        this.disconnect = jest.fn();
+        this.trigger = callback;
+      })
+    };
+    windowObj.top = windowObj;
+
+    const chromeApi = {
+      runtime: { onMessage: { addListener: jest.fn() } },
+      storage: { local: { get: (defaults, callback) => callback({ enabled: false, serverUrl: DEFAULT_SERVER_URL }) } }
+    };
+    globalThis.AdaForwarder = {
+      createForwarder: jest.fn(() => ({ schedule: jest.fn(), send })),
+      getDefaultConfig: jest.fn(() => Promise.resolve({ serverUrl: DEFAULT_SERVER_URL }))
+    };
+    globalThis.AdaHighlighter = {
+      createHighlighter: jest.fn(() => ({ applyHighlights: jest.fn(), clearHighlights: jest.fn() })),
+      filterIssuesForPage: jest.fn((issues) => issues ?? [])
+    };
+
+    const { createContentScript: reloadedCreateContentScript } = require("../extension/contentScript");
+    const script = reloadedCreateContentScript({
+      chromeApi,
+      documentRoot: document,
+      windowObj,
+      fetchFn: jest.fn()
+    });
+    script.start();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(send).toHaveBeenCalledWith({
+      changeSource: "initial",
+      frameContext: {
+        isTopFrame: true,
+        frameUrl: "http://top.test/",
+        frameName: "top-frame",
+        topUrl: null
+      }
+    });
+  });
+
+  test("handles missing top location when not top frame", async () => {
+    jest.resetModules();
+    const send = jest.fn(() => Promise.resolve({ ok: true }));
+    const windowObj = {
+      location: { href: "http://frame.test/" },
+      top: { location: {} },
+      name: "frame-name",
+      innerWidth: 800,
+      innerHeight: 600,
+      getComputedStyle: () => ({ display: "block", visibility: "visible" }),
+      setTimeout: setTimeoutFn,
+      clearTimeout: clearTimeoutFn,
+      MutationObserver: jest.fn(function (callback) {
+        this.observe = jest.fn();
+        this.disconnect = jest.fn();
+        this.trigger = callback;
+      })
+    };
+
+    const chromeApi = {
+      runtime: { onMessage: { addListener: jest.fn() } },
+      storage: { local: { get: (defaults, callback) => callback({ enabled: false, serverUrl: DEFAULT_SERVER_URL }) } }
+    };
+    globalThis.AdaForwarder = {
+      createForwarder: jest.fn(() => ({ schedule: jest.fn(), send })),
+      getDefaultConfig: jest.fn(() => Promise.resolve({ serverUrl: DEFAULT_SERVER_URL }))
+    };
+    globalThis.AdaHighlighter = {
+      createHighlighter: jest.fn(() => ({ applyHighlights: jest.fn(), clearHighlights: jest.fn() })),
+      filterIssuesForPage: jest.fn((issues) => issues ?? [])
+    };
+
+    const { createContentScript: reloadedCreateContentScript } = require("../extension/contentScript");
+    const script = reloadedCreateContentScript({
+      chromeApi,
+      documentRoot: document,
+      windowObj,
+      fetchFn: jest.fn()
+    });
+    script.start();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(send).toHaveBeenCalledWith({
+      changeSource: "initial",
+      frameContext: {
+        isTopFrame: false,
+        frameUrl: "http://frame.test/",
+        frameName: "frame-name",
+        topUrl: null
+      }
+    });
+  });
+
   test("handles blocked top frame access when building frame context", async () => {
     jest.resetModules();
     const send = jest.fn(() => Promise.resolve({ ok: true }));
@@ -824,6 +1117,57 @@ describe("Extension content script", () => {
       changeSource: "initial",
       frameContext: expect.objectContaining({ topUrl: null })
     });
+  });
+
+  test("skips sidebar when top frame access throws", () => {
+    jest.resetModules();
+    const send = jest.fn(() => Promise.resolve({ ok: true }));
+    const windowObj = {
+      location: { href: "http://frame.test/" },
+      name: "frame-name",
+      innerWidth: 800,
+      innerHeight: 600,
+      getComputedStyle: () => ({ display: "block", visibility: "visible" }),
+      setTimeout: setTimeoutFn,
+      clearTimeout: clearTimeoutFn,
+      MutationObserver: jest.fn(function (callback) {
+        this.observe = jest.fn();
+        this.disconnect = jest.fn();
+        this.trigger = callback;
+      })
+    };
+    Object.defineProperty(windowObj, "top", {
+      get: () => {
+        throw new Error("blocked");
+      }
+    });
+
+    const chromeApi = {
+      runtime: { onMessage: { addListener: jest.fn() } },
+      storage: { local: { get: (defaults, callback) => callback({ enabled: false, serverUrl: DEFAULT_SERVER_URL }) } }
+    };
+    globalThis.AdaForwarder = {
+      createForwarder: jest.fn(() => ({ schedule: jest.fn(), send })),
+      getDefaultConfig: jest.fn(() => Promise.resolve({ serverUrl: DEFAULT_SERVER_URL }))
+    };
+    globalThis.AdaHighlighter = {
+      createHighlighter: jest.fn(() => ({ applyHighlights: jest.fn(), clearHighlights: jest.fn(), resolveTargets: jest.fn() })),
+      filterIssuesForPage: jest.fn((issues) => issues ?? [])
+    };
+    const createReportSidebarMock = jest.fn();
+    globalThis.AdaReportSidebar = {
+      createReportSidebar: createReportSidebarMock
+    };
+
+    const { createContentScript: reloadedCreateContentScript } = require("../extension/contentScript");
+    const script = reloadedCreateContentScript({
+      chromeApi,
+      documentRoot: document,
+      windowObj,
+      fetchFn: jest.fn()
+    });
+    script.start();
+    expect(createReportSidebarMock).not.toHaveBeenCalled();
   });
 
   test("logs when initial send fails", async () => {
@@ -881,6 +1225,142 @@ describe("Extension content script", () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     expect(warnSpy).toHaveBeenCalled();
+    warnSpy.mockRestore();
+  });
+
+  test("logs initial send failures with error and status fallbacks", async () => {
+    jest.resetModules();
+    const warnSpy = jest.spyOn(console, "warn").mockImplementation(() => {});
+
+    function MockXHR() {}
+    MockXHR.prototype.open = jest.fn();
+    MockXHR.prototype.addEventListener = jest.fn();
+    MockXHR.prototype.send = jest.fn();
+
+    const windowObj = {
+      location: { href: "http://localhost/" },
+      top: null,
+      name: "",
+      innerWidth: 800,
+      innerHeight: 600,
+      getComputedStyle: () => ({ display: "block", visibility: "visible" }),
+      setTimeout: setTimeoutFn,
+      clearTimeout: clearTimeoutFn,
+      fetch: jest.fn(() => Promise.resolve({})),
+      XMLHttpRequest: MockXHR,
+      MutationObserver: jest.fn(function (callback) {
+        this.observe = jest.fn();
+        this.disconnect = jest.fn();
+        this.trigger = callback;
+      })
+    };
+    windowObj.top = windowObj;
+
+    const send = jest.fn()
+      .mockResolvedValueOnce({ ok: false, error: "fail" })
+      .mockResolvedValueOnce({ ok: false, status: 500 })
+      .mockResolvedValueOnce({ ok: false });
+
+    const chromeApi = {
+      runtime: { onMessage: { addListener: jest.fn() } },
+      storage: { local: { get: (defaults, callback) => callback({ enabled: false, serverUrl: DEFAULT_SERVER_URL }) } }
+    };
+    globalThis.AdaForwarder = {
+      createForwarder: jest.fn(() => ({ schedule: jest.fn(), send })),
+      getDefaultConfig: jest.fn(() => Promise.resolve({ serverUrl: DEFAULT_SERVER_URL }))
+    };
+    globalThis.AdaHighlighter = {
+      createHighlighter: jest.fn(() => ({ applyHighlights: jest.fn(), clearHighlights: jest.fn(), resolveTargets: jest.fn() })),
+      filterIssuesForPage: jest.fn((issues) => issues ?? [])
+    };
+
+    const { createContentScript: reloadedCreateContentScript } = require("../extension/contentScript");
+    const script = reloadedCreateContentScript({
+      chromeApi,
+      documentRoot: document,
+      windowObj,
+      fetchFn: jest.fn()
+    });
+
+    script.start();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    script.stop();
+
+    script.start();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    script.stop();
+
+    script.start();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    script.stop();
+
+    expect(warnSpy).toHaveBeenCalledTimes(3);
+    warnSpy.mockRestore();
+  });
+
+  test("destroys sidebar and restores xhr hooks on stop after initial failure", async () => {
+    jest.resetModules();
+    const warnSpy = jest.spyOn(console, "warn").mockImplementation(() => {});
+    const destroy = jest.fn();
+
+    function MockXHR() {}
+    const originalSend = jest.fn();
+    MockXHR.prototype.open = jest.fn();
+    MockXHR.prototype.addEventListener = jest.fn();
+    MockXHR.prototype.send = originalSend;
+
+    const windowObj = {
+      location: { href: "http://localhost/" },
+      top: null,
+      name: "",
+      innerWidth: 800,
+      innerHeight: 600,
+      getComputedStyle: () => ({ display: "block", visibility: "visible" }),
+      setTimeout: setTimeoutFn,
+      clearTimeout: clearTimeoutFn,
+      fetch: jest.fn(() => Promise.resolve({})),
+      XMLHttpRequest: MockXHR,
+      MutationObserver: jest.fn(function (callback) {
+        this.observe = jest.fn();
+        this.disconnect = jest.fn();
+        this.trigger = callback;
+      })
+    };
+    windowObj.top = windowObj;
+
+    const chromeApi = {
+      runtime: { onMessage: { addListener: jest.fn() } },
+      storage: { local: { get: (defaults, callback) => callback({ enabled: false, serverUrl: DEFAULT_SERVER_URL }) } }
+    };
+    globalThis.AdaForwarder = {
+      createForwarder: jest.fn(() => ({
+        schedule: jest.fn(),
+        send: jest.fn(() => Promise.resolve({ ok: false, error: new Error("fail") }))
+      })),
+      getDefaultConfig: jest.fn(() => Promise.resolve({ serverUrl: DEFAULT_SERVER_URL }))
+    };
+    globalThis.AdaHighlighter = {
+      createHighlighter: jest.fn(() => ({ applyHighlights: jest.fn(), clearHighlights: jest.fn(), resolveTargets: jest.fn() })),
+      filterIssuesForPage: jest.fn((issues) => issues ?? [])
+    };
+    globalThis.AdaReportSidebar = {
+      createReportSidebar: jest.fn(() => ({ render: jest.fn(), refresh: jest.fn(), destroy }))
+    };
+
+    const { createContentScript: reloadedCreateContentScript } = require("../extension/contentScript");
+    const script = reloadedCreateContentScript({
+      chromeApi,
+      documentRoot: document,
+      windowObj,
+      fetchFn: jest.fn()
+    });
+    script.start();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    script.stop();
+    expect(warnSpy).toHaveBeenCalled();
+    expect(destroy).toHaveBeenCalled();
+    expect(windowObj.XMLHttpRequest.prototype.send).toBe(originalSend);
     warnSpy.mockRestore();
   });
 
@@ -999,6 +1479,267 @@ describe("Extension content script", () => {
     expect(applyHighlights).toHaveBeenCalledTimes(2);
     window.MutationObserver = originalObserver;
     jest.useRealTimers();
+  });
+
+  test("renders report sidebar updates and cleans up on stop", async () => {
+    jest.useFakeTimers();
+    jest.resetModules();
+    const applyHighlights = jest.fn();
+    const refresh = jest.fn();
+    const render = jest.fn();
+    const destroy = jest.fn();
+    const observers = [];
+    const originalObserver = window.MutationObserver;
+
+    window.MutationObserver = jest.fn(function (callback) {
+      this.observe = jest.fn();
+      this.disconnect = jest.fn();
+      this.trigger = callback;
+      observers.push(this);
+    });
+
+    globalThis.AdaHighlighter = {
+      createHighlighter: jest.fn(() => ({ applyHighlights, clearHighlights: jest.fn(), resolveTargets: jest.fn() })),
+      filterIssuesForPage: jest.fn((issues) => issues ?? [])
+    };
+    globalThis.AdaReportSidebar = {
+      createReportSidebar: jest.fn(() => ({ render, refresh, destroy }))
+    };
+    globalThis.AdaForwarder = {
+      createForwarder: jest.fn((options) => ({
+        schedule: jest.fn(),
+        send: jest.fn(() => {
+          options.onReport({ issues: [{ selector: "#save", message: "Issue" }] });
+          return Promise.resolve({ ok: true });
+        })
+      })),
+      getDefaultConfig: jest.fn(() => Promise.resolve({ serverUrl: DEFAULT_SERVER_URL }))
+    };
+
+    const chromeApi = {
+      runtime: { onMessage: { addListener: jest.fn() } },
+      storage: { local: { get: (defaults, callback) => callback({ enabled: false, serverUrl: DEFAULT_SERVER_URL }) } }
+    };
+
+    const { createContentScript: reloadedCreateContentScript } = require("../extension/contentScript");
+    const script = reloadedCreateContentScript({
+      chromeApi,
+      documentRoot: document,
+      windowObj: window,
+      fetchFn: jest.fn()
+    });
+    script.start();
+    await Promise.resolve();
+
+    observers[0].trigger([]);
+    jest.runOnlyPendingTimers();
+
+    expect(render).toHaveBeenCalledWith([{ selector: "#save", message: "Issue" }]);
+    expect(refresh).toHaveBeenCalled();
+
+    script.stop();
+    expect(destroy).toHaveBeenCalled();
+    window.MutationObserver = originalObserver;
+    jest.useRealTimers();
+  });
+
+  test("schedules captures after fetch and xhr activity", async () => {
+    jest.resetModules();
+    const schedule = jest.fn();
+    const send = jest.fn(() => Promise.resolve({ ok: true }));
+    const observers = [];
+
+    const windowObj = {
+      location: { href: "http://example.test" },
+      top: null,
+      name: "",
+      innerWidth: 800,
+      innerHeight: 600,
+      getComputedStyle: () => ({ display: "block", visibility: "visible" }),
+      setTimeout: setTimeoutFn,
+      clearTimeout: clearTimeoutFn,
+      fetch: jest.fn(() => Promise.resolve({})),
+      MutationObserver: jest.fn(function (callback) {
+        this.observe = jest.fn();
+        this.disconnect = jest.fn();
+        this.trigger = callback;
+        observers.push(this);
+      })
+    };
+    windowObj.top = windowObj;
+
+    function MockXHR() {}
+    MockXHR.prototype.open = jest.fn();
+    MockXHR.prototype.addEventListener = function (event, callback) {
+      if (event === "loadend") {
+        this.onLoadend = callback;
+      }
+    };
+    MockXHR.prototype.send = function () {
+      if (this.onLoadend) {
+        this.onLoadend();
+      }
+    };
+    windowObj.XMLHttpRequest = MockXHR;
+
+    globalThis.AdaHighlighter = {
+      createHighlighter: jest.fn(() => ({ applyHighlights: jest.fn(), clearHighlights: jest.fn(), resolveTargets: jest.fn() })),
+      filterIssuesForPage: jest.fn((issues) => issues ?? [])
+    };
+    globalThis.AdaForwarder = {
+      createForwarder: jest.fn(() => ({ schedule, send })),
+      getDefaultConfig: jest.fn(() => Promise.resolve({ serverUrl: DEFAULT_SERVER_URL }))
+    };
+
+    const chromeApi = {
+      runtime: { onMessage: { addListener: jest.fn() } },
+      storage: { local: { get: (defaults, callback) => callback({ enabled: false, serverUrl: DEFAULT_SERVER_URL }) } }
+    };
+
+    const { createContentScript: reloadedCreateContentScript } = require("../extension/contentScript");
+    const script = reloadedCreateContentScript({
+      chromeApi,
+      documentRoot: document,
+      windowObj,
+      fetchFn: jest.fn()
+    });
+    script.start();
+
+    await windowObj.fetch("/data");
+    const xhr = new windowObj.XMLHttpRequest();
+    xhr.open("GET", "/api");
+    xhr.send();
+
+    expect(schedule).toHaveBeenCalledWith(
+      expect.objectContaining({ changeSource: "ajax" })
+    );
+
+    script.stop();
+  });
+
+  test("restores xhr hooks on stop", () => {
+    jest.resetModules();
+    const schedule = jest.fn();
+    const send = jest.fn(() => Promise.resolve({ ok: true }));
+    const observers = [];
+
+    const windowObj = {
+      location: { href: "http://example.test" },
+      top: null,
+      name: "",
+      innerWidth: 800,
+      innerHeight: 600,
+      getComputedStyle: () => ({ display: "block", visibility: "visible" }),
+      setTimeout: setTimeoutFn,
+      clearTimeout: clearTimeoutFn,
+      fetch: jest.fn(() => Promise.resolve({})),
+      MutationObserver: jest.fn(function (callback) {
+        this.observe = jest.fn();
+        this.disconnect = jest.fn();
+        this.trigger = callback;
+        observers.push(this);
+      })
+    };
+    windowObj.top = windowObj;
+
+    function MockXHR() {}
+    const originalSend = jest.fn();
+    const originalOpen = jest.fn();
+    MockXHR.prototype.open = originalOpen;
+    MockXHR.prototype.addEventListener = jest.fn();
+    MockXHR.prototype.send = originalSend;
+    windowObj.XMLHttpRequest = MockXHR;
+
+    globalThis.AdaHighlighter = {
+      createHighlighter: jest.fn(() => ({ applyHighlights: jest.fn(), clearHighlights: jest.fn(), resolveTargets: jest.fn() })),
+      filterIssuesForPage: jest.fn((issues) => issues ?? [])
+    };
+    globalThis.AdaForwarder = {
+      createForwarder: jest.fn(() => ({ schedule, send })),
+      getDefaultConfig: jest.fn(() => Promise.resolve({ serverUrl: DEFAULT_SERVER_URL }))
+    };
+
+    const chromeApi = {
+      runtime: { onMessage: { addListener: jest.fn() } },
+      storage: { local: { get: (defaults, callback) => callback({ enabled: false, serverUrl: DEFAULT_SERVER_URL }) } }
+    };
+
+    const { createContentScript: reloadedCreateContentScript } = require("../extension/contentScript");
+    const script = reloadedCreateContentScript({
+      chromeApi,
+      documentRoot: document,
+      windowObj,
+      fetchFn: jest.fn()
+    });
+    script.start();
+
+    expect(windowObj.XMLHttpRequest.prototype.send).not.toBe(originalSend);
+    expect(windowObj.XMLHttpRequest.prototype.open).not.toBe(originalOpen);
+    script.stop();
+    expect(windowObj.XMLHttpRequest.prototype.send).toBe(originalSend);
+    expect(windowObj.XMLHttpRequest.prototype.open).toBe(originalOpen);
+  });
+
+  test("skips loadend handler when xhr send occurs without open", () => {
+    jest.resetModules();
+    const schedule = jest.fn();
+    const send = jest.fn(() => Promise.resolve({ ok: true }));
+    const observers = [];
+
+    const windowObj = {
+      location: { href: "http://example.test" },
+      top: null,
+      name: "",
+      innerWidth: 800,
+      innerHeight: 600,
+      getComputedStyle: () => ({ display: "block", visibility: "visible" }),
+      setTimeout: setTimeoutFn,
+      clearTimeout: clearTimeoutFn,
+      fetch: jest.fn(() => Promise.resolve({})),
+      MutationObserver: jest.fn(function (callback) {
+        this.observe = jest.fn();
+        this.disconnect = jest.fn();
+        this.trigger = callback;
+        observers.push(this);
+      })
+    };
+    windowObj.top = windowObj;
+
+    function MockXHR() {
+      this.addEventListener = jest.fn();
+    }
+    MockXHR.prototype.open = jest.fn();
+    MockXHR.prototype.send = jest.fn();
+    windowObj.XMLHttpRequest = MockXHR;
+
+    globalThis.AdaHighlighter = {
+      createHighlighter: jest.fn(() => ({ applyHighlights: jest.fn(), clearHighlights: jest.fn(), resolveTargets: jest.fn() })),
+      filterIssuesForPage: jest.fn((issues) => issues ?? [])
+    };
+    globalThis.AdaForwarder = {
+      createForwarder: jest.fn(() => ({ schedule, send })),
+      getDefaultConfig: jest.fn(() => Promise.resolve({ serverUrl: DEFAULT_SERVER_URL }))
+    };
+
+    const chromeApi = {
+      runtime: { onMessage: { addListener: jest.fn() } },
+      storage: { local: { get: (defaults, callback) => callback({ enabled: false, serverUrl: DEFAULT_SERVER_URL }) } }
+    };
+
+    const { createContentScript: reloadedCreateContentScript } = require("../extension/contentScript");
+    const script = reloadedCreateContentScript({
+      chromeApi,
+      documentRoot: document,
+      windowObj,
+      fetchFn: jest.fn()
+    });
+    script.start();
+
+    const xhr = new windowObj.XMLHttpRequest();
+    xhr.send();
+
+    expect(xhr.addEventListener).not.toHaveBeenCalled();
+    script.stop();
   });
 
   test("skips refresh when no cached issues exist", () => {

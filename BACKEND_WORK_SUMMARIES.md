@@ -45,3 +45,5 @@
 2026-01-09 - Added iframe/AJAX capture metadata in node engine extension and listener with tests. (SPEC-019)
 2026-01-09 - Enhanced runtime listener UI/report styling with badge variants and tests. (SPEC-019)
 2026-01-09 - Allow ftl in rule appliesTo validation (SPEC-009)
+
+2026-01-10 - Enhanced extension capture/sidebars and added missing autocomplete check coverage (SPEC-019, SPEC-008)

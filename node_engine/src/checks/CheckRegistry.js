@@ -24,6 +24,7 @@ const { MissingHeadingStructureCheck } = require("./MissingHeadingStructureCheck
 const { DeviceDependentEventHandlerCheck } = require("./DeviceDependentEventHandlerCheck");
 const { RedundantTitleTextCheck } = require("./RedundantTitleTextCheck");
 const { LayoutTableCheck } = require("./LayoutTableCheck");
+const { MissingAutocompleteCheck } = require("./MissingAutocompleteCheck");
 
 class CheckRegistry {
   constructor(checks = []) {
@@ -75,7 +76,8 @@ const createDefaultCheckRegistry = () =>
     MissingHeadingStructureCheck,
     DeviceDependentEventHandlerCheck,
     RedundantTitleTextCheck,
-    LayoutTableCheck
+    LayoutTableCheck,
+    MissingAutocompleteCheck
   ]);
 
 module.exports = { CheckRegistry, createDefaultCheckRegistry };

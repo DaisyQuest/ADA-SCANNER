@@ -12,6 +12,7 @@ const {
   MIN_VIEWPORT_HEIGHT_PX
 } = require("../src/checks/FixedWidthLayoutCheck");
 const { MissingLabelCheck } = require("../src/checks/MissingLabelCheck");
+const { MissingAutocompleteCheck } = require("../src/checks/MissingAutocompleteCheck");
 const { MissingDocumentLanguageCheck } = require("../src/checks/MissingDocumentLanguageCheck");
 const {
   UnlabeledButtonCheck,
@@ -208,6 +209,30 @@ describe("MissingLabelCheck", () => {
 
     const wrappedLabel = createContext('<label><input /></label>', "html");
     expect(MissingLabelCheck.run(wrappedLabel, rule)).toHaveLength(0);
+  });
+});
+
+describe("MissingAutocompleteCheck", () => {
+  test("flags personal data fields missing autocomplete hints", () => {
+    const missing = createContext('<input type="text" name="email" />', "html");
+    expect(MissingAutocompleteCheck.run(missing, rule)).toHaveLength(1);
+
+    const missingPassword = createContext('<input type="password" aria-label="Password" />', "html");
+    expect(MissingAutocompleteCheck.run(missingPassword, rule)).toHaveLength(1);
+  });
+
+  test("skips fields with autocomplete or unrelated hints and flags autocomplete off", () => {
+    const present = createContext('<input type="text" name="email" autocomplete="email" />', "html");
+    expect(MissingAutocompleteCheck.run(present, rule)).toHaveLength(0);
+
+    const off = createContext('<input type="text" name="email" autocomplete="off" />', "html");
+    expect(MissingAutocompleteCheck.run(off, rule)).toHaveLength(1);
+
+    const unrelated = createContext('<input type="text" name="search" />', "html");
+    expect(MissingAutocompleteCheck.run(unrelated, rule)).toHaveLength(0);
+
+    const hidden = createContext('<input type="hidden" name="email" />', "html");
+    expect(MissingAutocompleteCheck.run(hidden, rule)).toHaveLength(0);
   });
 });
 

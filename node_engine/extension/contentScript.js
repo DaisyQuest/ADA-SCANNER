@@ -11,12 +11,15 @@
 
   const { createForwarder, getDefaultConfig } = globalThis.AdaForwarder;
   const { createHighlighter, filterIssuesForPage } = globalThis.AdaHighlighter;
+  const { createReportSidebar } = globalThis.AdaReportSidebar ?? {};
 
   const createContentScript = ({ chromeApi, documentRoot, windowObj, fetchFn }) => {
     let observer = null;
     let refreshTimeout = null;
     let lastIssues = [];
     const highlighter = createHighlighter({ documentRoot });
+    let sidebar = null;
+    let ajaxMonitor = null;
 
     const getConfig = async () => {
       const config = await getDefaultConfig(chromeApi.storage.local);
@@ -39,6 +42,9 @@
       refreshTimeout = windowObj.setTimeout(() => {
         refreshTimeout = null;
         highlighter.applyHighlights(lastIssues);
+        if (sidebar) {
+          sidebar.refresh();
+        }
       }, 100);
     };
 
@@ -51,6 +57,9 @@
         const issues = filterIssuesForPage(payload?.issues, windowObj.location.href);
         lastIssues = Array.isArray(issues) ? issues : [];
         highlighter.applyHighlights(issues);
+        if (sidebar) {
+          sidebar.render(lastIssues);
+        }
       }
     });
 
@@ -71,10 +80,18 @@
       }
     };
 
+    const isTopFrame = () => {
+      try {
+        return windowObj.top === windowObj;
+      } catch {
+        return false;
+      }
+    };
+
     const getFrameContext = () => {
-      const isTopFrame = windowObj.top === windowObj;
+      const topFrame = isTopFrame();
       let topUrl = null;
-      if (!isTopFrame) {
+      if (!topFrame) {
         try {
           topUrl = windowObj.top?.location?.href ?? null;
         } catch {
@@ -82,11 +99,89 @@
         }
       }
       return {
-        isTopFrame,
+        isTopFrame: topFrame,
         frameUrl: windowObj.location?.href ?? null,
         frameName: windowObj.name || null,
         topUrl
       };
+    };
+
+    const ensureSidebar = () => {
+      if (!createReportSidebar || sidebar || !isTopFrame()) {
+        return;
+      }
+
+      sidebar = createReportSidebar({
+        documentRoot,
+        windowObj,
+        resolveTargets: highlighter.resolveTargets
+      });
+    };
+
+    const createAjaxMonitor = () => {
+      let originalFetch = null;
+      let originalXhrOpen = null;
+      let originalXhrSend = null;
+      let installed = false;
+
+      const scheduleAjaxCapture = () => {
+        forwarder.schedule({ changeSource: "ajax", frameContext: getFrameContext() });
+      };
+
+      const install = () => {
+        if (installed) {
+          return;
+        }
+        installed = true;
+
+        if (typeof windowObj.fetch === "function") {
+          originalFetch = windowObj.fetch;
+          windowObj.fetch = (...args) => {
+            const result = originalFetch(...args);
+            Promise.resolve(result).finally(scheduleAjaxCapture);
+            return result;
+          };
+        }
+
+        if (windowObj.XMLHttpRequest?.prototype?.send) {
+          originalXhrOpen = windowObj.XMLHttpRequest.prototype.open;
+          originalXhrSend = windowObj.XMLHttpRequest.prototype.send;
+
+          windowObj.XMLHttpRequest.prototype.open = function (...args) {
+            this.__adaCapture = true;
+            return originalXhrOpen.apply(this, args);
+          };
+
+          windowObj.XMLHttpRequest.prototype.send = function (...args) {
+            if (this.__adaCapture && typeof this.addEventListener === "function") {
+              this.addEventListener("loadend", scheduleAjaxCapture, { once: true });
+            }
+            return originalXhrSend.apply(this, args);
+          };
+        }
+      };
+
+      const uninstall = () => {
+        if (!installed) {
+          return;
+        }
+        installed = false;
+
+        if (originalFetch) {
+          windowObj.fetch = originalFetch;
+          originalFetch = null;
+        }
+        if (originalXhrOpen) {
+          windowObj.XMLHttpRequest.prototype.open = originalXhrOpen;
+          originalXhrOpen = null;
+        }
+        if (originalXhrSend) {
+          windowObj.XMLHttpRequest.prototype.send = originalXhrSend;
+          originalXhrSend = null;
+        }
+      };
+
+      return { install, uninstall };
     };
 
     const isElementVisible = (element) => {
@@ -153,12 +248,18 @@
     };
 
     const start = () => {
+      if (!ajaxMonitor) {
+        ajaxMonitor = createAjaxMonitor();
+      }
+      ajaxMonitor.install();
+
       if (observer) {
         console.log("[ADA] already started");
         return;
       }
 
       console.log("[ADA] starting observer on", windowObj.location.href);
+      ensureSidebar();
 
       observer = new windowObj.MutationObserver(() => {
         // schedule can be very chatty; keep log minimal
@@ -187,6 +288,9 @@
     };
 
     const stop = () => {
+      if (ajaxMonitor) {
+        ajaxMonitor.uninstall();
+      }
       if (!observer) {
         console.log("[ADA] already stopped");
         return;
@@ -196,6 +300,10 @@
       lastIssues = [];
       clearRefreshTimeout();
       highlighter.clearHighlights();
+      if (sidebar) {
+        sidebar.destroy();
+        sidebar = null;
+      }
       console.log("[ADA] stopped");
     };
 
@@ -244,6 +352,7 @@
 
   globalThis.createContentScript = createContentScript;
 
+  /* istanbul ignore next */
   if (typeof module !== "undefined") {
     module.exports = { createContentScript };
   }
