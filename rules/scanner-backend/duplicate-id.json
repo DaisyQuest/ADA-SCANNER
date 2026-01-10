@@ -1,0 +1,10 @@
+{
+  "id": "duplicate-id-001",
+  "description": "Ensure IDs are unique to avoid parsing and accessibility issues.",
+  "severity": "medium",
+  "checkId": "duplicate-id",
+  "appliesTo": "html, htm, cshtml, razor",
+  "recommendation": "Use unique IDs within the document to avoid parsing conflicts. (WCAG 2.1 SC 4.1.1)",
+  "wcagCriteria": "4.1.1",
+  "problemTags": "duplicate-id"
+}

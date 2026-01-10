@@ -4,7 +4,7 @@
   "severity": "high",
   "checkId": "missing-document-language",
   "appliesTo": "html, htm",
-  "recommendation": "Add a valid lang (or xml:lang) attribute to the <html> element.",
+  "recommendation": "Add a valid lang (or xml:lang) attribute to the <html> element. (WCAG 2.1 SC 3.1.1)",
   "wcagCriteria": "3.1.1",
   "problemTags": "document-language, html-root"
 }

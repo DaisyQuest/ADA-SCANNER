@@ -4,7 +4,7 @@
   "severity": "medium",
   "checkId": "device-dependent-event-handler",
   "appliesTo": "html, htm, cshtml, razor",
-  "recommendation": "Add keyboard and focus event handlers alongside mouse-specific handlers.",
-  "wcagCriteria": "2.1.1",
+  "recommendation": "Add keyboard and focus event handlers alongside mouse-specific handlers. (WCAG 2.1 SC 2.1.1,2.5.1)",
+  "wcagCriteria": "2.1.1,2.5.1",
   "problemTags": "input"
 }

@@ -4,7 +4,7 @@
   "severity": "medium",
   "checkId": "missing-skip-link",
   "appliesTo": "html, htm, cshtml, razor",
-  "recommendation": "Add a visually-hidden skip link that targets the main content region.",
+  "recommendation": "Add a visually-hidden skip link that targets the main content region. (WCAG 2.1 SC 2.4.1)",
   "wcagCriteria": "2.4.1",
   "problemTags": "skip-link, bypass-blocks"
 }

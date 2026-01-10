@@ -1,0 +1,10 @@
+{
+  "id": "autocomplete-001",
+  "description": "Ensure inputs that capture personal data include autocomplete hints.",
+  "severity": "medium",
+  "checkId": "missing-autocomplete",
+  "appliesTo": "html, htm, cshtml, razor",
+  "recommendation": "Provide appropriate autocomplete tokens for user data fields. (WCAG 2.1 SC 1.3.5)",
+  "wcagCriteria": "1.3.5",
+  "problemTags": "input-purpose"
+}

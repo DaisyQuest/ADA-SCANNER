@@ -4,7 +4,7 @@
   "severity": "medium",
   "checkId": "empty-link",
   "appliesTo": "html, htm, cshtml, razor",
-  "recommendation": "Provide visible link text or an accessible name via aria-label or aria-labelledby.",
+  "recommendation": "Provide visible link text or an accessible name via aria-label or aria-labelledby. (WCAG 2.1 SC 2.4.4)",
   "wcagCriteria": "2.4.4",
   "problemTags": "links"
 }

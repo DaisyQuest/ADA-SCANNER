@@ -4,7 +4,7 @@
   "severity": "low",
   "checkId": "redundant-title-text",
   "appliesTo": "html, htm, cshtml, razor",
-  "recommendation": "Remove redundant title attributes or keep them distinct from visible text.",
+  "recommendation": "Remove redundant title attributes or keep them distinct from visible text. (WCAG 2.1 SC 2.4.4)",
   "wcagCriteria": "2.4.4",
   "problemTags": "titles"
 }

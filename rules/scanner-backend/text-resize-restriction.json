@@ -1,0 +1,10 @@
+{
+  "id": "text-resize-001",
+  "description": "Avoid disabling text resizing on the page.",
+  "severity": "low",
+  "checkId": "text-resize-restriction",
+  "appliesTo": "html, htm, cshtml, razor, css",
+  "recommendation": "Allow text to resize up to 200% without loss of content. (WCAG 2.1 SC 1.4.4)",
+  "wcagCriteria": "1.4.4",
+  "problemTags": "text-resize"
+}

@@ -61,7 +61,7 @@ const MissingAutocompleteCheck = {
     const issues = [];
 
     for (const match of context.content.matchAll(inputRegex)) {
-      const attrs = match.groups?.attrs ?? "";
+      const attrs = match.groups.attrs;
       const type = normalizeText(getAttributeValue(attrs, "type"));
       if (type && ignoredTypes.has(type)) {
         continue;
@@ -81,7 +81,7 @@ const MissingAutocompleteCheck = {
         continue;
       }
 
-      const line = getLineNumber(context.content, match.index ?? 0);
+      const line = getLineNumber(context.content, match.index);
       issues.push({
         ruleId: rule.id,
         checkId: MissingAutocompleteCheck.id,

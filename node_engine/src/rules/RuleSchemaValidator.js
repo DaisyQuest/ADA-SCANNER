@@ -26,7 +26,22 @@ const AllowedChecks = new Set([
   "device-dependent-event-handler",
   "redundant-title-text",
   "layout-table",
-  "label-in-name"
+  "label-in-name",
+  "missing-autocomplete",
+  "media-alternative",
+  "sensory-characteristics",
+  "orientation-lock",
+  "audio-control",
+  "text-resize-restriction",
+  "images-of-text",
+  "text-spacing",
+  "hover-focus-content",
+  "interaction-limits",
+  "navigation-structure",
+  "focus-visible",
+  "language-of-parts",
+  "error-handling",
+  "duplicate-id"
 ]);
 const AllowedAppliesTo = new Set(["xaml", "cshtml", "razor", "html", "htm", "css", "ftl"]);
 

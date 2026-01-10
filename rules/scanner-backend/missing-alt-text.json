@@ -4,7 +4,7 @@
   "severity": "high",
   "checkId": "missing-alt-text",
   "appliesTo": "html, htm, cshtml, razor",
-  "recommendation": "Provide concise alt text for <img> elements or mark decorative images with alt=\"\".",
+  "recommendation": "Provide concise alt text for <img> elements or mark decorative images with alt=\"\". (WCAG 2.1 SC 1.1.1)",
   "wcagCriteria": "1.1.1",
   "problemTags": "image-alt, non-text-content"
 }

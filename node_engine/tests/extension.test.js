@@ -609,6 +609,195 @@ describe("Extension tab order overlay", () => {
     expect(document.querySelector("#ada-tab-order-overlay")).toBeNull();
     expect(document.querySelector("#ada-tab-order-style")).toBeNull();
   });
+
+  test("skips disabled and aria-disabled elements", () => {
+    document.body.innerHTML = `
+      <button id="enabled"></button>
+      <button id="disabled" disabled></button>
+      <a id="aria-disabled" href="#" aria-disabled="true"></a>
+    `;
+
+    const originalGetComputedStyle = window.getComputedStyle;
+    window.getComputedStyle = () => ({ display: "block", visibility: "visible", opacity: "1" });
+
+    ["enabled", "disabled", "aria-disabled"].forEach((id) => {
+      const element = document.getElementById(id);
+      element.getBoundingClientRect = jest.fn(() => ({
+        left: 10,
+        top: 10,
+        width: 10,
+        height: 10,
+        right: 20,
+        bottom: 20
+      }));
+    });
+
+    const overlay = createTabOrderOverlay({ documentRoot: document, windowObj: window });
+    overlay.enable();
+    expect(document.querySelectorAll(".ada-tab-order-marker")).toHaveLength(1);
+    overlay.destroy();
+    window.getComputedStyle = originalGetComputedStyle;
+  });
+
+  test("ignores hidden or contenteditable false elements", () => {
+    document.body.innerHTML = `
+      <button id="hidden"></button>
+      <div id="editable" contenteditable="false"></div>
+      <button id="visible"></button>
+    `;
+
+    const originalGetComputedStyle = window.getComputedStyle;
+    window.getComputedStyle = (element) => {
+      if (element.id === "hidden") {
+        return { display: "block", visibility: "hidden", opacity: "1" };
+      }
+      return { display: "block", visibility: "visible", opacity: "1" };
+    };
+
+    ["hidden", "editable", "visible"].forEach((id) => {
+      const element = document.getElementById(id);
+      element.getBoundingClientRect = jest.fn(() => ({
+        left: 10,
+        top: 10,
+        width: 10,
+        height: 10,
+        right: 20,
+        bottom: 20
+      }));
+    });
+
+    const overlay = createTabOrderOverlay({ documentRoot: document, windowObj: window });
+    overlay.enable();
+    expect(document.querySelectorAll(".ada-tab-order-marker")).toHaveLength(1);
+    overlay.destroy();
+    window.getComputedStyle = originalGetComputedStyle;
+  });
+
+  test("handles repeated enable and disable calls", () => {
+    document.body.innerHTML = "<button id=\"first\"></button>";
+    const element = document.getElementById("first");
+    element.getBoundingClientRect = jest.fn(() => ({
+      left: 10,
+      top: 10,
+      width: 10,
+      height: 10,
+      right: 20,
+      bottom: 20
+    }));
+
+    const overlay = createTabOrderOverlay({ documentRoot: document, windowObj: window });
+    overlay.disable();
+    overlay.enable();
+    overlay.enable();
+    expect(document.querySelectorAll("#ada-tab-order-style")).toHaveLength(1);
+    overlay.disable();
+  });
+
+  test("renders without focusable elements", () => {
+    document.body.innerHTML = "<div></div>";
+    const overlay = createTabOrderOverlay({ documentRoot: document, windowObj: window });
+    overlay.enable();
+    expect(document.querySelectorAll(".ada-tab-order-marker")).toHaveLength(0);
+    overlay.disable();
+  });
+
+  test("skips rendering when disabled", () => {
+    document.body.innerHTML = '<button id="first"></button>';
+    const overlay = createTabOrderOverlay({ documentRoot: document, windowObj: window });
+    overlay.refresh();
+    expect(document.querySelector("#ada-tab-order-overlay")).toBeNull();
+  });
+
+  test("respects pre-existing styles", () => {
+    document.body.innerHTML = '<button id="first"></button>';
+    const style = document.createElement("style");
+    style.id = "ada-tab-order-style";
+    document.head.appendChild(style);
+
+    const element = document.getElementById("first");
+    element.getBoundingClientRect = jest.fn(() => ({
+      left: 10,
+      top: 10,
+      width: 10,
+      height: 10,
+      right: 20,
+      bottom: 20
+    }));
+
+    const overlay = createTabOrderOverlay({ documentRoot: document, windowObj: window });
+    overlay.enable();
+    expect(document.querySelectorAll("#ada-tab-order-style")).toHaveLength(1);
+    overlay.destroy();
+  });
+
+  test("handles duplicate nodes from selectors", () => {
+    document.body.innerHTML = '<button id="dup"></button>';
+    const element = document.getElementById("dup");
+    element.getBoundingClientRect = jest.fn(() => ({
+      left: 10,
+      top: 10,
+      width: 10,
+      height: 10,
+      right: 20,
+      bottom: 20
+    }));
+
+    const originalQuerySelectorAll = document.querySelectorAll;
+    document.querySelectorAll = jest.fn(() => [element, element]);
+    const overlay = createTabOrderOverlay({ documentRoot: document, windowObj: window });
+    overlay.enable();
+    expect(originalQuerySelectorAll.call(document, ".ada-tab-order-marker")).toHaveLength(1);
+    overlay.destroy();
+    document.querySelectorAll = originalQuerySelectorAll;
+  });
+
+  test("ignores elements without visible geometry", () => {
+    document.body.innerHTML = `
+      <button id="zero"></button>
+      <button id="visible"></button>
+    `;
+    const originalGetComputedStyle = window.getComputedStyle;
+    window.getComputedStyle = () => ({ display: "block", visibility: "visible", opacity: "1" });
+
+    const zero = document.getElementById("zero");
+    zero.getBoundingClientRect = jest.fn(() => ({ left: 0, top: 0, width: 0, height: 0, right: 0, bottom: 0 }));
+    const visible = document.getElementById("visible");
+    visible.getBoundingClientRect = jest.fn(() => ({ left: 10, top: 10, width: 10, height: 10, right: 20, bottom: 20 }));
+
+    const overlay = createTabOrderOverlay({ documentRoot: document, windowObj: window });
+    overlay.enable();
+    expect(document.querySelectorAll(".ada-tab-order-marker")).toHaveLength(1);
+    overlay.destroy();
+    window.getComputedStyle = originalGetComputedStyle;
+  });
+
+  test("sorts positive tabindex ties by document order", () => {
+    document.body.innerHTML = `
+      <button id="first" tabindex="1"></button>
+      <button id="second" tabindex="1"></button>
+    `;
+    const originalGetComputedStyle = window.getComputedStyle;
+    window.getComputedStyle = () => ({ display: "block", visibility: "visible", opacity: "1" });
+
+    ["first", "second"].forEach((id, index) => {
+      const element = document.getElementById(id);
+      element.getBoundingClientRect = jest.fn(() => ({
+        left: 10 + index * 10,
+        top: 10,
+        width: 10,
+        height: 10,
+        right: 20 + index * 10,
+        bottom: 20
+      }));
+    });
+
+    const overlay = createTabOrderOverlay({ documentRoot: document, windowObj: window });
+    overlay.enable();
+    const markers = Array.from(document.querySelectorAll(".ada-tab-order-marker"));
+    expect(markers.map((marker) => marker.textContent)).toEqual(["1", "2"]);
+    overlay.destroy();
+    window.getComputedStyle = originalGetComputedStyle;
+  });
 });
 
 describe("Extension background", () => {
