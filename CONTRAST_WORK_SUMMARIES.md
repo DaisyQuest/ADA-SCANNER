@@ -12,3 +12,5 @@
 2026-01-10 - Enhanced node_engine runtime/static dashboards and extension popup UX with filtering and styling updates (SPEC-010)
 2026-01-10 - Expanded contrast parsing and default background heuristics with exhaustive tests. (SPEC-008, SPEC-013)
 2026-01-10 - Added sidebar configuration toggle, in-sidebar switch, and click highlighting with expanded tests (SPEC-019, SPEC-013)
+2026-01-10 - Handle single-quoted HTML style attributes in contrast checks and add coverage. (SPEC-008, SPEC-013)
+2026-01-10 - Fix node_engine contrast parsing for single-quoted style attributes with tests. (SPEC-008, SPEC-013)

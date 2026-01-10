@@ -8,7 +8,7 @@ namespace Scanner.Core.Checks;
 /// </summary>
 public sealed class InsufficientContrastCheck : ICheck
 {
-    private static readonly Regex StyleRegex = new("style=\"(?<style>[^\"]+)\"", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+    private static readonly Regex StyleRegex = new("style\\s*=\\s*(?:\"(?<style>[^\"]+)\"|'(?<style>[^']+)')", RegexOptions.IgnoreCase | RegexOptions.Compiled);
     private static readonly Regex XamlElementRegex = new("<(?<tag>[\\w:.-]+)(?<attrs>[^>]*?)>", RegexOptions.IgnoreCase | RegexOptions.Compiled);
     private static readonly Regex CssBlockRegex = new("(?<selector>[^\\{]+)\\{(?<body>[^}]+)\\}", RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.Singleline);
     private static readonly Regex CssHexRegex = new("#[0-9a-fA-F]{3,8}", RegexOptions.Compiled);
