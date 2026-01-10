@@ -1,8 +1,9 @@
 const { JSDOM } = require("jsdom");
 
 const createDomDocument = ({ content, url } = {}) => {
+  const resolvedUrl = url ? new URL(url, "http://localhost/").toString() : "http://localhost/";
   const dom = new JSDOM(content ?? "", {
-    url: url || "http://localhost",
+    url: resolvedUrl,
     contentType: "text/html"
   });
   return dom.window.document;

@@ -25,7 +25,8 @@ const AllowedChecks = new Set([
   "missing-heading-structure",
   "device-dependent-event-handler",
   "redundant-title-text",
-  "layout-table"
+  "layout-table",
+  "label-in-name"
 ]);
 const AllowedAppliesTo = new Set(["xaml", "cshtml", "razor", "html", "htm", "css", "ftl"]);
 

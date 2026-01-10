@@ -47,3 +47,5 @@
 2026-01-09 - Allow ftl in rule appliesTo validation (SPEC-009)
 
 2026-01-10 - Enhanced extension capture/sidebars and added missing autocomplete check coverage (SPEC-019, SPEC-008)
+
+2026-01-10 - Added DOM-based WCAG 2.1 label-in-name checks and improved node engine rule robustness with tests. (SPEC-008, SPEC-013)

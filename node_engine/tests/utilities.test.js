@@ -3,6 +3,8 @@ const {
   collectLabelForIds,
   collectLabelRanges,
   collectElementIds,
+  collectElementIdsFromDocument,
+  collectLabelForIdsFromDocument,
   isWithinLabel,
   hasAriaLabel,
   hasValidAriaLabelledBy,
@@ -13,6 +15,7 @@ const {
 const { getLineNumber, containsAttribute } = require("../src/checks/TextUtilities");
 const { getLastPropertyValue, isFixedLength } = require("../src/checks/StyleUtilities");
 const { parseHexColor, parseColor, contrastRatio } = require("../src/checks/ColorContrastAnalyzer");
+const { JSDOM } = require("jsdom");
 
 describe("AttributeParser", () => {
   test("extracts attribute values case-insensitively", () => {
@@ -37,6 +40,13 @@ describe("AccessibleNameUtilities", () => {
     expect(collectElementIds('<div id=""></div>')).toEqual(new Set());
   });
 
+  test("collects ids from documents", () => {
+    const dom = new JSDOM('<label for="field"></label><input id="field" /><div id=""></div>');
+    expect(collectLabelForIdsFromDocument(dom.window.document)).toEqual(new Set(["field"]));
+    expect(collectElementIdsFromDocument(dom.window.document)).toEqual(new Set(["field"]));
+    expect(collectLabelForIdsFromDocument(null)).toEqual(new Set());
+  });
+
   test("detects label ranges and membership", () => {
     const ranges = collectLabelRanges(markup);
     expect(ranges).toHaveLength(1);
@@ -56,6 +66,7 @@ describe("AccessibleNameUtilities", () => {
     expect(hasValidAriaLabelledBy("missing", ids)).toBe(false);
     expect(hasValidAriaLabelledBy("", ids)).toBe(false);
     expect(hasValidAriaLabelledBy("label-one missing", ids)).toBe(true);
+    expect(hasValidAriaLabelledBy("  label-one  ", ids)).toBe(true);
   });
 
   test("validates label for id and text content", () => {

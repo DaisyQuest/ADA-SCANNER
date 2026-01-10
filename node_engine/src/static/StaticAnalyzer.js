@@ -3,6 +3,7 @@ const path = require("path");
 const { RuleLoader } = require("../rules/RuleLoader");
 const { createDefaultCheckRegistry } = require("../checks/CheckRegistry");
 const { extractStylesheetLinks } = require("../utils/StylesheetLinks");
+const { createDomDocument } = require("../utils/DomParser");
 
 const DEFAULT_EXTENSIONS = new Map([
   [".java", { kind: "java", contentType: "text/x-java-source" }],
@@ -27,6 +28,8 @@ const DEFAULT_IGNORED_DIRS = new Set([
   "coverage",
   "node_modules"
 ]);
+
+const DOM_KINDS = new Set(["html", "cshtml", "razor"]);
 
 const normalizePath = (rootDir, filePath) =>
   path.relative(rootDir, filePath).split(path.sep).join("/");
@@ -110,7 +113,10 @@ class StaticAnalyzer {
       const context = {
         filePath: normalizedPath,
         content,
-        kind: entry.kind
+        kind: entry.kind,
+        document: DOM_KINDS.has(entry.kind)
+          ? createDomDocument({ content, url: normalizedPath })
+          : null
       };
 
       documents.push({

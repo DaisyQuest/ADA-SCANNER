@@ -66,4 +66,16 @@ describe("RuleSchemaValidator", () => {
 
     expect(errors).toEqual([]);
   });
+
+  test("accepts label-in-name check id", () => {
+    const validator = new RuleSchemaValidator();
+    const errors = validator.validate({
+      id: "rule-4",
+      description: "desc",
+      severity: "medium",
+      checkId: "label-in-name"
+    });
+
+    expect(errors).toEqual([]);
+  });
 });

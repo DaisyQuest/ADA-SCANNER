@@ -43,6 +43,13 @@ const { LayoutTableCheck } = require("../src/checks/LayoutTableCheck");
 const { MissingIframeTitleCheck } = require("../src/checks/MissingIframeTitleCheck");
 const { MissingFieldsetLegendCheck } = require("../src/checks/MissingFieldsetLegendCheck");
 const {
+  LabelInNameCheck,
+  normalizeText: normalizeLabelText,
+  getVisibleLabel,
+  getAccessibleNameCandidate,
+  isInteractiveCandidate
+} = require("../src/checks/LabelInNameCheck");
+const {
   MissingSkipLinkCheck,
   normalizeText,
   isSkipLabel,
@@ -220,6 +227,54 @@ describe("MissingLabelCheck", () => {
 
     const wrappedLabel = createContext('<label><input /></label>', "html");
     expect(MissingLabelCheck.run(wrappedLabel, rule)).toHaveLength(0);
+
+    const domMissing = {
+      filePath: "file",
+      content: '<input type="text" />',
+      kind: "html",
+      document: new JSDOM('<input type="text" />').window.document
+    };
+    expect(MissingLabelCheck.run(domMissing, rule)).toHaveLength(1);
+
+    const domLabelled = {
+      filePath: "file",
+      content: '<label for="name">Name</label><input id="name" />',
+      kind: "html",
+      document: new JSDOM('<label for="name">Name</label><input id="name" />').window.document
+    };
+    expect(MissingLabelCheck.run(domLabelled, rule)).toHaveLength(0);
+
+    const domWrapped = {
+      filePath: "file",
+      content: "<label><input /></label>",
+      kind: "html",
+      document: new JSDOM("<label><input /></label>").window.document
+    };
+    expect(MissingLabelCheck.run(domWrapped, rule)).toHaveLength(0);
+
+    const domHidden = {
+      filePath: "file",
+      content: '<input type="hidden" />',
+      kind: "html",
+      document: new JSDOM('<input type="hidden" />').window.document
+    };
+    expect(MissingLabelCheck.run(domHidden, rule)).toHaveLength(0);
+
+    const domAriaLabel = {
+      filePath: "file",
+      content: '<input aria-label="Name" />',
+      kind: "html",
+      document: new JSDOM('<input aria-label="Name" />').window.document
+    };
+    expect(MissingLabelCheck.run(domAriaLabel, rule)).toHaveLength(0);
+
+    const domLabelledBy = {
+      filePath: "file",
+      content: '<span id="label">Name</span><input aria-labelledby="label" />',
+      kind: "html",
+      document: new JSDOM('<span id="label">Name</span><input aria-labelledby="label" />').window.document
+    };
+    expect(MissingLabelCheck.run(domLabelledBy, rule)).toHaveLength(0);
   });
 });
 
@@ -449,6 +504,30 @@ describe("MissingPageTitleCheck", () => {
 
     const multi = createContext("<title></title><title>Home</title>", "html");
     expect(MissingPageTitleCheck.run(multi, rule)).toHaveLength(0);
+
+    const domMissing = {
+      filePath: "file",
+      content: "<html></html>",
+      kind: "html",
+      document: new JSDOM("<html></html>").window.document
+    };
+    expect(MissingPageTitleCheck.run(domMissing, rule)).toHaveLength(1);
+
+    const domEmpty = {
+      filePath: "file",
+      content: "<title></title>",
+      kind: "html",
+      document: new JSDOM("<title></title>").window.document
+    };
+    expect(MissingPageTitleCheck.run(domEmpty, rule)).toHaveLength(1);
+
+    const domPresent = {
+      filePath: "file",
+      content: "<title>Home</title>",
+      kind: "html",
+      document: new JSDOM("<title>Home</title>").window.document
+    };
+    expect(MissingPageTitleCheck.run(domPresent, rule)).toHaveLength(0);
   });
 });
 
@@ -603,6 +682,62 @@ describe("EmptyLinkCheck", () => {
 
     const notLink = createContext("<a></a>", "html");
     expect(EmptyLinkCheck.run(notLink, rule)).toHaveLength(0);
+
+    const domEmpty = {
+      filePath: "file",
+      content: '<a href="/home"></a>',
+      kind: "html",
+      document: new JSDOM('<a href="/home"></a>').window.document
+    };
+    expect(EmptyLinkCheck.run(domEmpty, rule)).toHaveLength(1);
+
+    const domLabelled = {
+      filePath: "file",
+      content: '<span id="home">Home</span><a href="/home" aria-labelledby="home"></a>',
+      kind: "html",
+      document: new JSDOM('<span id="home">Home</span><a href="/home" aria-labelledby="home"></a>').window.document
+    };
+    expect(EmptyLinkCheck.run(domLabelled, rule)).toHaveLength(0);
+
+    const domRoleLink = {
+      filePath: "file",
+      content: '<div role="link" aria-label="Home"></div>',
+      kind: "html",
+      document: new JSDOM('<div role="link" aria-label="Home"></div>').window.document
+    };
+    expect(EmptyLinkCheck.run(domRoleLink, rule)).toHaveLength(0);
+
+    const domSkipped = {
+      filePath: "file",
+      content: "<a>Skip</a>",
+      kind: "html",
+      document: new JSDOM("<a>Skip</a>").window.document
+    };
+    expect(EmptyLinkCheck.run(domSkipped, rule)).toHaveLength(0);
+
+    const domWithText = {
+      filePath: "file",
+      content: '<a href="/home">Home</a>',
+      kind: "html",
+      document: new JSDOM('<a href="/home">Home</a>').window.document
+    };
+    expect(EmptyLinkCheck.run(domWithText, rule)).toHaveLength(0);
+
+    const domTitle = {
+      filePath: "file",
+      content: '<a href="/home" title="Home"></a>',
+      kind: "html",
+      document: new JSDOM('<a href="/home" title="Home"></a>').window.document
+    };
+    expect(EmptyLinkCheck.run(domTitle, rule)).toHaveLength(0);
+
+    const domCaseMismatch = {
+      filePath: "file",
+      content: '<A href="/home"></A>',
+      kind: "html",
+      document: new JSDOM('<A href="/home"></A>').window.document
+    };
+    expect(EmptyLinkCheck.run(domCaseMismatch, rule)).toHaveLength(1);
   });
 
   test("helper identifies link attributes", () => {
@@ -646,6 +781,22 @@ describe("MissingHeadingStructureCheck", () => {
 
     const present = createContext("<main><h2>Title</h2></main>", "html");
     expect(MissingHeadingStructureCheck.run(present, rule)).toHaveLength(0);
+
+    const domMissing = {
+      filePath: "file",
+      content: "<main></main>",
+      kind: "html",
+      document: new JSDOM("<main></main>").window.document
+    };
+    expect(MissingHeadingStructureCheck.run(domMissing, rule)).toHaveLength(1);
+
+    const domPresent = {
+      filePath: "file",
+      content: "<main><h2>Title</h2></main>",
+      kind: "html",
+      document: new JSDOM("<main><h2>Title</h2></main>").window.document
+    };
+    expect(MissingHeadingStructureCheck.run(domPresent, rule)).toHaveLength(0);
   });
 });
 
@@ -749,6 +900,30 @@ describe("MissingTableHeaderCheck", () => {
 
     const noneRole = createContext('<table role="none"></table>', "html");
     expect(MissingTableHeaderCheck.run(noneRole, rule)).toHaveLength(0);
+
+    const domMissing = {
+      filePath: "file",
+      content: "<table><tr><td>Cell</td></tr></table>",
+      kind: "html",
+      document: new JSDOM("<table><tr><td>Cell</td></tr></table>").window.document
+    };
+    expect(MissingTableHeaderCheck.run(domMissing, rule)).toHaveLength(1);
+
+    const domPresent = {
+      filePath: "file",
+      content: "<table><tr><th>Header</th></tr></table>",
+      kind: "html",
+      document: new JSDOM("<table><tr><th>Header</th></tr></table>").window.document
+    };
+    expect(MissingTableHeaderCheck.run(domPresent, rule)).toHaveLength(0);
+
+    const domPresentation = {
+      filePath: "file",
+      content: '<table role="presentation"><tr><td>Cell</td></tr></table>',
+      kind: "html",
+      document: new JSDOM('<table role="presentation"><tr><td>Cell</td></tr></table>').window.document
+    };
+    expect(MissingTableHeaderCheck.run(domPresentation, rule)).toHaveLength(0);
   });
 });
 
@@ -869,6 +1044,141 @@ describe("MissingLinkTextCheck", () => {
     expect(
       hasAccessibleLabelFromElement(domLabelledBy.window.document.querySelector("a"), new Set(["label"]))
     ).toBe(true);
+  });
+});
+
+describe("LabelInNameCheck", () => {
+  test("flags controls whose accessible name excludes the visible label", () => {
+    const domMismatch = {
+      filePath: "file",
+      content: '<button aria-label="Save">Delete</button>',
+      kind: "html",
+      document: new JSDOM('<button aria-label="Save">Delete</button>').window.document
+    };
+    expect(LabelInNameCheck.run(domMismatch, rule)).toHaveLength(1);
+
+    const domMatch = {
+      filePath: "file",
+      content: '<button aria-label="Save changes">Save</button>',
+      kind: "html",
+      document: new JSDOM('<button aria-label="Save changes">Save</button>').window.document
+    };
+    expect(LabelInNameCheck.run(domMatch, rule)).toHaveLength(0);
+
+    const domLabelledByMismatch = {
+      filePath: "file",
+      content: '<span id="label">Cancel</span><button aria-labelledby="label">Submit</button>',
+      kind: "html",
+      document: new JSDOM('<span id="label">Cancel</span><button aria-labelledby="label">Submit</button>').window.document
+    };
+    expect(LabelInNameCheck.run(domLabelledByMismatch, rule)).toHaveLength(1);
+
+    const domLabelledByMatch = {
+      filePath: "file",
+      content: '<span id="label">Submit</span><button aria-labelledby="label">Submit</button>',
+      kind: "html",
+      document: new JSDOM('<span id="label">Submit</span><button aria-labelledby="label">Submit</button>').window.document
+    };
+    expect(LabelInNameCheck.run(domLabelledByMatch, rule)).toHaveLength(0);
+
+    const domCaseMismatch = {
+      filePath: "file",
+      content: '<BUTTON aria-label="Save">Delete</BUTTON>',
+      kind: "html",
+      document: new JSDOM('<BUTTON aria-label="Save">Delete</BUTTON>').window.document
+    };
+    expect(LabelInNameCheck.run(domCaseMismatch, rule)).toHaveLength(1);
+  });
+
+  test("skips controls without explicit accessible names or visible labels", () => {
+    const domImplicit = {
+      filePath: "file",
+      content: "<button>Save</button>",
+      kind: "html",
+      document: new JSDOM("<button>Save</button>").window.document
+    };
+    expect(LabelInNameCheck.run(domImplicit, rule)).toHaveLength(0);
+
+    const domIconOnly = {
+      filePath: "file",
+      content: '<button aria-label="Settings"></button>',
+      kind: "html",
+      document: new JSDOM('<button aria-label="Settings"></button>').window.document
+    };
+    expect(LabelInNameCheck.run(domIconOnly, rule)).toHaveLength(0);
+  });
+
+  test("handles input and link controls", () => {
+    const domInputMismatch = {
+      filePath: "file",
+      content: '<input type="submit" value="Send" aria-label="Submit form" />',
+      kind: "html",
+      document: new JSDOM('<input type="submit" value="Send" aria-label="Submit form" />').window.document
+    };
+    expect(LabelInNameCheck.run(domInputMismatch, rule)).toHaveLength(1);
+
+    const domInputMatch = {
+      filePath: "file",
+      content: '<input type="submit" value="Send" aria-label="Send form" />',
+      kind: "html",
+      document: new JSDOM('<input type="submit" value="Send" aria-label="Send form" />').window.document
+    };
+    expect(LabelInNameCheck.run(domInputMatch, rule)).toHaveLength(0);
+
+    const domLinkMismatch = {
+      filePath: "file",
+      content: '<a href="/" aria-label="Home">Start</a>',
+      kind: "html",
+      document: new JSDOM('<a href="/" aria-label="Home">Start</a>').window.document
+    };
+    expect(LabelInNameCheck.run(domLinkMismatch, rule)).toHaveLength(1);
+  });
+
+  test("exposes helpers for normalization and candidate detection", () => {
+    const dom = new JSDOM('<button aria-label="Save"> Save </button>');
+    const button = dom.window.document.querySelector("button");
+    expect(normalizeLabelText("  Save  ")).toBe("save");
+    expect(getVisibleLabel(button)).toBe(" Save ");
+    expect(getAccessibleNameCandidate(button, dom.window.document)).toBe("Save");
+    expect(isInteractiveCandidate(button)).toBe(true);
+  });
+
+  test("covers helper branches and missing document handling", () => {
+    const dom = new JSDOM('<div role="button">Press</div><div role="link">Go</div><a>Plain</a><div>Other</div>');
+    const roleButton = dom.window.document.querySelector('[role="button"]');
+    const roleLink = dom.window.document.querySelector('[role="link"]');
+    const plainAnchor = dom.window.document.querySelector("a");
+    const plainDiv = dom.window.document.querySelector("div:not([role])");
+    expect(getVisibleLabel(roleButton)).toBe("Press");
+    expect(getVisibleLabel(roleLink)).toBe("Go");
+    expect(isInteractiveCandidate(roleLink)).toBe(true);
+    expect(isInteractiveCandidate(plainAnchor)).toBe(false);
+    expect(getVisibleLabel(plainDiv)).toBe("");
+    expect(isInteractiveCandidate(plainDiv)).toBe(false);
+
+    const domInput = new JSDOM('<input type="image" alt="Photo" title="Photo title" />');
+    const input = domInput.window.document.querySelector("input");
+    expect(getVisibleLabel(input)).toBe("Photo");
+    expect(getAccessibleNameCandidate(input, domInput.window.document)).toBe("Photo title");
+
+    const domInputButton = new JSDOM('<input type="submit" value="Send" />');
+    const inputButton = domInputButton.window.document.querySelector("input");
+    expect(getVisibleLabel(inputButton)).toBe("Send");
+
+    const domMissingLabelledBy = new JSDOM('<button aria-labelledby="missing">Save</button>');
+    const missingLabel = domMissingLabelledBy.window.document.querySelector("button");
+    expect(getAccessibleNameCandidate(missingLabel, domMissingLabelledBy.window.document)).toBe("");
+
+    expect(LabelInNameCheck.run({ filePath: "file", content: "<button>Save</button>", kind: "html" }, rule))
+      .toHaveLength(0);
+
+    const domNonInteractiveAnchor = {
+      filePath: "file",
+      content: "<a>Plain</a>",
+      kind: "html",
+      document: new JSDOM("<a>Plain</a>").window.document
+    };
+    expect(LabelInNameCheck.run(domNonInteractiveAnchor, rule)).toHaveLength(0);
   });
 });
 
