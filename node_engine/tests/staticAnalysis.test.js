@@ -82,6 +82,134 @@ describe("StaticAnalyzer", () => {
     expect(document.stylesheets).toEqual(["styles.css"]);
   });
 
+  test("records linked stylesheets from embedded HTML in JavaScript files", () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "ada-static-js-links-"));
+    fs.writeFileSync(
+      path.join(root, "script.js"),
+      "const template = `\\n<link rel=\"stylesheet\" href=\"styles.css\" />\\n`;"
+    );
+    const analyzer = new StaticAnalyzer({
+      ruleLoader: {
+        validateRules: () => ({ isValid: true, teams: [] })
+      }
+    });
+
+    const result = analyzer.scanRoot({ rootDir: root, rulesRoot: "/rules" });
+    const document = result.documents.find((doc) => doc.url === "script.js");
+
+    expect(document.stylesheets).toEqual(["styles.css"]);
+  });
+
+  test("scans embedded HTML and CSS inside JavaScript files", () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "ada-static-js-embedded-"));
+    fs.writeFileSync(
+      path.join(root, "script.js"),
+      [
+        "const template = `",
+        "<button aria-label=\"Save\"></button>",
+        "`;",
+        "const styles = `",
+        ".button { line-height: 1 !important; }",
+        "`;"
+      ].join("\n")
+    );
+    const seen = [];
+    const analyzer = new StaticAnalyzer({
+      ruleLoader: {
+        validateRules: () => ({
+          isValid: true,
+          teams: [
+            {
+              teamName: "team",
+              rules: [
+                { id: "rule-html", checkId: "mock-html", appliesTo: "html" },
+                { id: "rule-css", checkId: "mock-css", appliesTo: "css" },
+                { id: "rule-js", checkId: "mock-js", appliesTo: "js" }
+              ]
+            }
+          ]
+        })
+      },
+      checkRegistry: {
+        find: (checkId) => {
+          if (checkId === "mock-html") {
+            return {
+              applicableKinds: ["html"],
+              run: (context) => {
+                seen.push({ kind: context.kind, hasDocument: Boolean(context.document) });
+                return [{ ruleId: "rule-html", checkId, filePath: context.filePath, message: "html" }];
+              }
+            };
+          }
+          if (checkId === "mock-css") {
+            return {
+              applicableKinds: ["css"],
+              run: (context) => {
+                seen.push({ kind: context.kind, hasDocument: Boolean(context.document) });
+                return [{ ruleId: "rule-css", checkId, filePath: context.filePath, message: "css" }];
+              }
+            };
+          }
+          if (checkId === "mock-js") {
+            return {
+              applicableKinds: ["js"],
+              run: (context) => {
+                seen.push({ kind: context.kind, hasDocument: Boolean(context.document) });
+                return [{ ruleId: "rule-js", checkId, filePath: context.filePath, message: "js" }];
+              }
+            };
+          }
+          return null;
+        }
+      }
+    });
+
+    const result = analyzer.scanRoot({ rootDir: root, rulesRoot: "/rules" });
+
+    expect(result.documents).toHaveLength(1);
+    expect(result.issues.map((issue) => issue.checkId).sort()).toEqual(["mock-css", "mock-html", "mock-js"]);
+    expect(seen).toEqual(expect.arrayContaining([
+      { kind: "html", hasDocument: true },
+      { kind: "css", hasDocument: false },
+      { kind: "js", hasDocument: false }
+    ]));
+  });
+
+  test("aligns line numbers for CSS snippets in JavaScript files", () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "ada-static-js-lines-"));
+    fs.writeFileSync(
+      path.join(root, "script.js"),
+      [
+        "const header = \"hello\";",
+        "const styles = `",
+        ".button {",
+        "  line-height: 1 !important;",
+        "}",
+        "`;",
+        "const footer = \"done\";"
+      ].join("\n")
+    );
+    const analyzer = new StaticAnalyzer({
+      ruleLoader: {
+        validateRules: () => ({
+          isValid: true,
+          teams: [
+            {
+              teamName: "team",
+              rules: [{ id: "rule-1", checkId: "text-spacing", appliesTo: "css" }]
+            }
+          ]
+        })
+      }
+    });
+
+    const result = analyzer.scanRoot({ rootDir: root, rulesRoot: "/rules" });
+
+    expect(result.issues).toHaveLength(1);
+    expect(result.issues[0].filePath).toBe("script.js");
+    expect(result.issues[0].line).toBe(4);
+  });
+
   test("throws when root or rules are missing", () => {
     const analyzer = new StaticAnalyzer();
     expect(() => analyzer.scanRoot({ rootDir: "", rulesRoot: "/rules" })).toThrow("Root directory is required.");
