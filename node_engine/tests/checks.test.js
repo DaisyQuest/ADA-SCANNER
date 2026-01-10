@@ -1375,7 +1375,10 @@ describe("InsufficientContrastCheck", () => {
       .toEqual({ r: 0.5, g: 0.5, b: 0.5, a: 1 });
 
     const htmlContext = createContext('<div style="color:#777; background-color:#888"></div>', "html");
-    expect(InsufficientContrastCheck.run(htmlContext, rule)).toHaveLength(1);
+    const htmlIssues = InsufficientContrastCheck.run(htmlContext, rule);
+    expect(htmlIssues).toHaveLength(1);
+    expect(htmlIssues[0].evidence).toContain('Foreground: rgb(119, 119, 119)');
+    expect(htmlIssues[0].evidence).toContain('Background: rgb(136, 136, 136)');
 
     const htmlSingleQuotedStyle = createContext(
       "<strong style = 'opacity: 1; color: rgb(255, 255, 255); background-color: rgb(255, 255, 255);'></strong>",

@@ -886,6 +886,8 @@ public sealed class ChecksTests
         var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
 
         Assert.Single(issues);
+        Assert.Contains("Foreground: rgb(119, 119, 119)", issues[0].Evidence);
+        Assert.Contains("Background: rgb(136, 136, 136)", issues[0].Evidence);
     }
 
     [Fact]
