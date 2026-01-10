@@ -96,6 +96,36 @@ describe("goldmaster options", () => {
     expect(options.errors).toContain("No extensions selected. Use --all or --ext.");
   });
 
+  test("falls back to RULES_ROOT then ADA_RULES_ROOT when rules root is unset", () => {
+    const options = resolveGoldMasterOptions({
+      argv: ["--ext", "html"],
+      env: {
+        RULES_ROOT: "/env/rules"
+      },
+      cwd: "/tmp"
+    });
+    expect(options.rulesRoot).toBe("/env/rules");
+
+    const fallbackOptions = resolveGoldMasterOptions({
+      argv: ["--ext", "html"],
+      env: {
+        ADA_RULES_ROOT: "/env/ada-rules"
+      },
+      cwd: "/tmp"
+    });
+    expect(fallbackOptions.rulesRoot).toBe("/env/ada-rules");
+  });
+
+  test("parses mixed-case extensions and trims outputDir values", () => {
+    const options = resolveGoldMasterOptions({
+      argv: ["--ext", "HTML, .HTM, razor", "--outputDir", "  /tmp/out  "],
+      env: {},
+      cwd: "/tmp"
+    });
+    expect(options.extensions).toEqual([".html", ".htm", ".razor"]);
+    expect(options.outputDir).toBe("/tmp/out");
+  });
+
   test("deduplicates extensions unless --all is set", () => {
     const options = resolveGoldMasterOptions({ argv: ["--ext", "html,html,razor"], env: {}, cwd: "/tmp" });
     expect(options.errors).toEqual([]);
@@ -214,10 +244,119 @@ describe("goldmaster runner", () => {
     expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining(".razor"));
   });
 
+  test("writes an empty summary when no extensions are provided", async () => {
+    const rulesRoot = createTempRules();
+    const rootDir = createGoldMasterRoot();
+    const outputDir = fs.mkdtempSync(path.join(os.tmpdir(), "ada-gm-out-"));
+
+    const result = await runGoldMaster({
+      rootDir,
+      rulesRoot,
+      outputDir,
+      extensions: []
+    });
+
+    expect(result.summary.totalExtensions).toBe(0);
+    expect(result.summary.results).toEqual([]);
+    expect(fs.existsSync(result.summaryPath)).toBe(true);
+  });
+
+  test("scans each existing extension directory and writes reports", async () => {
+    const rulesRoot = createTempRules();
+    const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "ada-gm-multi-"));
+    const outputDir = fs.mkdtempSync(path.join(os.tmpdir(), "ada-gm-out-"));
+    fs.mkdirSync(path.join(rootDir, "html"), { recursive: true });
+    fs.mkdirSync(path.join(rootDir, "htm"), { recursive: true });
+
+    const analyzers = [];
+    const analyzerFactory = jest.fn(() => {
+      const analyzer = {
+        scanRoot: jest.fn(() => ({ documents: [], issues: [], rules: [] }))
+      };
+      analyzers.push(analyzer);
+      return analyzer;
+    });
+    const reportBuilder = {
+      build: jest.fn(() => ({ summary: { documents: 0, issues: 0 } }))
+    };
+
+    const result = await runGoldMaster({
+      rootDir,
+      rulesRoot,
+      outputDir,
+      extensions: [".html", ".htm"],
+      analyzerFactory,
+      reportBuilder
+    });
+
+    expect(analyzerFactory).toHaveBeenCalledTimes(2);
+    expect(analyzers[0].scanRoot).toHaveBeenCalledWith({ rootDir: path.join(rootDir, "html"), rulesRoot });
+    expect(analyzers[1].scanRoot).toHaveBeenCalledWith({ rootDir: path.join(rootDir, "htm"), rulesRoot });
+    expect(result.summary.results).toHaveLength(2);
+    expect(fs.existsSync(result.summary.results[0].reportPath)).toBe(true);
+  });
+
   test("startGoldMaster reports option errors", async () => {
     const logger = { warn: jest.fn(), log: jest.fn(), error: jest.fn() };
     const result = await startGoldMaster({ argv: [], env: {}, logger });
     expect(result.started).toBe(false);
     expect(result.errors).toContain("No extensions selected. Use --all or --ext.");
+  });
+
+  test("startGoldMaster logs success when reports are generated", async () => {
+    jest.resetModules();
+    const summaryPath = "/tmp/goldmaster-summary.json";
+    const mockRunGoldMaster = jest.fn().mockResolvedValue({
+      summaryPath,
+      summary: { results: [] }
+    });
+
+    await new Promise((resolve, reject) => {
+      jest.isolateModules(() => {
+        jest.doMock("../src/goldmaster/GoldMasterRunner", () => ({
+          runGoldMaster: mockRunGoldMaster
+        }));
+        const { startGoldMaster: mockedStartGoldMaster } = require("../src/goldmaster/cli");
+        const logger = { warn: jest.fn(), log: jest.fn(), error: jest.fn() };
+
+        mockedStartGoldMaster({ argv: ["--all"], env: {}, logger })
+          .then((result) => {
+            expect(result.started).toBe(true);
+            expect(logger.log).toHaveBeenCalledWith(`GoldMaster reports written to ${summaryPath}`);
+            resolve();
+          })
+          .catch(reject);
+      });
+    });
+  });
+
+  test("runCli sets exitCode when goldmaster execution fails", async () => {
+    const errorMessage = "boom";
+    jest.resetModules();
+    await new Promise((resolve, reject) => {
+      jest.isolateModules(() => {
+        jest.doMock("../src/goldmaster/GoldMasterRunner", () => ({
+          runGoldMaster: jest.fn().mockRejectedValue(new Error(errorMessage))
+        }));
+        const { runCli } = require("../src/goldmaster/cli");
+        const errorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+        const originalExitCode = process.exitCode;
+        process.exitCode = undefined;
+
+        runCli({ argv: ["--all"], env: {}, logger: console })
+          .then(() => {
+            expect(process.exitCode).toBe(1);
+            expect(errorSpy).toHaveBeenCalledWith(errorMessage);
+            errorSpy.mockRestore();
+            process.exitCode = originalExitCode;
+            resolve();
+          })
+          .catch((error) => {
+            errorSpy.mockRestore();
+            process.exitCode = originalExitCode;
+            reject(error);
+          });
+      });
+    });
   });
 });
