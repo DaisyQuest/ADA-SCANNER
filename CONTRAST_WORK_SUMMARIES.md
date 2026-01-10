@@ -17,3 +17,4 @@
 2026-01-10 - Improved contrast detection for style-tag CSS variables with added coverage. (SPEC-008)
 2026-01-10 - Clarified contrast evidence with foreground/background colors in node engine and server checks. (SPEC-008)
 2026-01-10 - Added 100-issue contrast sample and coverage test. (SPEC-008)
+2026-01-10 - Added mixed-pattern 100-issue contrast sample and tests. (SPEC-008)

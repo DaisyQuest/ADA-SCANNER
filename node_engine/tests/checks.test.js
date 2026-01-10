@@ -1443,6 +1443,21 @@ describe("InsufficientContrastCheck", () => {
     expect(issues).toHaveLength(100);
   });
 
+  test("flags mixed contrast samples across multiple patterns", () => {
+    const samplePath = path.join(__dirname, "..", "sample_files", "contrast", "contrast-100-mixed-issues.html");
+    const content = fs.readFileSync(samplePath, "utf-8");
+    const sampleContext = createContext(content, "html");
+    const issues = InsufficientContrastCheck.run(sampleContext, rule);
+    const evidenceText = issues.map((issue) => issue.evidence).join("\n");
+
+    expect(getCandidates(sampleContext)).toHaveLength(100);
+    expect(issues).toHaveLength(100);
+    expect(evidenceText).toContain("linear-gradient");
+    expect(evidenceText).toContain("background-image");
+    expect(evidenceText).toContain("var(--mix-fg)");
+    expect(evidenceText).toContain("font-size: 24px");
+  });
+
   test("skips candidates with missing colors or sufficient contrast", () => {
     const cssContext = createContext(".a { color: #fff; }", "css");
     expect(InsufficientContrastCheck.run(cssContext, rule)).toHaveLength(1);
