@@ -137,6 +137,13 @@ body {
   font-size: 14px;
   background: #fff;
   color: #0f172a;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.field input:focus-visible,
+.field select:focus-visible {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18);
 }
 
 .field input::placeholder {
@@ -153,6 +160,12 @@ body {
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease, border 0.2s ease;
+}
+
+.ghost-button:hover {
+  background: #e0e7ff;
+  border-color: #a5b4fc;
 }
 
 .data-table {
@@ -166,6 +179,7 @@ body {
   padding: 12px 8px;
   border-bottom: 1px solid #e2e8f0;
   font-size: 14px;
+  vertical-align: top;
 }
 
 .data-table th {
@@ -192,11 +206,22 @@ body {
   font-size: 12px;
   font-weight: 600;
   margin-right: 6px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
 }
 
 .pill-button--secondary {
   background: #e2e8f0;
   color: #1e293b;
+}
+
+.pill-button:hover {
+  background: #1d4ed8;
+  box-shadow: 0 8px 16px rgba(37, 99, 235, 0.2);
+  transform: translateY(-1px);
+}
+
+.pill-button--secondary:hover {
+  background: #cbd5f5;
 }
 
 .issue-feed {
@@ -208,6 +233,24 @@ body {
   border: 1px solid #e2e8f0;
   border-radius: 10px;
   padding: 12px 14px;
+  background: #f8fafc;
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06);
+}
+
+.issue-item--severity-critical,
+.issue-item--severity-high {
+  border-left: 4px solid #ef4444;
+  background: #fff5f5;
+}
+
+.issue-item--severity-medium {
+  border-left: 4px solid #f59e0b;
+  background: #fffbeb;
+}
+
+.issue-item--severity-low {
+  border-left: 4px solid #22c55e;
+  background: #f0fdf4;
 }
 
 .issue-title {
@@ -229,6 +272,27 @@ body {
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+}
+
+.badge--severity-critical,
+.badge--severity-high {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.badge--severity-medium {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.badge--severity-low {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.badge--severity-unknown {
+  background: #e2e8f0;
+  color: #475569;
 }
 
 .guide-grid {

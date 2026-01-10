@@ -53,11 +53,47 @@
         </div>
       </section>
 
+      <section class="panel filter-panel">
+        <header class="panel-header">
+          <div>
+            <h2>Filter runtime insights</h2>
+            <p>Focus on the rule IDs, files, and severities that need attention.</p>
+          </div>
+          <button class="ghost-button" id="clearFilters" type="button">Clear filters</button>
+        </header>
+        <div class="filter-grid">
+          <label class="field">
+            <span>Rule search</span>
+            <input id="ruleSearchInput" type="search" placeholder="Filter by rule ID or description" />
+          </label>
+          <label class="field">
+            <span>File search</span>
+            <input id="fileSearchInput" type="search" placeholder="Filter by file path" />
+          </label>
+          <label class="field">
+            <span>Severity focus</span>
+            <select id="severityFilterSelect">
+              <option value="all">All severities</option>
+              <option value="critical">Critical</option>
+              <option value="high">High</option>
+              <option value="medium">Medium</option>
+              <option value="low">Low</option>
+              <option value="unknown">Unknown</option>
+            </select>
+          </label>
+        </div>
+      </section>
+
       <section class="panel-grid">
         <article class="panel">
           <header class="panel-header">
-            <h2>Rule violations</h2>
-            <p>Top offending rules, severity, and affected files.</p>
+            <div>
+              <h2>Rule violations</h2>
+              <p>Top offending rules, severity, and affected files.</p>
+            </div>
+            <div class="panel-meta">
+              <span class="meta-chip">Showing <strong id="ruleResultCount">0</strong></span>
+            </div>
           </header>
           <div class="panel-body">
             <table class="data-table">
@@ -77,8 +113,13 @@
 
         <article class="panel">
           <header class="panel-header">
-            <h2>Files with violations</h2>
-            <p>Where issues are concentrated in the captured documents.</p>
+            <div>
+              <h2>Files with violations</h2>
+              <p>Where issues are concentrated in the captured documents.</p>
+            </div>
+            <div class="panel-meta">
+              <span class="meta-chip">Showing <strong id="fileResultCount">0</strong></span>
+            </div>
           </header>
           <div class="panel-body">
             <table class="data-table">
@@ -123,8 +164,13 @@
 
       <section class="panel">
         <header class="panel-header">
-          <h2>Latest issues</h2>
-          <p>Live feed of the most recent rule violations.</p>
+          <div>
+            <h2>Latest issues</h2>
+            <p>Live feed of the most recent rule violations.</p>
+          </div>
+          <div class="panel-meta">
+            <span class="meta-chip">Showing <strong id="issueResultCount">0</strong></span>
+          </div>
         </header>
         <div class="panel-body">
           <div id="issueFeed" class="issue-feed"></div>

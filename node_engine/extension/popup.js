@@ -44,11 +44,10 @@
     const serverStatus = documentRoot.getElementById("server-status");
 
     const setStatus = (enabled, spiderEnabled) => {
-      const parts = [enabled ? "Forwarding enabled" : "Forwarding disabled"];
-      if (spiderEnabled) {
-        parts.push("Spider mode running");
-      }
-      statusText.textContent = parts.join(" · ");
+      const base = enabled ? "Forwarding on" : "Forwarding off";
+      const suffix = spiderEnabled ? " • Spider on" : "";
+      statusText.textContent = `${base}${suffix}`;
+      statusText.classList.toggle("active", enabled);
       statusText.classList.toggle("disabled", !enabled);
     };
 

@@ -13,6 +13,10 @@ const setupDom = () => {
     <select id="ruleFilterSelect">
       <option value="all">All rules</option>
     </select>
+    <select id="severityFilterSelect">
+      <option value="all">All severities</option>
+      <option value="high">High</option>
+    </select>
     <button id="clearFilters"></button>
     <div id="fileResultCount"></div>
     <div id="issueResultCount"></div>
@@ -51,13 +55,15 @@ describe("Static analysis UI app", () => {
           filePath: "file-a.html",
           issueCount: 1,
           rules: [{ ruleId: "rule-1", count: 1 }],
-          linkedStylesheetsWithIssues: [{ filePath: "styles.css", count: 2 }]
+          linkedStylesheetsWithIssues: [{ filePath: "styles.css", count: 2 }],
+          severities: [{ severity: "high", count: 1 }]
         },
         {
           filePath: "file-b.js",
           issueCount: 0,
           rules: [],
-          linkedStylesheetsWithIssues: []
+          linkedStylesheetsWithIssues: [],
+          severities: []
         }
       ]
     };
@@ -75,6 +81,7 @@ describe("Static analysis UI app", () => {
     expect(app.elements.fileTable.innerHTML).toContain("file-a.html");
     expect(app.elements.fileTable.innerHTML).toContain("Save JSON");
     expect(app.elements.fileTable.innerHTML).toContain("styles.css (2)");
+    expect(app.elements.fileTable.innerHTML).toContain("high (1)");
     expect(app.elements.issueFeed.innerHTML).toContain("Problem");
     expect(app.elements.fileResultCount.textContent).toBe("2 of 2");
     expect(app.elements.issueResultCount.textContent).toBe("1 of 1");
@@ -119,6 +126,22 @@ describe("Static analysis UI app", () => {
     expect(app.matchesQuery("File-A", "file")).toBe(true);
     expect(app.matchesQuery("File-A", "")).toBe(true);
     expect(app.matchesQuery("File-A", "missing")).toBe(false);
+  });
+
+  test("resolves severity variants and badges", () => {
+    const app = require("../src/static/ui/assets/app");
+    expect(app.normalizeToken("High Severity")).toBe("high-severity");
+    expect(app.resolveSeverityVariant("High")).toBe("severity-high");
+    expect(app.resolveSeverityVariant("Medium")).toBe("severity-medium");
+    expect(app.resolveSeverityVariant("Low")).toBe("severity-low");
+    expect(app.resolveSeverityVariant("")).toBe("severity-unknown");
+    expect(app.matchesSeverity("high", "high")).toBe(true);
+    expect(app.matchesSeverity("low", "high")).toBe(false);
+    expect(app.matchesSeverity("low", "all")).toBe(true);
+
+    const badge = app.renderBadge("High", "high");
+    expect(badge).toContain("badge--severity-high");
+    expect(badge).toContain("High");
   });
 
   test("builds rule options sorted by count", () => {
@@ -180,13 +203,15 @@ describe("Static analysis UI app", () => {
     app.elements.fileSearchInput = null;
     app.elements.issueSearchInput = null;
     app.elements.ruleFilterSelect = null;
+    app.elements.severityFilterSelect = null;
 
     app.syncFiltersFromInputs();
 
     expect(app.state.filters).toEqual({
       fileQuery: "",
       issueQuery: "",
-      ruleId: "all"
+      ruleId: "all",
+      severity: "all"
     });
   });
 
@@ -195,6 +220,7 @@ describe("Static analysis UI app", () => {
     app.elements.fileSearchInput = null;
     app.elements.issueSearchInput = null;
     app.elements.ruleFilterSelect = null;
+    app.elements.severityFilterSelect = null;
 
     expect(() => app.resetFilters()).not.toThrow();
   });
@@ -260,18 +286,20 @@ describe("Static analysis UI app", () => {
         {
           filePath: "file-a.html",
           issueCount: 1,
-          rules: [{ ruleId: "rule-1", count: 1 }]
+          rules: [{ ruleId: "rule-1", count: 1 }],
+          severities: [{ severity: "high", count: 1 }]
         },
         {
           filePath: "file-b.html",
           issueCount: 1,
-          rules: [{ ruleId: "rule-2", count: 1 }]
+          rules: [{ ruleId: "rule-2", count: 1 }],
+          severities: [{ severity: "low", count: 1 }]
         }
       ]
     };
     app.state.issues = [
-      { message: "A issue", ruleId: "rule-1", filePath: "file-a.html" },
-      { message: "B issue", ruleId: "rule-2", filePath: "file-b.html" }
+      { message: "A issue", ruleId: "rule-1", filePath: "file-a.html", severity: "high" },
+      { message: "B issue", ruleId: "rule-2", filePath: "file-b.html", severity: "low" }
     ];
 
     app.elements.fileSearchInput.value = "file-b";
@@ -279,6 +307,7 @@ describe("Static analysis UI app", () => {
 
     app.renderAll();
     app.elements.ruleFilterSelect.value = "rule-2";
+    app.elements.severityFilterSelect.value = "low";
     app.renderAll();
 
     expect(app.elements.fileTable.innerHTML).toContain("file-b.html");
@@ -353,6 +382,7 @@ describe("Static analysis UI app", () => {
     app.elements.fileSearchInput.value = "file-a";
     app.elements.issueSearchInput.value = "Problem";
     app.elements.ruleFilterSelect.value = "rule-1";
+    app.elements.severityFilterSelect.value = "all";
 
     app.renderAll();
     app.resetFilters();
@@ -360,6 +390,7 @@ describe("Static analysis UI app", () => {
     expect(app.elements.fileSearchInput.value).toBe("");
     expect(app.elements.issueSearchInput.value).toBe("");
     expect(app.elements.ruleFilterSelect.value).toBe("all");
+    expect(app.elements.severityFilterSelect.value).toBe("all");
     expect(app.elements.fileResultCount.textContent).toBe("1 of 1");
   });
 

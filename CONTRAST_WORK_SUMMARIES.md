@@ -9,3 +9,4 @@
 2026-01-09 - Handled runtime capture fetch failures and expanded forwarder/content script tests. (SPEC-019)
 2026-01-09 - Added stylesheet linkage reporting and spider mode delay controls (SPEC-010, SPEC-019, SPEC-013)
 2026-01-09 - Expanded freemarker support, runtime reporting UI, DOM-backed runtime checks, and exhaustive tests (SPEC-008, SPEC-010, SPEC-013, SPEC-019)
+2026-01-10 - Enhanced node_engine runtime/static dashboards and extension popup UX with filtering and styling updates (SPEC-010)
