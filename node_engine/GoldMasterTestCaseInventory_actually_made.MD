@@ -111,6 +111,7 @@ This file tracks GoldMaster documents that have been implemented in `node_engine
 | HTML-GM-098 | gm-html-098-missing-accessible-name-on-custom-component.html | ✅ | Missing accessible name on custom component (MissingLabelCheck) | Generated starter GoldMaster case. |
 | HTML-GM-099 | gm-html-099-deep-nesting-with-5-iframes-and-10-subforms.html | ✅ | Deep nesting with 5 iframes and 10 subforms (Combo) | Generated starter GoldMaster case. |
 | HTML-GM-100 | gm-html-100-full-regression-mix-contrast-labels-headings-nav-forms-iframe.html | ✅ | Full regression mix: contrast + labels + headings + nav + forms + iframe (Combo) | Generated starter GoldMaster case. |
+| HTML-GM-101 | gm-html-101-iframe-labyrinth-with-deep-nesting.html | ✅ | Iframe labyrinth with deep nesting and form errors (MissingIframeTitleCheck + MissingLabelCheck + DuplicateIdCheck) | Added complex nesting + iframe coverage. |
 
 ## HTM (.htm)
 
@@ -216,6 +217,7 @@ This file tracks GoldMaster documents that have been implemented in `node_engine
 | HTM-GM-098 | gm-htm-098-missing-accessible-name-on-custom-component.htm | ✅ | Missing accessible name on custom component (MissingLabelCheck) | Generated starter GoldMaster case. |
 | HTM-GM-099 | gm-htm-099-deep-nesting-with-5-iframes-and-10-subforms.htm | ✅ | Deep nesting with 5 iframes and 10 subforms (Combo) | Generated starter GoldMaster case. |
 | HTM-GM-100 | gm-htm-100-full-regression-mix-contrast-labels-headings-nav-forms-iframe.htm | ✅ | Full regression mix: contrast + labels + headings + nav + forms + iframe (Combo) | Generated starter GoldMaster case. |
+| HTM-GM-101 | gm-htm-101-iframe-stack-with-deep-nesting.htm | ✅ | Deep nesting with iframe stack and duplicate IDs (MissingIframeTitleCheck + DuplicateIdCheck + MissingLabelCheck) | Added complex nesting + iframe coverage. |
 
 ## CSHTML (.cshtml)
 
@@ -321,6 +323,7 @@ This file tracks GoldMaster documents that have been implemented in `node_engine
 | CSHTML-GM-098 | gm-cshtml-098-missing-accessible-name-on-custom-component.cshtml | ✅ | Missing accessible name on custom component (MissingLabelCheck) | Generated starter GoldMaster case. |
 | CSHTML-GM-099 | gm-cshtml-099-deep-nesting-with-5-iframes-and-10-subforms.cshtml | ✅ | Deep nesting with 5 iframes and 10 subforms (Combo) | Generated starter GoldMaster case. |
 | CSHTML-GM-100 | gm-cshtml-100-full-regression-mix-contrast-labels-headings-nav-forms-iframe.cshtml | ✅ | Full regression mix: contrast + labels + headings + nav + forms + iframe (Combo) | Generated starter GoldMaster case. |
+| CSHTML-GM-101 | gm-cshtml-101-iframe-labyrinth-with-deep-nesting.cshtml | ✅ | Iframe labyrinth with deep nesting and unlabeled inputs (MissingIframeTitleCheck + MissingLabelCheck + DuplicateIdCheck) | Added complex nesting + iframe coverage. |
 
 ## RAZOR (.razor)
 
@@ -426,6 +429,7 @@ This file tracks GoldMaster documents that have been implemented in `node_engine
 | RAZOR-GM-098 | gm-razor-098-missing-accessible-name-on-custom-component.razor | ✅ | Missing accessible name on custom component (MissingLabelCheck) | Generated starter GoldMaster case. |
 | RAZOR-GM-099 | gm-razor-099-deep-nesting-with-5-iframes-and-10-subforms.razor | ✅ | Deep nesting with 5 iframes and 10 subforms (Combo) | Generated starter GoldMaster case. |
 | RAZOR-GM-100 | gm-razor-100-full-regression-mix-contrast-labels-headings-nav-forms-iframe.razor | ✅ | Full regression mix: contrast + labels + headings + nav + forms + iframe (Combo) | Generated starter GoldMaster case. |
+| RAZOR-GM-101 | gm-razor-101-iframe-labyrinth-with-deep-nesting.razor | ✅ | Iframe labyrinth with deep nesting and form errors (MissingIframeTitleCheck + MissingLabelCheck + DuplicateIdCheck) | Added complex nesting + iframe coverage. |
 
 ## XAML (.xaml)
 
@@ -531,3 +535,4 @@ This file tracks GoldMaster documents that have been implemented in `node_engine
 | XAML-GM-098 | gm-xaml-098-xaml-control-missing-x-name.xaml | ✅ | XAML control missing x:Name (XamlMissingNameCheck) | Generated starter GoldMaster case. |
 | XAML-GM-099 | gm-xaml-099-deep-nesting-with-5-iframes-and-10-subforms.xaml | ✅ | Deep nesting with 5 iframes and 10 subforms (Combo) | Generated starter GoldMaster case. |
 | XAML-GM-100 | gm-xaml-100-full-regression-mix-contrast-labels-headings-nav-forms-iframe.xaml | ✅ | Full regression mix: contrast + labels + headings + nav + forms + iframe (Combo) | Generated starter GoldMaster case. |
+| XAML-GM-101 | gm-xaml-101-deep-nesting-frame-webbrowser.xaml | ✅ | Deep nesting with Frame/WebBrowser stack (MissingIframeTitleCheck + XamlMissingNameCheck) | Added complex nesting + iframe coverage. |

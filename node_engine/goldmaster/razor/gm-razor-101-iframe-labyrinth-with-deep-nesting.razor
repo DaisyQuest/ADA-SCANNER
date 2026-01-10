@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>GoldMaster Case</title>
+<style>
+.hidden{display:none;} .nowrap{white-space:nowrap;} .fixed{width:1200px;}
+.level-0,.level-1,.level-2,.level-3,.level-4,.level-5,.level-6,.level-7,.level-8,.level-9,.level-10,.level-11{margin:2px;}
+</style>
+</head>
+<body>
+<!-- Scenario: Iframe labyrinth with deep nesting and form errors (MissingIframeTitleCheck, MissingLabelCheck, DuplicateIdCheck) -->
+<div class="level-0"><div class="level-1"><div class="level-2"><div class="level-3"><div class="level-4"><div class="level-5"><div class="level-6"><div class="level-7"><div class="level-8"><div class="level-9"><div class="level-10"><div class="level-11">
+<main id="main">
+<h1>GoldMaster Case</h1>
+<section>
+<h2>Shipping</h2>
+<form>
+<label>Address</label>
+<input type="text" id="shipping">
+<input type="text" id="shipping">
+</form>
+</section>
+<section>
+<h2>Embedded Help</h2>
+<iframe srcdoc='<!doctype html><html lang="en"><body><p>Frame root</p><iframe srcdoc="<p>Frame leaf</p>"></iframe></body></html>'></iframe>
+<iframe title="" srcdoc="<p>Frame helper</p>"></iframe>
+</section>
+</main>
+</div></div></div></div></div></div></div></div></div></div></div></div>
+</body>
+</html>
