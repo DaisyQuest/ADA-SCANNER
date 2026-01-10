@@ -58,8 +58,11 @@ const runGoldMaster = async ({
     rootDir,
     outputDir,
     totalExtensions: extensions.length,
+    totalDocuments: 0,
+    totalIssues: 0,
     results: []
   };
+  const reports = [];
 
   for (const extension of extensions) {
     const subDir = path.join(rootDir, formatExtensionLabel(extension));
@@ -96,20 +99,26 @@ const runGoldMaster = async ({
     const reportPath = path.join(outputDir, reportFileName);
     fs.writeFileSync(reportPath, JSON.stringify(reportPayload, null, 2));
 
+    const documentCount = report.summary?.documents ?? 0;
+    const issueCount = report.summary?.issues ?? 0;
+
     summary.results.push({
       extension,
       rootDir: subDir,
       status: "complete",
-      documentCount: report.summary.documents,
-      issueCount: report.summary.issues,
+      documentCount,
+      issueCount,
       reportPath
     });
+    summary.totalDocuments += documentCount;
+    summary.totalIssues += issueCount;
+    reports.push(reportPayload);
   }
 
   const summaryPath = path.join(outputDir, "goldmaster-summary.json");
   fs.writeFileSync(summaryPath, JSON.stringify(summary, null, 2));
 
-  return { summaryPath, summary };
+  return { summaryPath, summary, reports };
 };
 
 module.exports = {

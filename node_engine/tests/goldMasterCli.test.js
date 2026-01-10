@@ -45,6 +45,7 @@ const createGoldMasterRoot = () => {
 
 describe("goldmaster options", () => {
   test("normalizes extensions and validates support", () => {
+    expect(normalizeExtension()).toBeNull();
     expect(normalizeExtension("html")).toBe(".html");
     expect(normalizeExtension(".razor")).toBe(".razor");
     expect(normalizeExtension("TXT")).toBeNull();
@@ -59,13 +60,15 @@ describe("goldmaster options", () => {
 
   test("parses --ext and output directory", () => {
     const options = resolveGoldMasterOptions({
-      argv: ["--ext", "html,razor", "--outputDir", "/tmp/out"],
+      argv: ["--ext", "html,razor", "--outputDir", "/tmp/out", "--compare", "/tmp/baseline.json", "--save", "/tmp/save.json"],
       env: {},
       cwd: "/tmp"
     });
     expect(options.errors).toEqual([]);
     expect(options.extensions).toEqual([".html", ".razor"]);
     expect(options.outputDir).toBe("/tmp/out");
+    expect(options.comparePath).toBe("/tmp/baseline.json");
+    expect(options.savePath).toBe("/tmp/save.json");
   });
 
   test("reports unknown or malformed options", () => {
@@ -75,9 +78,15 @@ describe("goldmaster options", () => {
   });
 
   test("flags missing option values", () => {
-    const options = resolveGoldMasterOptions({ argv: ["--ext", "--outputDir"], env: {}, cwd: "/tmp" });
+    const options = resolveGoldMasterOptions({
+      argv: ["--ext", "--outputDir", "--compare", "--save"],
+      env: {},
+      cwd: "/tmp"
+    });
     expect(options.errors).toContain("--ext requires a value.");
     expect(options.errors).toContain("--outputDir requires a value.");
+    expect(options.errors).toContain("--compare requires a value.");
+    expect(options.errors).toContain("--save requires a value.");
   });
 
   test("respects environment defaults while still validating extensions", () => {
@@ -93,6 +102,13 @@ describe("goldmaster options", () => {
     expect(options.rootDir).toBe("/env/root");
     expect(options.rulesRoot).toBe("/env/rules");
     expect(options.outputDir).toBe("/env/out");
+    expect(options.errors).toContain("No extensions selected. Use --all or --ext.");
+  });
+
+  test("uses process defaults when no arguments are provided", () => {
+    const options = resolveGoldMasterOptions();
+    expect(options.rootDir).toContain(path.join("goldmaster"));
+    expect(options.outputDir).toContain(path.join("goldmaster_output"));
     expect(options.errors).toContain("No extensions selected. Use --all or --ext.");
   });
 
@@ -126,6 +142,16 @@ describe("goldmaster options", () => {
     expect(options.outputDir).toBe("/tmp/out");
   });
 
+  test("trims compare and save paths", () => {
+    const options = resolveGoldMasterOptions({
+      argv: ["--ext", "html", "--compare", "  /tmp/base.json  ", "--save", "  /tmp/save.json  "],
+      env: {},
+      cwd: "/tmp"
+    });
+    expect(options.comparePath).toBe("/tmp/base.json");
+    expect(options.savePath).toBe("/tmp/save.json");
+  });
+
   test("deduplicates extensions unless --all is set", () => {
     const options = resolveGoldMasterOptions({ argv: ["--ext", "html,html,razor"], env: {}, cwd: "/tmp" });
     expect(options.errors).toEqual([]);
@@ -146,6 +172,16 @@ describe("goldmaster options", () => {
     });
     expect(options.errors).toContain("--outputDir requires a value.");
   });
+
+  test("flags empty compare/save values", () => {
+    const options = resolveGoldMasterOptions({
+      argv: ["--ext", "html", "--compare", "   ", "--save", "   "],
+      env: {},
+      cwd: "/tmp"
+    });
+    expect(options.errors).toContain("--compare requires a value.");
+    expect(options.errors).toContain("--save requires a value.");
+  });
 });
 
 describe("goldmaster helpers", () => {
@@ -154,6 +190,11 @@ describe("goldmaster helpers", () => {
     expect(extensionMap.has(".html")).toBe(true);
     expect(extensionMap.has(".bogus")).toBe(false);
     expect(extensionMap.size).toBe(1);
+  });
+
+  test("buildExtensionMap handles non-array input", () => {
+    const extensionMap = buildExtensionMap(null);
+    expect(extensionMap.size).toBe(0);
   });
 
   test("ensureDirectory creates directories and handles falsy values", () => {
@@ -212,6 +253,8 @@ describe("goldmaster runner", () => {
     expect(analyzer.scanRoot).toHaveBeenCalledWith({ rootDir: path.join(rootDir, "html"), rulesRoot: "/tmp/rules" });
     expect(reportBuilder.build).toHaveBeenCalledTimes(1);
     expect(result.summary.results[0].documentCount).toBe(1);
+    expect(result.summary.totalDocuments).toBe(1);
+    expect(result.summary.totalIssues).toBe(1);
 
     const reportPath = result.summary.results[0].reportPath;
     const payload = JSON.parse(fs.readFileSync(reportPath, "utf-8"));
@@ -242,6 +285,8 @@ describe("goldmaster runner", () => {
     expect(htmlResult.status).toBe("complete");
     expect(razorResult.status).toBe("missing");
     expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining(".razor"));
+    expect(result.summary.totalDocuments).toBeGreaterThanOrEqual(0);
+    expect(result.summary.totalIssues).toBeGreaterThanOrEqual(0);
   });
 
   test("writes an empty summary when no extensions are provided", async () => {
@@ -259,6 +304,29 @@ describe("goldmaster runner", () => {
     expect(result.summary.totalExtensions).toBe(0);
     expect(result.summary.results).toEqual([]);
     expect(fs.existsSync(result.summaryPath)).toBe(true);
+  });
+
+  test("defaults document and issue counts when report summary is missing values", async () => {
+    const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "ada-gm-missing-summary-"));
+    fs.mkdirSync(path.join(rootDir, "html"), { recursive: true });
+    const outputDir = fs.mkdtempSync(path.join(os.tmpdir(), "ada-gm-out-"));
+    const analyzer = { scanRoot: jest.fn(() => ({ documents: [], issues: [], rules: [] })) };
+    const analyzerFactory = jest.fn(() => analyzer);
+    const reportBuilder = { build: jest.fn(() => ({ summary: {} })) };
+
+    const result = await runGoldMaster({
+      rootDir,
+      rulesRoot: "/tmp/rules",
+      outputDir,
+      extensions: [".html"],
+      analyzerFactory,
+      reportBuilder
+    });
+
+    expect(result.summary.results[0].documentCount).toBe(0);
+    expect(result.summary.results[0].issueCount).toBe(0);
+    expect(result.summary.totalDocuments).toBe(0);
+    expect(result.summary.totalIssues).toBe(0);
   });
 
   test("scans each existing extension directory and writes reports", async () => {
@@ -308,7 +376,8 @@ describe("goldmaster runner", () => {
     const summaryPath = "/tmp/goldmaster-summary.json";
     const mockRunGoldMaster = jest.fn().mockResolvedValue({
       summaryPath,
-      summary: { results: [] }
+      summary: { results: [] },
+      reports: []
     });
 
     await new Promise((resolve, reject) => {
@@ -323,6 +392,107 @@ describe("goldmaster runner", () => {
           .then((result) => {
             expect(result.started).toBe(true);
             expect(logger.log).toHaveBeenCalledWith(`GoldMaster reports written to ${summaryPath}`);
+            resolve();
+          })
+          .catch(reject);
+      });
+    });
+  });
+
+  test("startGoldMaster uses default argv values when none are provided", async () => {
+    jest.resetModules();
+    const summaryPath = "/tmp/goldmaster-summary.json";
+    const mockRunGoldMaster = jest.fn().mockResolvedValue({
+      summaryPath,
+      summary: { results: [] },
+      reports: []
+    });
+    const originalArgv = process.argv;
+    process.argv = ["node", "cli", "--all"];
+
+    try {
+      await new Promise((resolve, reject) => {
+        jest.isolateModules(() => {
+          jest.doMock("../src/goldmaster/GoldMasterRunner", () => ({
+            runGoldMaster: mockRunGoldMaster
+          }));
+          const { startGoldMaster: mockedStartGoldMaster } = require("../src/goldmaster/cli");
+          const logger = { warn: jest.fn(), log: jest.fn(), error: jest.fn() };
+
+          mockedStartGoldMaster()
+            .then((result) => {
+              expect(result.started).toBe(true);
+              expect(mockRunGoldMaster).toHaveBeenCalled();
+              resolve();
+            })
+            .catch(reject);
+        });
+      });
+    } finally {
+      process.argv = originalArgv;
+    }
+  });
+
+  test("startGoldMaster saves report bundles when --save is provided", async () => {
+    jest.resetModules();
+    const summaryPath = "/tmp/goldmaster-summary.json";
+    const savePath = path.join(os.tmpdir(), `goldmaster-save-${Date.now()}.json`);
+    const mockRunGoldMaster = jest.fn().mockResolvedValue({
+      summaryPath,
+      summary: { results: [] },
+      reports: [{ extension: ".html", report: { summary: { documents: 1, issues: 0 } } }]
+    });
+
+    await new Promise((resolve, reject) => {
+      jest.isolateModules(() => {
+        jest.doMock("../src/goldmaster/GoldMasterRunner", () => ({
+          runGoldMaster: mockRunGoldMaster
+        }));
+        const { startGoldMaster: mockedStartGoldMaster } = require("../src/goldmaster/cli");
+        const logger = { warn: jest.fn(), log: jest.fn(), error: jest.fn() };
+
+        mockedStartGoldMaster({ argv: ["--all", "--save", savePath], env: {}, logger })
+          .then((result) => {
+            const savedPayload = JSON.parse(fs.readFileSync(savePath, "utf-8"));
+            expect(result.savedReportPath).toBe(savePath);
+            expect(savedPayload.summary).toEqual({ results: [] });
+            expect(savedPayload.reports).toHaveLength(1);
+            resolve();
+          })
+          .catch(reject);
+      });
+    });
+  });
+
+  test("startGoldMaster compares against saved reports when --compare is provided", async () => {
+    jest.resetModules();
+    const summaryPath = "/tmp/goldmaster-summary.json";
+    const comparePath = path.join(os.tmpdir(), `goldmaster-compare-${Date.now()}.json`);
+    fs.writeFileSync(comparePath, JSON.stringify({
+      summary: {
+        results: [{ extension: ".html", status: "complete", documentCount: 1, issueCount: 1 }]
+      }
+    }));
+
+    const mockRunGoldMaster = jest.fn().mockResolvedValue({
+      summaryPath,
+      summary: { results: [{ extension: ".html", status: "complete", documentCount: 2, issueCount: 1 }] },
+      reports: []
+    });
+
+    await new Promise((resolve, reject) => {
+      jest.isolateModules(() => {
+        jest.doMock("../src/goldmaster/GoldMasterRunner", () => ({
+          runGoldMaster: mockRunGoldMaster
+        }));
+        const { startGoldMaster: mockedStartGoldMaster } = require("../src/goldmaster/cli");
+        const logger = { warn: jest.fn(), log: jest.fn(), error: jest.fn() };
+
+        mockedStartGoldMaster({ argv: ["--all", "--compare", comparePath], env: {}, logger })
+          .then((result) => {
+            expect(result.comparison).not.toBeNull();
+            expect(result.comparison.totals.changed).toBe(1);
+            expect(logger.log).toHaveBeenCalledWith(expect.stringContaining("GoldMaster comparison"));
             resolve();
           })
           .catch(reject);
