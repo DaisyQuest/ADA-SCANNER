@@ -59,7 +59,7 @@ const startListener = async ({
 
   const server = new ListenerServerClass(serverOptions);
   const actualPort = await server.start();
-  logger.log(`Listener server running on port ${actualPort}.`);
+  logger.log(`Listener server running at http://localhost:${actualPort}.`);
 
   return { started: true, port: actualPort, server };
 };

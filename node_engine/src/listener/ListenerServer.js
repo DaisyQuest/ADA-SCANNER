@@ -7,7 +7,7 @@ const { RuntimeScanner } = require("../runtime/RuntimeScanner");
 const { ReportBuilder } = require("./ReportBuilder");
 const { HtmlReportBuilder } = require("./HtmlReportBuilder");
 
-const DEFAULT_ALLOWED_ORIGINS = ["https://localhost:7203"];
+const DEFAULT_ALLOWED_ORIGINS = ["*"];
 
 class ListenerServer extends EventEmitter {
   constructor({

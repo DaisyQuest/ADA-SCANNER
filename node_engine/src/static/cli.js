@@ -62,7 +62,7 @@ const startStaticAnalysis = async ({
     port: port ?? 0
   });
   const actualPort = await server.start();
-  logger.log(`Static analysis server running on port ${actualPort}.`);
+  logger.log(`Static analysis server running at http://localhost:${actualPort}.`);
   logger.log(`Scanned ${result.documents.length} files with ${result.issues.length} issues.`);
 
   return { started: true, port: actualPort, server, result };
