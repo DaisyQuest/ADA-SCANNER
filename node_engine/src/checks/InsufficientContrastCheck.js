@@ -2,6 +2,7 @@ const { getLineNumber } = require("./TextUtilities");
 const { parseColor, contrastRatio, clamp01 } = require("./ColorContrastAnalyzer");
 
 const styleRegex = /style\s*=\s*(?:"(?<styleDouble>[^"]+)"|'(?<styleSingle>[^']+)')/gi;
+const styleTagRegex = /<style[^>]*>(?<css>[\s\S]*?)<\/style>/gi;
 const xamlElementRegex = /<(?<tag>[\w:.-]+)(?<attrs>[^>]*?)>/gi;
 const cssBlockRegex = /(?<selector>[^\{]+)\{(?<body>[^}]+)\}/gis;
 
@@ -129,6 +130,25 @@ const extractCssVarFallback = (value) => {
   return normalizeColorValue(inner.slice(commaIndex + 1));
 };
 
+const extractCssVariableDefinitions = (content) => {
+  if (!content || !content.trim()) {
+    return new Map();
+  }
+
+  const definitions = new Map();
+  const matches = content.matchAll(/(--[\w-]+)\s*:\s*([^;]+);/g);
+  for (const match of matches) {
+    const [, name, rawValue] = match;
+    const normalized = normalizeColorValue(rawValue);
+    const color = extractCssColorToken(normalized) ?? extractColorTokens(normalized)[0];
+    if (color) {
+      definitions.set(name, color);
+    }
+  }
+
+  return definitions;
+};
+
 const extractXamlFallback = (value) => {
   const fallbackIndex = value.toLowerCase().indexOf("fallbackvalue=");
   if (fallbackIndex < 0) {
@@ -243,7 +263,7 @@ const resolveCssVarFromStyle = (value, style) => {
   return varValue ? normalizeColorValue(varValue) : null;
 };
 
-const resolveColorWithContext = (value, style) => {
+const resolveColorWithContext = (value, style, cssVariables = new Map(), visited = new Set()) => {
   const resolved = resolveStaticColor(value);
   if (resolved) {
     return resolved;
@@ -253,12 +273,74 @@ const resolveColorWithContext = (value, style) => {
     return null;
   }
 
+  const varName = extractCssVarName(value);
+  if (varName && cssVariables instanceof Map) {
+    if (visited.has(varName)) {
+      return null;
+    }
+
+    const variableValue = cssVariables.get(varName);
+    if (variableValue) {
+      visited.add(varName);
+      const resolvedVariable = resolveColorWithContext(variableValue, style, cssVariables, visited);
+      if (resolvedVariable) {
+        return resolvedVariable;
+      }
+
+      const staticVariable = resolveStaticColor(variableValue);
+      return staticVariable ?? null;
+    }
+  }
+
   const fallback = resolveCssVarFromStyle(value, style);
   return fallback ? resolveStaticColor(fallback) ?? fallback : null;
 };
 
 const shouldDefaultBackground = (kind) =>
   ["html", "htm", "cshtml", "razor", "css"].includes(kind.toLowerCase());
+
+const extractStyleTagBlocks = (content) =>
+  Array.from(content.matchAll(styleTagRegex))
+    .map((match) => {
+      const css = match.groups?.css ?? "";
+      if (!css) {
+        return null;
+      }
+
+      const offset = match.index + match[0].indexOf(css);
+      return { css, offset };
+    })
+    .filter(Boolean);
+
+const collectCssVariables = (context) => {
+  const kind = context.kind.toLowerCase();
+  if (kind === "xaml") {
+    return new Map();
+  }
+
+  const definitions = new Map();
+  const addDefinitions = (content) => {
+    for (const [name, value] of extractCssVariableDefinitions(content)) {
+      definitions.set(name, value);
+    }
+  };
+
+  if (kind === "css") {
+    addDefinitions(context.content);
+    return definitions;
+  }
+
+  for (const match of context.content.matchAll(styleRegex)) {
+    const style = match.groups.styleDouble ?? match.groups.styleSingle;
+    addDefinitions(style ?? "");
+  }
+
+  for (const block of extractStyleTagBlocks(context.content)) {
+    addDefinitions(block.css);
+  }
+
+  return definitions;
+};
 
 const getCandidates = (context) => {
   const kind = context.kind.toLowerCase();
@@ -308,7 +390,7 @@ const getCandidates = (context) => {
       .filter(Boolean);
   }
 
-  return Array.from(context.content.matchAll(styleRegex))
+  const inlineCandidates = Array.from(context.content.matchAll(styleRegex))
     .map((match) => {
       const style = match.groups.styleDouble ?? match.groups.styleSingle;
       const foreground = parseCssColor(style, "color");
@@ -328,6 +410,30 @@ const getCandidates = (context) => {
       };
     })
     .filter(Boolean);
+
+  const styleTagCandidates = extractStyleTagBlocks(context.content)
+    .flatMap((block) => Array.from(block.css.matchAll(cssBlockRegex))
+      .map((match) => {
+        const body = match.groups.body;
+        const foreground = parseCssColor(body, "color");
+        const backgroundColors = parseCssBackgroundColors(body);
+        if (!foreground) {
+          return null;
+        }
+
+        return {
+          foreground,
+          backgroundColors,
+          fontSizePx: parseCssFontSize(body),
+          isBold: parseFontWeight(parseCssValue(body, "font-weight")),
+          index: block.offset + match.index,
+          snippet: match[0],
+          style: body
+        };
+      })
+      .filter(Boolean));
+
+  return [...inlineCandidates, ...styleTagCandidates];
 };
 
 const InsufficientContrastCheck = {
@@ -336,8 +442,9 @@ const InsufficientContrastCheck = {
   run(context, rule) {
     const issues = [];
     const candidates = getCandidates(context);
+    const cssVariables = collectCssVariables(context);
     for (const candidate of candidates) {
-      const foreground = resolveColorWithContext(candidate.foreground, candidate.style);
+      const foreground = resolveColorWithContext(candidate.foreground, candidate.style, cssVariables);
       if (!foreground) {
         continue;
       }
@@ -349,7 +456,7 @@ const InsufficientContrastCheck = {
       }
 
       const backgroundColors = candidate.backgroundColors
-        .map((color) => resolveColorWithContext(color, candidate.style))
+        .map((color) => resolveColorWithContext(color, candidate.style, cssVariables))
         .filter(Boolean);
 
       const parsedBackgrounds = backgroundColors
@@ -418,6 +525,7 @@ module.exports = {
   parseXmlAttribute,
   resolveStaticColor,
   extractCssVarFallback,
+  extractCssVariableDefinitions,
   extractXamlFallback,
   normalizeColorValue,
   extractCssVarName,
@@ -429,5 +537,7 @@ module.exports = {
   getRequiredContrastRatio,
   getCandidates,
   blendColors,
-  shouldDefaultBackground
+  shouldDefaultBackground,
+  collectCssVariables,
+  extractStyleTagBlocks
 };
