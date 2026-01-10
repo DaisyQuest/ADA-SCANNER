@@ -95,6 +95,7 @@ const {
   parseXmlAttribute,
   resolveStaticColor,
   extractCssVarFallback,
+  extractCssVariableDefinitions,
   extractCssVarName,
   resolveCssVarFromStyle,
   resolveColorWithContext,
@@ -1335,11 +1336,20 @@ describe("InsufficientContrastCheck", () => {
     expect(extractCssVarFallback("var(--primary, #fff)")).toBe("#fff");
     expect(extractCssVarFallback("var(--primary)")).toBeNull();
     expect(extractCssVarFallback("color")).toBeNull();
+    expect([...extractCssVariableDefinitions("--base-3:#fff; --base-4: rgb(1, 2, 3);")].sort())
+      .toEqual([
+        ["--base-3", "#fff"],
+        ["--base-4", "rgb(1, 2, 3)"]
+      ]);
     expect(extractCssVarName("var(--primary)")).toBe("--primary");
     expect(resolveCssVarFromStyle("var(--primary)", "--primary: #333; color: var(--primary);"))
       .toBe("#333");
     expect(resolveColorWithContext("var(--primary)", "--primary: #333; color: var(--primary);"))
       .toBe("#333");
+    const cssVariables = new Map([["--brand", "#fff"]]);
+    expect(resolveColorWithContext("var(--brand)", "", cssVariables)).toBe("#fff");
+    expect(resolveColorWithContext("var(--loop)", "", new Map([["--loop", "var(--loop)"]])))
+      .toBeNull();
     expect(shouldDefaultBackground("html")).toBe(true);
     expect(shouldDefaultBackground("xaml")).toBe(false);
     expect(parseHexColor("#12")).toBeNull();
@@ -1383,8 +1393,17 @@ describe("InsufficientContrastCheck", () => {
     );
     expect(InsufficientContrastCheck.run(htmlVar, rule)).toHaveLength(1);
 
+    const htmlStyleTag = createContext(
+      '<style>:root{--base-3:#fff;}.text{color:var(--base-3);}</style><p class="text">Hello</p>',
+      "html"
+    );
+    expect(InsufficientContrastCheck.run(htmlStyleTag, rule)).toHaveLength(1);
+
     const cssContext = createContext('.a { color: #777; background-color: #888; }', "css");
     expect(InsufficientContrastCheck.run(cssContext, rule)).toHaveLength(1);
+
+    const cssVarContext = createContext(':root { --base-3: #fff; } .text { color: var(--base-3); }', "css");
+    expect(InsufficientContrastCheck.run(cssVarContext, rule)).toHaveLength(1);
 
     const xamlContext = createContext('<TextBlock Foreground="#777" Background="#888" />', "xaml");
     expect(InsufficientContrastCheck.run(xamlContext, rule)).toHaveLength(1);
