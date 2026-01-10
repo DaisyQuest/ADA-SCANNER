@@ -1,5 +1,5 @@
 const { getAttributeValue } = require("./AttributeParser");
-const { getLineNumber, containsAttribute } = require("./TextUtilities");
+const { getLineNumber, getLineNumberForSnippet, containsAttribute } = require("./TextUtilities");
 const {
   collectElementIds,
   collectElementIdsFromDocument,
@@ -29,9 +29,12 @@ const EmptyLinkCheck = {
     if (context.document?.querySelectorAll) {
       const elementIds = collectElementIdsFromDocument(context.document);
       const candidates = Array.from(context.document.querySelectorAll("a, [role=\"link\"]"));
-      let searchStart = 0;
+      const sourceAnchors = context.content ? Array.from(context.content.matchAll(linkRegex)) : [];
+      let sourceIndex = 0;
 
       for (const link of candidates) {
+        const isAnchor = link.tagName?.toLowerCase() === "a";
+        const sourceMatch = isAnchor ? sourceAnchors[sourceIndex++] : null;
         const role = link.getAttribute("role");
         const hasHref = link.hasAttribute("href");
         if (!(hasHref || (role && role.toLowerCase() === "link"))) {
@@ -61,19 +64,18 @@ const EmptyLinkCheck = {
           continue;
         }
 
-        const evidence = link.outerHTML;
-        const matchIndex = context.content.indexOf(evidence, searchStart);
+        const evidence = sourceMatch ? sourceMatch[0] : link.outerHTML;
+        const matchIndex = sourceMatch?.index ?? -1;
         issues.push({
           ruleId: rule.id,
           checkId: EmptyLinkCheck.id,
           filePath: context.filePath,
-          line: getLineNumber(context.content, matchIndex >= 0 ? matchIndex : searchStart),
+          line: matchIndex >= 0
+            ? getLineNumber(context.content, matchIndex)
+            : getLineNumberForSnippet(context.content, evidence),
           message: "Link has no accessible name.",
           evidence
         });
-        if (matchIndex >= 0) {
-          searchStart = matchIndex + evidence.length;
-        }
       }
 
       return issues;

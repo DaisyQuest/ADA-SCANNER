@@ -822,6 +822,40 @@ describe("EmptyLinkCheck", () => {
       document: new JSDOM('<A href="/home"></A>').window.document
     };
     expect(EmptyLinkCheck.run(domCaseMismatch, rule)).toHaveLength(1);
+
+    const domMissingContent = {
+      filePath: "file",
+      content: "",
+      kind: "html",
+      document: new JSDOM('<a href="/home"></a>').window.document
+    };
+    const fallbackIssues = EmptyLinkCheck.run(domMissingContent, rule);
+    expect(fallbackIssues).toHaveLength(1);
+    expect(fallbackIssues[0].line).toBe(1);
+    expect(fallbackIssues[0].evidence).toBe('<a href="/home"></a>');
+  });
+
+  test("maps line numbers using source anchors when DOM serializes attributes", () => {
+    const content = [
+      "<div>",
+      '<a b-flag href="/home"></a>',
+      '<a b-flag href="/next"></a>',
+      "</div>"
+    ].join("\n");
+    const domContext = {
+      filePath: "file",
+      content,
+      kind: "html",
+      document: new JSDOM(content).window.document
+    };
+
+    const issues = EmptyLinkCheck.run(domContext, rule);
+    expect(issues).toHaveLength(2);
+    expect(issues.map((issue) => issue.line)).toEqual([2, 3]);
+    expect(issues.map((issue) => issue.evidence)).toEqual([
+      '<a b-flag href="/home"></a>',
+      '<a b-flag href="/next"></a>'
+    ]);
   });
 
   test("helper identifies link attributes", () => {
@@ -1136,6 +1170,40 @@ describe("MissingLinkTextCheck", () => {
     expect(
       hasAccessibleLabelFromElement(domLabelledBy.window.document.querySelector("a"), new Set(["label"]))
     ).toBe(true);
+
+    const domMissingContent = {
+      filePath: "file",
+      content: "",
+      kind: "html",
+      document: new JSDOM('<a href="/"></a>').window.document
+    };
+    const fallbackIssues = MissingLinkTextCheck.run(domMissingContent, rule);
+    expect(fallbackIssues).toHaveLength(1);
+    expect(fallbackIssues[0].line).toBe(1);
+    expect(fallbackIssues[0].evidence).toBe('<a href="/"></a>');
+  });
+
+  test("tracks source evidence when DOM serialization changes", () => {
+    const content = [
+      "<div>",
+      '<a b-flag href="/home"></a>',
+      '<a b-flag href="/next"></a>',
+      "</div>"
+    ].join("\n");
+    const domContext = {
+      filePath: "file",
+      content,
+      kind: "html",
+      document: new JSDOM(content).window.document
+    };
+
+    const issues = MissingLinkTextCheck.run(domContext, rule);
+    expect(issues).toHaveLength(2);
+    expect(issues.map((issue) => issue.line)).toEqual([2, 3]);
+    expect(issues.map((issue) => issue.evidence)).toEqual([
+      '<a b-flag href="/home"></a>',
+      '<a b-flag href="/next"></a>'
+    ]);
   });
 });
 
