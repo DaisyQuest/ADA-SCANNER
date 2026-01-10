@@ -5,6 +5,7 @@ const DEFAULT_SPIDER_REQUEST_DELAY_MS = 0;
 const defaultState = {
   enabled: false,
   sidebarEnabled: true,
+  tabOrderEnabled: false,
   spiderEnabled: false,
   serverUrl: DEFAULT_SERVER_URL,
   spiderRequestDelayMs: DEFAULT_SPIDER_REQUEST_DELAY_MS

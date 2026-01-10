@@ -12,6 +12,7 @@ const {
 } = require("../extension/forwarder");
 const { createHighlighter, filterIssuesForPage } = require("../extension/highlighter");
 const { createReportSidebar } = require("../extension/reportSidebar");
+const { createTabOrderOverlay } = require("../extension/tabOrderOverlay");
 const {
   registerBackground,
   toggleExtension,
@@ -41,7 +42,8 @@ describe("Extension forwarder utilities", () => {
     expect(normalizeHtml(null)).toBe("");
 
     document.head.innerHTML = '<style id="ada-highlight-style">.ada-highlight{}</style>';
-    document.body.innerHTML = '\n      <div class="ada-highlight" data-ada-issue-count="1" title="Issue">Hi</div>\n      <div data-ada-report-sidebar="true">Sidebar</div>\n    ';
+    document.body.innerHTML =
+      '\n      <div class="ada-highlight" data-ada-issue-count="1" title="Issue">Hi</div>\n      <div data-ada-report-sidebar="true">Sidebar</div>\n      <div data-ada-tab-order="true" id="tab-overlay"></div>\n    ';
     const clone = document.documentElement.cloneNode(true);
     stripHighlights(clone);
     expect(clone.querySelector(".ada-highlight")).toBeNull();
@@ -57,6 +59,7 @@ describe("Extension forwarder utilities", () => {
     const strippedHtml = normalizeHtml(document);
     expect(strippedHtml).not.toContain("ada-highlight");
     expect(strippedHtml).not.toContain("ada-report-sidebar");
+    expect(strippedHtml).not.toContain("ada-tab-order");
 
     const fallbackDoc = {
       documentElement: {
@@ -507,11 +510,110 @@ describe("Extension report sidebar", () => {
     expect(document.querySelector("#ada-report-sidebar")).not.toBeNull();
     sidebar.destroy();
   });
+
+  test("fires tab order toggle changes", () => {
+    document.body.innerHTML = "<div></div>";
+    const onToggleTabOrder = jest.fn();
+    const sidebar = createReportSidebar({
+      documentRoot: document,
+      windowObj: window,
+      resolveTargets: () => [],
+      onToggleTabOrder,
+      initialTabOrderEnabled: true
+    });
+
+    sidebar.render([{ selector: "#missing", ruleId: "rule-tab" }]);
+    const toggles = document.querySelectorAll(".ada-report-toggle input");
+    const tabOrderToggle = toggles[1];
+    expect(tabOrderToggle.checked).toBe(true);
+    tabOrderToggle.checked = false;
+    tabOrderToggle.dispatchEvent(new window.Event("change"));
+    expect(onToggleTabOrder).toHaveBeenCalledWith(false);
+    sidebar.destroy();
+  });
+});
+
+describe("Extension tab order overlay", () => {
+  test("renders tab order markers with arrows", () => {
+    document.body.innerHTML = `
+      <button id="first"></button>
+      <a id="second" href="#"></a>
+      <input id="third" />
+      <button id="priority" tabindex="2"></button>
+      <button id="priority-1" tabindex="1"></button>
+      <button id="hidden" tabindex="0" style="display: none;"></button>
+      <button id="skip" tabindex="-1"></button>
+    `;
+
+    const originalGetComputedStyle = window.getComputedStyle;
+    window.getComputedStyle = (element) => {
+      if (element.id === "hidden") {
+        return { display: "none", visibility: "visible", opacity: "1" };
+      }
+      return { display: "block", visibility: "visible", opacity: "1" };
+    };
+
+    const positions = {
+      "priority-1": { left: 100, top: 10 },
+      priority: { left: 200, top: 10 },
+      first: { left: 10, top: 10 },
+      second: { left: 20, top: 10 },
+      third: { left: 30, top: 10 }
+    };
+    Object.entries(positions).forEach(([id, point]) => {
+      const element = document.getElementById(id);
+      element.getBoundingClientRect = jest.fn(() => ({
+        left: point.left,
+        top: point.top,
+        width: 10,
+        height: 10,
+        right: point.left + 10,
+        bottom: point.top + 10
+      }));
+    });
+
+    const overlay = createTabOrderOverlay({ documentRoot: document, windowObj: window });
+    overlay.enable();
+
+    const markers = Array.from(document.querySelectorAll(".ada-tab-order-marker"));
+    expect(markers).toHaveLength(5);
+    expect(markers.map((marker) => marker.style.left)).toEqual([
+      "105px",
+      "205px",
+      "15px",
+      "25px",
+      "35px"
+    ]);
+    expect(document.querySelectorAll(".ada-tab-order-line")).toHaveLength(4);
+
+    overlay.destroy();
+    window.getComputedStyle = originalGetComputedStyle;
+  });
+
+  test("removes overlay when disabled", () => {
+    document.body.innerHTML = '<button id="first"></button>';
+    const element = document.getElementById("first");
+    element.getBoundingClientRect = jest.fn(() => ({
+      left: 10,
+      top: 10,
+      width: 10,
+      height: 10,
+      right: 20,
+      bottom: 20
+    }));
+
+    const overlay = createTabOrderOverlay({ documentRoot: document, windowObj: window });
+    overlay.enable();
+    expect(document.querySelector("#ada-tab-order-overlay")).not.toBeNull();
+    overlay.disable();
+    expect(document.querySelector("#ada-tab-order-overlay")).toBeNull();
+    expect(document.querySelector("#ada-tab-order-style")).toBeNull();
+  });
 });
 
 describe("Extension background", () => {
   const createChrome = () => {
-    const state = { enabled: false, serverUrl: DEFAULT_SERVER_URL, spiderRequestDelayMs: 0 };
+    const state = { enabled: false, tabOrderEnabled: false, serverUrl: DEFAULT_SERVER_URL, spiderRequestDelayMs: 0 };
     const listeners = { clicked: [], installed: [], activated: [], message: [] };
     return {
       action: {
@@ -611,6 +713,7 @@ describe("Extension background", () => {
     expect(chromeApi.storage.local.set).toHaveBeenCalledWith({
       enabled: false,
       sidebarEnabled: true,
+      tabOrderEnabled: false,
       spiderEnabled: false,
       serverUrl: DEFAULT_SERVER_URL,
       spiderRequestDelayMs: 0
@@ -1518,6 +1621,9 @@ describe("Extension content script", () => {
     const refresh = jest.fn();
     const render = jest.fn();
     const destroy = jest.fn();
+    const tabOrderRefresh = jest.fn();
+    const tabOrderDestroy = jest.fn();
+    const tabOrderEnable = jest.fn();
     const observers = [];
     const originalObserver = window.MutationObserver;
 
@@ -1535,6 +1641,9 @@ describe("Extension content script", () => {
     globalThis.AdaReportSidebar = {
       createReportSidebar: jest.fn(() => ({ render, refresh, destroy }))
     };
+    globalThis.AdaTabOrderOverlay = {
+      createTabOrderOverlay: jest.fn(() => ({ enable: tabOrderEnable, refresh: tabOrderRefresh, destroy: tabOrderDestroy }))
+    };
     globalThis.AdaForwarder = {
       createForwarder: jest.fn((options) => ({
         schedule: jest.fn(),
@@ -1548,7 +1657,12 @@ describe("Extension content script", () => {
 
     const chromeApi = {
       runtime: { onMessage: { addListener: jest.fn() } },
-      storage: { local: { get: (defaults, callback) => callback({ enabled: false, serverUrl: DEFAULT_SERVER_URL }) } }
+      storage: {
+        local: {
+          get: (defaults, callback) =>
+            callback({ enabled: false, tabOrderEnabled: true, serverUrl: DEFAULT_SERVER_URL })
+        }
+      }
     };
 
     const { createContentScript: reloadedCreateContentScript } = require("../extension/contentScript");
@@ -1566,9 +1680,11 @@ describe("Extension content script", () => {
 
     expect(render).toHaveBeenCalledWith([{ selector: "#save", message: "Issue" }]);
     expect(refresh).toHaveBeenCalled();
+    expect(tabOrderRefresh).toHaveBeenCalled();
 
     script.stop();
     expect(destroy).toHaveBeenCalled();
+    expect(tabOrderDestroy).toHaveBeenCalled();
     window.MutationObserver = originalObserver;
     jest.useRealTimers();
   });
@@ -1620,6 +1736,51 @@ describe("Extension content script", () => {
     expect(destroy).toHaveBeenCalled();
     storageListener({ sidebarEnabled: { newValue: true } });
     expect(createReportSidebarMock).toHaveBeenCalledTimes(2);
+  });
+
+  test("toggles tab order overlay when config changes", () => {
+    jest.resetModules();
+    let storageListener = null;
+    const overlay = { enable: jest.fn(), refresh: jest.fn(), destroy: jest.fn() };
+    const createTabOrderOverlayMock = jest.fn(() => overlay);
+
+    globalThis.AdaHighlighter = {
+      createHighlighter: jest.fn(() => ({ applyHighlights: jest.fn(), focusIssue: jest.fn(), clearHighlights: jest.fn(), resolveTargets: jest.fn() })),
+      filterIssuesForPage: jest.fn((issues) => issues ?? [])
+    };
+    globalThis.AdaReportSidebar = { createReportSidebar: jest.fn(() => ({ render: jest.fn(), refresh: jest.fn(), destroy: jest.fn() })) };
+    globalThis.AdaTabOrderOverlay = { createTabOrderOverlay: createTabOrderOverlayMock };
+    globalThis.AdaForwarder = {
+      createForwarder: jest.fn(() => ({ schedule: jest.fn(), send: jest.fn(() => Promise.resolve({ ok: true })) })),
+      getDefaultConfig: jest.fn(() => Promise.resolve({ serverUrl: DEFAULT_SERVER_URL }))
+    };
+
+    const chromeApi = {
+      runtime: { onMessage: { addListener: jest.fn() } },
+      storage: {
+        local: {
+          get: (defaults, callback) =>
+            callback({ enabled: true, sidebarEnabled: false, tabOrderEnabled: true, serverUrl: DEFAULT_SERVER_URL })
+        },
+        onChanged: {
+          addListener: (listener) => {
+            storageListener = listener;
+          }
+        }
+      }
+    };
+
+    const { createContentScript: reloadedCreateContentScript } = require("../extension/contentScript");
+    reloadedCreateContentScript({ chromeApi, documentRoot: document, windowObj: window, fetchFn: jest.fn() });
+
+    expect(createTabOrderOverlayMock).toHaveBeenCalledTimes(1);
+    expect(overlay.enable).toHaveBeenCalled();
+
+    storageListener({ tabOrderEnabled: { newValue: false } });
+    expect(overlay.destroy).toHaveBeenCalled();
+
+    storageListener({ tabOrderEnabled: { newValue: true } });
+    expect(createTabOrderOverlayMock).toHaveBeenCalledTimes(2);
   });
 
   test("does not create sidebar when disabled and sidebar is toggled on", () => {
@@ -2376,6 +2537,7 @@ describe("Extension popup", () => {
     const state = {
       enabled: false,
       sidebarEnabled: true,
+      tabOrderEnabled: false,
       spiderEnabled: false,
       serverUrl: DEFAULT_SERVER_URL,
       spiderRequestDelayMs: 0
@@ -2407,18 +2569,20 @@ describe("Extension popup", () => {
   });
 
   test("updates toggles and server url", async () => {
-    document.body.innerHTML = "\n      <input id=\"enabled-toggle\" type=\"checkbox\" />\n      <input id=\"sidebar-toggle\" type=\"checkbox\" />\n      <input id=\"spider-toggle\" type=\"checkbox\" />\n      <input id=\"spider-delay\" type=\"number\" />\n      <input id=\"server-url\" type=\"text\" />\n      <div id=\"status-text\"></div>\n      <div id=\"server-status\"></div>\n    ";
+    document.body.innerHTML = "\n      <input id=\"enabled-toggle\" type=\"checkbox\" />\n      <input id=\"sidebar-toggle\" type=\"checkbox\" />\n      <input id=\"tab-order-toggle\" type=\"checkbox\" />\n      <input id=\"spider-toggle\" type=\"checkbox\" />\n      <input id=\"spider-delay\" type=\"number\" />\n      <input id=\"server-url\" type=\"text\" />\n      <div id=\"status-text\"></div>\n      <div id=\"server-status\"></div>\n    ";
     const chromeApi = createChromeApi();
     const popup = createPopup({ documentRoot: document, chromeApi });
 
     await popup.updateEnabled(true);
     await popup.updateSidebar(true);
+    await popup.updateTabOrder(true);
     await popup.updateSpider(true);
     await popup.updateSpiderDelay(250);
     await popup.updateServerUrl("http://localhost:9999/capture");
 
     expect(chromeApi.storage.local.set).toHaveBeenCalledWith({ enabled: true });
     expect(chromeApi.storage.local.set).toHaveBeenCalledWith({ sidebarEnabled: true });
+    expect(chromeApi.storage.local.set).toHaveBeenCalledWith({ tabOrderEnabled: true });
     expect(chromeApi.storage.local.set).toHaveBeenCalledWith({ spiderEnabled: true });
     expect(chromeApi.storage.local.set).toHaveBeenCalledWith({ spiderRequestDelayMs: 250 });
     expect(chromeApi.storage.local.set).toHaveBeenCalledWith({ serverUrl: "http://localhost:9999/capture" });
@@ -2426,7 +2590,7 @@ describe("Extension popup", () => {
   });
 
   test("responds to popup change events", async () => {
-    document.body.innerHTML = "\n      <input id=\"enabled-toggle\" type=\"checkbox\" />\n      <input id=\"sidebar-toggle\" type=\"checkbox\" />\n      <input id=\"spider-toggle\" type=\"checkbox\" />\n      <input id=\"spider-delay\" type=\"number\" />\n      <input id=\"server-url\" type=\"text\" />\n      <div id=\"status-text\"></div>\n      <div id=\"server-status\"></div>\n    ";
+    document.body.innerHTML = "\n      <input id=\"enabled-toggle\" type=\"checkbox\" />\n      <input id=\"sidebar-toggle\" type=\"checkbox\" />\n      <input id=\"tab-order-toggle\" type=\"checkbox\" />\n      <input id=\"spider-toggle\" type=\"checkbox\" />\n      <input id=\"spider-delay\" type=\"number\" />\n      <input id=\"server-url\" type=\"text\" />\n      <div id=\"status-text\"></div>\n      <div id=\"server-status\"></div>\n    ";
     const chromeApi = createChromeApi();
     createPopup({ documentRoot: document, chromeApi });
 
@@ -2437,6 +2601,10 @@ describe("Extension popup", () => {
     const sidebarToggle = document.getElementById("sidebar-toggle");
     sidebarToggle.checked = false;
     sidebarToggle.dispatchEvent(new Event("change"));
+
+    const tabOrderToggle = document.getElementById("tab-order-toggle");
+    tabOrderToggle.checked = true;
+    tabOrderToggle.dispatchEvent(new Event("change"));
 
     const spiderToggle = document.getElementById("spider-toggle");
     spiderToggle.checked = true;
@@ -2453,13 +2621,14 @@ describe("Extension popup", () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(chromeApi.storage.local.set).toHaveBeenCalledWith({ enabled: true });
     expect(chromeApi.storage.local.set).toHaveBeenCalledWith({ sidebarEnabled: false });
+    expect(chromeApi.storage.local.set).toHaveBeenCalledWith({ tabOrderEnabled: true });
     expect(chromeApi.storage.local.set).toHaveBeenCalledWith({ spiderEnabled: true });
     expect(chromeApi.storage.local.set).toHaveBeenCalledWith({ spiderRequestDelayMs: 200 });
     expect(chromeApi.storage.local.set).toHaveBeenCalledWith({ serverUrl: "http://localhost:7777/capture" });
   });
 
   test("rejects invalid server urls", async () => {
-    document.body.innerHTML = "\n      <input id=\"enabled-toggle\" type=\"checkbox\" />\n      <input id=\"sidebar-toggle\" type=\"checkbox\" />\n      <input id=\"spider-toggle\" type=\"checkbox\" />\n      <input id=\"spider-delay\" type=\"number\" />\n      <input id=\"server-url\" type=\"text\" />\n      <div id=\"status-text\"></div>\n      <div id=\"server-status\"></div>\n    ";
+    document.body.innerHTML = "\n      <input id=\"enabled-toggle\" type=\"checkbox\" />\n      <input id=\"sidebar-toggle\" type=\"checkbox\" />\n      <input id=\"tab-order-toggle\" type=\"checkbox\" />\n      <input id=\"spider-toggle\" type=\"checkbox\" />\n      <input id=\"spider-delay\" type=\"number\" />\n      <input id=\"server-url\" type=\"text\" />\n      <div id=\"status-text\"></div>\n      <div id=\"server-status\"></div>\n    ";
     const chromeApi = createChromeApi();
     const popup = createPopup({ documentRoot: document, chromeApi });
     await popup.updateServerUrl("bad url");
@@ -2468,7 +2637,7 @@ describe("Extension popup", () => {
   });
 
   test("uses default server url when blank and shows warning", async () => {
-    document.body.innerHTML = "\n      <input id=\"enabled-toggle\" type=\"checkbox\" />\n      <input id=\"sidebar-toggle\" type=\"checkbox\" />\n      <input id=\"spider-toggle\" type=\"checkbox\" />\n      <input id=\"spider-delay\" type=\"number\" />\n      <input id=\"server-url\" type=\"text\" />\n      <div id=\"status-text\"></div>\n      <div id=\"server-status\"></div>\n    ";
+    document.body.innerHTML = "\n      <input id=\"enabled-toggle\" type=\"checkbox\" />\n      <input id=\"sidebar-toggle\" type=\"checkbox\" />\n      <input id=\"tab-order-toggle\" type=\"checkbox\" />\n      <input id=\"spider-toggle\" type=\"checkbox\" />\n      <input id=\"spider-delay\" type=\"number\" />\n      <input id=\"server-url\" type=\"text\" />\n      <div id=\"status-text\"></div>\n      <div id=\"server-status\"></div>\n    ";
     const chromeApi = createChromeApi();
     const popup = createPopup({ documentRoot: document, chromeApi });
     await popup.updateServerUrl(" ");
@@ -2477,11 +2646,11 @@ describe("Extension popup", () => {
   });
 
   test("applies state defaults and error hints", () => {
-    document.body.innerHTML = "\n      <input id=\"enabled-toggle\" type=\"checkbox\" />\n      <input id=\"sidebar-toggle\" type=\"checkbox\" />\n      <input id=\"spider-toggle\" type=\"checkbox\" />\n      <input id=\"spider-delay\" type=\"number\" />\n      <input id=\"server-url\" type=\"text\" />\n      <div id=\"status-text\"></div>\n      <div id=\"server-status\"></div>\n    ";
+    document.body.innerHTML = "\n      <input id=\"enabled-toggle\" type=\"checkbox\" />\n      <input id=\"sidebar-toggle\" type=\"checkbox\" />\n      <input id=\"tab-order-toggle\" type=\"checkbox\" />\n      <input id=\"spider-toggle\" type=\"checkbox\" />\n      <input id=\"spider-delay\" type=\"number\" />\n      <input id=\"server-url\" type=\"text\" />\n      <div id=\"status-text\"></div>\n      <div id=\"server-status\"></div>\n    ";
     const chromeApi = createChromeApi();
     const popup = createPopup({ documentRoot: document, chromeApi });
 
-    popup.applyState({ enabled: true, sidebarEnabled: true, spiderEnabled: true });
+    popup.applyState({ enabled: true, sidebarEnabled: true, tabOrderEnabled: true, spiderEnabled: true });
     popup.setServerHint("Bad URL", true);
     expect(document.getElementById("server-status").classList.contains("error")).toBe(true);
     popup.setServerHint(null, false);
@@ -2489,24 +2658,26 @@ describe("Extension popup", () => {
     expect(document.getElementById("server-url").value).toBe(DEFAULT_SERVER_URL);
     expect(document.getElementById("spider-delay").value).toBe("0");
     expect(document.getElementById("sidebar-toggle").checked).toBe(true);
+    expect(document.getElementById("tab-order-toggle").checked).toBe(true);
     expect(document.getElementById("status-text").textContent).toContain("Spider on");
     expect(document.getElementById("server-status").classList.contains("error")).toBe(false);
   });
 
   test("applies disabled state and clears status", () => {
-    document.body.innerHTML = "\n      <input id=\"enabled-toggle\" type=\"checkbox\" />\n      <input id=\"sidebar-toggle\" type=\"checkbox\" />\n      <input id=\"spider-toggle\" type=\"checkbox\" />\n      <input id=\"spider-delay\" type=\"number\" />\n      <input id=\"server-url\" type=\"text\" />\n      <div id=\"status-text\"></div>\n      <div id=\"server-status\"></div>\n    ";
+    document.body.innerHTML = "\n      <input id=\"enabled-toggle\" type=\"checkbox\" />\n      <input id=\"sidebar-toggle\" type=\"checkbox\" />\n      <input id=\"tab-order-toggle\" type=\"checkbox\" />\n      <input id=\"spider-toggle\" type=\"checkbox\" />\n      <input id=\"spider-delay\" type=\"number\" />\n      <input id=\"server-url\" type=\"text\" />\n      <div id=\"status-text\"></div>\n      <div id=\"server-status\"></div>\n    ";
     const chromeApi = createChromeApi();
     const popup = createPopup({ documentRoot: document, chromeApi });
 
-    popup.applyState({ enabled: false, sidebarEnabled: false, spiderEnabled: false, serverUrl: null });
+    popup.applyState({ enabled: false, sidebarEnabled: false, tabOrderEnabled: false, spiderEnabled: false, serverUrl: null });
 
     expect(document.getElementById("status-text").textContent).toContain("Forwarding off");
     expect(document.getElementById("server-url").value).toBe(DEFAULT_SERVER_URL);
     expect(document.getElementById("sidebar-toggle").checked).toBe(false);
+    expect(document.getElementById("tab-order-toggle").checked).toBe(false);
   });
 
   test("ignores unrelated storage changes", () => {
-    document.body.innerHTML = "\n      <input id=\"enabled-toggle\" type=\"checkbox\" />\n      <input id=\"sidebar-toggle\" type=\"checkbox\" />\n      <input id=\"spider-toggle\" type=\"checkbox\" />\n      <input id=\"spider-delay\" type=\"number\" />\n      <input id=\"server-url\" type=\"text\" />\n      <div id=\"status-text\"></div>\n      <div id=\"server-status\"></div>\n    ";
+    document.body.innerHTML = "\n      <input id=\"enabled-toggle\" type=\"checkbox\" />\n      <input id=\"sidebar-toggle\" type=\"checkbox\" />\n      <input id=\"tab-order-toggle\" type=\"checkbox\" />\n      <input id=\"spider-toggle\" type=\"checkbox\" />\n      <input id=\"spider-delay\" type=\"number\" />\n      <input id=\"server-url\" type=\"text\" />\n      <div id=\"status-text\"></div>\n      <div id=\"server-status\"></div>\n    ";
     const chromeApi = createChromeApi();
     let listener = null;
     chromeApi.storage.onChanged.addListener.mockImplementation((cb) => {
@@ -2521,7 +2692,7 @@ describe("Extension popup", () => {
   });
 
   test("refreshes state when storage changes", async () => {
-    document.body.innerHTML = "\n      <input id=\"enabled-toggle\" type=\"checkbox\" />\n      <input id=\"sidebar-toggle\" type=\"checkbox\" />\n      <input id=\"spider-toggle\" type=\"checkbox\" />\n      <input id=\"spider-delay\" type=\"number\" />\n      <input id=\"server-url\" type=\"text\" />\n      <div id=\"status-text\"></div>\n      <div id=\"server-status\"></div>\n    ";
+    document.body.innerHTML = "\n      <input id=\"enabled-toggle\" type=\"checkbox\" />\n      <input id=\"sidebar-toggle\" type=\"checkbox\" />\n      <input id=\"tab-order-toggle\" type=\"checkbox\" />\n      <input id=\"spider-toggle\" type=\"checkbox\" />\n      <input id=\"spider-delay\" type=\"number\" />\n      <input id=\"server-url\" type=\"text\" />\n      <div id=\"status-text\"></div>\n      <div id=\"server-status\"></div>\n    ";
     const chromeApi = createChromeApi();
     let listener = null;
     chromeApi.storage.onChanged.addListener.mockImplementation((cb) => {
@@ -2529,19 +2700,27 @@ describe("Extension popup", () => {
     });
     createPopup({ documentRoot: document, chromeApi });
 
-    chromeApi.storage.local.set({ enabled: true, sidebarEnabled: false, spiderEnabled: true, serverUrl: "http://updated" });
+    chromeApi.storage.local.set({
+      enabled: true,
+      sidebarEnabled: false,
+      tabOrderEnabled: true,
+      spiderEnabled: true,
+      serverUrl: "http://updated"
+    });
     listener({ sidebarEnabled: { newValue: false } });
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(document.getElementById("enabled-toggle").checked).toBe(true);
     expect(document.getElementById("sidebar-toggle").checked).toBe(false);
+    expect(document.getElementById("tab-order-toggle").checked).toBe(true);
   });
 
   test("reads storage when get returns a promise", async () => {
-    document.body.innerHTML = "\n      <input id=\"enabled-toggle\" type=\"checkbox\" />\n      <input id=\"sidebar-toggle\" type=\"checkbox\" />\n      <input id=\"spider-toggle\" type=\"checkbox\" />\n      <input id=\"spider-delay\" type=\"number\" />\n      <input id=\"server-url\" type=\"text\" />\n      <div id=\"status-text\"></div>\n      <div id=\"server-status\"></div>\n    ";
+    document.body.innerHTML = "\n      <input id=\"enabled-toggle\" type=\"checkbox\" />\n      <input id=\"sidebar-toggle\" type=\"checkbox\" />\n      <input id=\"tab-order-toggle\" type=\"checkbox\" />\n      <input id=\"spider-toggle\" type=\"checkbox\" />\n      <input id=\"spider-delay\" type=\"number\" />\n      <input id=\"server-url\" type=\"text\" />\n      <div id=\"status-text\"></div>\n      <div id=\"server-status\"></div>\n    ";
     const chromeApi = createChromeApi();
     chromeApi.storage.local.get = jest.fn(() => Promise.resolve({
       enabled: true,
       sidebarEnabled: false,
+      tabOrderEnabled: true,
       spiderEnabled: true,
       serverUrl: "http://example",
       spiderRequestDelayMs: 150
@@ -2551,11 +2730,12 @@ describe("Extension popup", () => {
     expect(document.getElementById("spider-toggle").checked).toBe(true);
     expect(document.getElementById("spider-delay").value).toBe("150");
     expect(document.getElementById("sidebar-toggle").checked).toBe(false);
+    expect(document.getElementById("tab-order-toggle").checked).toBe(true);
   });
 
   test("auto-bootstraps when chrome is available", () => {
     jest.resetModules();
-    document.body.innerHTML = "\n      <input id=\"enabled-toggle\" type=\"checkbox\" />\n      <input id=\"sidebar-toggle\" type=\"checkbox\" />\n      <input id=\"spider-toggle\" type=\"checkbox\" />\n      <input id=\"spider-delay\" type=\"number\" />\n      <input id=\"server-url\" type=\"text\" />\n      <div id=\"status-text\"></div>\n      <div id=\"server-status\"></div>\n    ";
+    document.body.innerHTML = "\n      <input id=\"enabled-toggle\" type=\"checkbox\" />\n      <input id=\"sidebar-toggle\" type=\"checkbox\" />\n      <input id=\"tab-order-toggle\" type=\"checkbox\" />\n      <input id=\"spider-toggle\" type=\"checkbox\" />\n      <input id=\"spider-delay\" type=\"number\" />\n      <input id=\"server-url\" type=\"text\" />\n      <div id=\"status-text\"></div>\n      <div id=\"server-status\"></div>\n    ";
     global.chrome = {
       runtime: { sendMessage: jest.fn() },
       storage: {
@@ -2572,7 +2752,7 @@ describe("Extension popup", () => {
   });
 
   test("skips storage change wiring when onChanged is missing", () => {
-    document.body.innerHTML = "\n      <input id=\"enabled-toggle\" type=\"checkbox\" />\n      <input id=\"sidebar-toggle\" type=\"checkbox\" />\n      <input id=\"spider-toggle\" type=\"checkbox\" />\n      <input id=\"spider-delay\" type=\"number\" />\n      <input id=\"server-url\" type=\"text\" />\n      <div id=\"status-text\"></div>\n      <div id=\"server-status\"></div>\n    ";
+    document.body.innerHTML = "\n      <input id=\"enabled-toggle\" type=\"checkbox\" />\n      <input id=\"sidebar-toggle\" type=\"checkbox\" />\n      <input id=\"tab-order-toggle\" type=\"checkbox\" />\n      <input id=\"spider-toggle\" type=\"checkbox\" />\n      <input id=\"spider-delay\" type=\"number\" />\n      <input id=\"server-url\" type=\"text\" />\n      <div id=\"status-text\"></div>\n      <div id=\"server-status\"></div>\n    ";
     const chromeApi = createChromeApi();
     delete chromeApi.storage.onChanged;
     expect(() => createPopup({ documentRoot: document, chromeApi })).not.toThrow();
