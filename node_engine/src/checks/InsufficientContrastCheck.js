@@ -319,6 +319,68 @@ const formatColor = (color) => {
   return `rgb(${r}, ${g}, ${b})`;
 };
 
+const MAX_EVIDENCE_SAMPLE_LENGTH = 200;
+
+const formatEvidenceSample = (value) => {
+  if (!value) {
+    return null;
+  }
+
+  const normalized = value.replace(/\s+/g, " ").trim();
+  if (normalized.length <= MAX_EVIDENCE_SAMPLE_LENGTH) {
+    return normalized;
+  }
+
+  return `${normalized.slice(0, MAX_EVIDENCE_SAMPLE_LENGTH)}…`;
+};
+
+const getSelectorUsage = (selector, document) => {
+  if (!selector || !document) {
+    return null;
+  }
+
+  const trimmed = selector.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  try {
+    const matches = Array.from(document.querySelectorAll(trimmed));
+    const sample = matches.length > 0
+      ? formatEvidenceSample(matches[0].outerHTML)
+      : null;
+    return {
+      selector: trimmed,
+      matchedCount: matches.length,
+      sample
+    };
+  } catch (error) {
+    return {
+      selector: trimmed,
+      error: error instanceof Error ? error.message : String(error)
+    };
+  }
+};
+
+const buildSelectorEvidence = (usage) => {
+  if (!usage) {
+    return [];
+  }
+
+  const lines = [`Selector: ${usage.selector}`];
+  if (usage.error) {
+    lines.push(`Selector evaluation: ${usage.error}`);
+    return lines;
+  }
+
+  lines.push(`Matched elements: ${usage.matchedCount}`);
+  if (usage.sample) {
+    lines.push(`Sample: ${usage.sample}`);
+  }
+
+  return lines;
+};
+
 const extractStyleTagBlocks = (content) =>
   Array.from(content.matchAll(styleTagRegex))
     .map((match) => {
@@ -381,7 +443,8 @@ const getCandidates = (context) => {
           isBold: parseFontWeight(parseXmlAttribute(attrs, "FontWeight")),
           index: match.index,
           snippet: match[0],
-          style: null
+          style: null,
+          selector: null
         };
       })
       .filter(Boolean);
@@ -404,7 +467,8 @@ const getCandidates = (context) => {
           isBold: parseFontWeight(parseCssValue(body, "font-weight")),
           index: match.index,
           snippet: match[0],
-          style: body
+          style: body,
+          selector: match.groups.selector?.trim() ?? null
         };
       })
       .filter(Boolean);
@@ -426,7 +490,8 @@ const getCandidates = (context) => {
         isBold: parseFontWeight(parseCssValue(style, "font-weight")),
         index: match.index,
         snippet: match[0],
-        style
+        style,
+        selector: null
       };
     })
     .filter(Boolean);
@@ -448,7 +513,8 @@ const getCandidates = (context) => {
           isBold: parseFontWeight(parseCssValue(body, "font-weight")),
           index: block.offset + match.index,
           snippet: match[0],
-          style: body
+          style: body,
+          selector: match.groups.selector?.trim() ?? null
         };
       })
       .filter(Boolean));
@@ -517,10 +583,21 @@ const InsufficientContrastCheck = {
         continue;
       }
 
+      const usage = getSelectorUsage(candidate.selector, context.document);
+      if (usage && usage.matchedCount === 0) {
+        continue;
+      }
+
       const line = getLineNumber(context.content, candidate.index);
-      const evidence = `${candidate.snippet}\n` +
-        `Foreground: ${formatColor(lowestRatio.foregroundColor)}\n` +
-        `Background: ${formatColor(lowestRatio.backgroundColor)}`;
+      const usageEvidence = buildSelectorEvidence(usage);
+      const evidence = [
+        candidate.snippet,
+        ...usageEvidence,
+        `Foreground: ${formatColor(lowestRatio.foregroundColor)}`,
+        `Background: ${formatColor(lowestRatio.backgroundColor)}`
+      ]
+        .filter((entry) => entry && entry.trim())
+        .join("\n");
       issues.push({
         ruleId: rule.id,
         checkId: InsufficientContrastCheck.id,
@@ -566,7 +643,10 @@ module.exports = {
   parseCssFontSize,
   parseFontWeight,
   getRequiredContrastRatio,
+  formatColor,
+  formatEvidenceSample,
   getCandidates,
+  getSelectorUsage,
   blendColors,
   shouldDefaultBackground,
   collectCssVariables,
