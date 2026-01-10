@@ -13,6 +13,8 @@ GoldMaster coverage must include **100 unique test cases per extension**:
 - `.cshtml`
 - `.razor`
 - `.xaml`
+- `.ftl`
+- `.js`
 
 ## Folder layout
 ```
@@ -23,6 +25,8 @@ node_engine/
     cshtml/
     razor/
     xaml/
+    ftl/
+    js/
 ```
 
 Each file is named using this convention:

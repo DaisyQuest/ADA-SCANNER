@@ -1,6 +1,6 @@
 const path = require("path");
 
-const SUPPORTED_EXTENSIONS = [".html", ".htm", ".cshtml", ".razor", ".xaml"];
+const SUPPORTED_EXTENSIONS = [".html", ".htm", ".cshtml", ".razor", ".xaml", ".ftl", ".js"];
 
 const normalizeExtension = (value) => {
   if (!value) {
