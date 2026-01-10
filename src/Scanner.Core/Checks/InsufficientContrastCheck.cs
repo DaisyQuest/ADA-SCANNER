@@ -50,7 +50,8 @@ public sealed class InsufficientContrastCheck : ICheck
             }
 
             var line = TextUtilities.GetLineNumber(context.Content, candidate.Index);
-            yield return new Issue(rule.Id, Id, context.FilePath, line, $"Color contrast ratio {ratio:0.00} is below {threshold:0.0}:1.", candidate.Snippet);
+            var evidence = $"{candidate.Snippet}\nForeground: {FormatRgb(fg)}\nBackground: {FormatRgb(bg)}";
+            yield return new Issue(rule.Id, Id, context.FilePath, line, $"Color contrast ratio {ratio:0.00} is below {threshold:0.0}:1.", evidence);
         }
     }
 
@@ -320,6 +321,12 @@ public sealed class InsufficientContrastCheck : ICheck
         var fontSize = candidate.FontSizePx.Value;
         var largeText = fontSize >= 24 || (fontSize >= 18.6667 && candidate.IsBold);
         return largeText ? 3.0 : 4.5;
+    }
+
+    private static string FormatRgb((double r, double g, double b) color)
+    {
+        static int ToChannel(double value) => (int)Math.Round(Math.Clamp(value, 0, 1) * 255);
+        return $"rgb({ToChannel(color.r)}, {ToChannel(color.g)}, {ToChannel(color.b)})";
     }
 
     private static string NormalizeColorValue(string value)

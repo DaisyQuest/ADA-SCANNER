@@ -239,6 +239,7 @@ const getRequiredContrastRatio = ({ fontSizePx, isBold }) => {
 };
 
 const DEFAULT_BACKGROUND = "#ffffff";
+const RGB_CHANNEL_SCALE = 255;
 
 const extractCssVarName = (value) => {
   if (!value || !value.trim()) {
@@ -298,6 +299,25 @@ const resolveColorWithContext = (value, style, cssVariables = new Map(), visited
 
 const shouldDefaultBackground = (kind) =>
   ["html", "htm", "cshtml", "razor", "css"].includes(kind.toLowerCase());
+
+const formatRgbChannel = (value) => Math.round(clamp01(value) * RGB_CHANNEL_SCALE);
+
+const formatAlphaValue = (value) => {
+  const rounded = Math.round(clamp01(value) * 100) / 100;
+  return rounded.toString();
+};
+
+const formatColor = (color) => {
+  const r = formatRgbChannel(color.r);
+  const g = formatRgbChannel(color.g);
+  const b = formatRgbChannel(color.b);
+  const alpha = color.a ?? 1;
+  if (alpha < 1) {
+    return `rgba(${r}, ${g}, ${b}, ${formatAlphaValue(alpha)})`;
+  }
+
+  return `rgb(${r}, ${g}, ${b})`;
+};
 
 const extractStyleTagBlocks = (content) =>
   Array.from(content.matchAll(styleTagRegex))
@@ -460,12 +480,12 @@ const InsufficientContrastCheck = {
         .filter(Boolean);
 
       const parsedBackgrounds = backgroundColors
-        .map((color) => parseColor(color, { alphaPosition }))
-        .filter(Boolean);
+        .map((color) => ({ value: color, parsed: parseColor(color, { alphaPosition }) }))
+        .filter((entry) => entry.parsed);
       if (parsedBackgrounds.length === 0 && shouldDefaultBackground(context.kind)) {
         const fallback = parseColor(DEFAULT_BACKGROUND, { alphaPosition });
         if (fallback) {
-          parsedBackgrounds.push(fallback);
+          parsedBackgrounds.push({ value: DEFAULT_BACKGROUND, parsed: fallback });
         }
       }
 
@@ -474,29 +494,40 @@ const InsufficientContrastCheck = {
       }
 
       const threshold = getRequiredContrastRatio(candidate);
-      const ratios = parsedBackgrounds.map((backgroundColor) => {
+      const ratios = parsedBackgrounds.map((backgroundEntry) => {
+        const backgroundColor = backgroundEntry.parsed;
         const resolvedBackground = backgroundColor.a < 1
           ? blendColors(backgroundColor, { r: 1, g: 1, b: 1, a: 1 })
           : backgroundColor;
         const resolvedForeground = fg.a < 1
           ? blendColors(fg, resolvedBackground)
           : fg;
-        return contrastRatio(resolvedForeground, resolvedBackground);
+        return {
+          ratio: contrastRatio(resolvedForeground, resolvedBackground),
+          backgroundValue: backgroundEntry.value,
+          foregroundColor: resolvedForeground,
+          backgroundColor: resolvedBackground
+        };
       });
 
-      const minRatio = Math.min(...ratios);
-      if (minRatio >= threshold) {
+      const lowestRatio = ratios.reduce((lowest, entry) =>
+        entry.ratio < lowest.ratio ? entry : lowest,
+      ratios[0]);
+      if (lowestRatio.ratio >= threshold) {
         continue;
       }
 
       const line = getLineNumber(context.content, candidate.index);
+      const evidence = `${candidate.snippet}\n` +
+        `Foreground: ${formatColor(lowestRatio.foregroundColor)}\n` +
+        `Background: ${formatColor(lowestRatio.backgroundColor)}`;
       issues.push({
         ruleId: rule.id,
         checkId: InsufficientContrastCheck.id,
         filePath: context.filePath,
         line,
-        message: `Color contrast ratio ${minRatio.toFixed(2)} is below ${threshold.toFixed(1)}:1.`,
-        evidence: candidate.snippet
+        message: `Color contrast ratio ${lowestRatio.ratio.toFixed(2)} is below ${threshold.toFixed(1)}:1.`,
+        evidence
       });
     }
 
