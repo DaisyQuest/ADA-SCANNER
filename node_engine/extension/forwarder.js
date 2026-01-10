@@ -9,6 +9,7 @@
     "data-ada-issue-message",
     "data-ada-original-title"
   ];
+  const REPORT_SIDEBAR_ATTR = "data-ada-report-sidebar";
 
   const stripHighlights = (rootElement) => {
     if (!rootElement) {
@@ -33,6 +34,15 @@
     });
   };
 
+  const stripReportSidebar = (rootElement) => {
+    if (!rootElement) {
+      return;
+    }
+
+    const sidebarNodes = rootElement.querySelectorAll(`[${REPORT_SIDEBAR_ATTR}]`);
+    sidebarNodes.forEach((node) => node.remove());
+  };
+
   const normalizeHtml = (documentRoot) => {
     const root = documentRoot?.documentElement;
     if (!root) {
@@ -41,6 +51,7 @@
 
     const clone = root.cloneNode(true);
     stripHighlights(clone);
+    stripReportSidebar(clone);
     return clone.outerHTML ?? "";
   };
 
