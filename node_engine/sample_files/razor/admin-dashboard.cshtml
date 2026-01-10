@@ -1,0 +1,95 @@
+@{
+    ViewData["Title"] = "Admin Dashboard";
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>@ViewData["Title"]</title>
+    <style>
+        .summary-card {
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        .summary-card .value {
+            color: #94a3b8;
+            font-size: 22px;
+        }
+        .alert-banner {
+            background: #fde2e2;
+            color: #7f1d1d;
+            padding: 12px;
+            border-radius: 8px;
+        }
+        .icon-only {
+            background: transparent;
+            border: none;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Operations Center</h1>
+        <button class="icon-only">🔍</button>
+    </header>
+
+    <section class="alert-banner">
+        <strong>3 workflows require approval</strong>
+        <p class="muted">Pending items older than 48 hours.</p>
+    </section>
+
+    <section class="summary-card">
+        <h2>Service health</h2>
+        <div>
+            <span>Uptime</span>
+            <span class="value">99.4%</span>
+        </div>
+        <div>
+            <span>Latency</span>
+            <span class="value">402ms</span>
+        </div>
+    </section>
+
+    <section>
+        <h2>Review queue</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Owner</th>
+                    <th>System</th>
+                    <th>Priority</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Ian Keller</td>
+                    <td>Billing</td>
+                    <td>High</td>
+                </tr>
+                <tr>
+                    <td>Sofia Ramos</td>
+                    <td>CRM</td>
+                    <td>Low</td>
+                </tr>
+            </tbody>
+        </table>
+    </section>
+
+    <form>
+        <label for="owner">Owner</label>
+        <input id="owner" name="owner" type="text" />
+
+        <input id="owner" name="owner" type="text" placeholder="Duplicate id" />
+
+        <select>
+            <option>Assign to team</option>
+            <option>Finance</option>
+        </select>
+
+        <button type="submit">Escalate</button>
+    </form>
+</body>
+</html>

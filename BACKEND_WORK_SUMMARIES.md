@@ -53,3 +53,4 @@
 2026-01-10 - Expanded node engine WCAG coverage checks and tests (SPEC-008, SPEC-013)
 
 2026-01-10 - Added JS embedded HTML/CSS static scanning with dedicated tests. (SPEC-004)
+2026-01-10 - Added complex admin demo sample files for node_engine. (SPEC-008)
