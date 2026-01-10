@@ -20,3 +20,5 @@
 2026-01-10 - Added mixed-pattern 100-issue contrast sample and tests. (SPEC-008)
 2026-01-10 - Expanded rule descriptions and added domain filtering in node engine UIs (SPEC-008, SPEC-019)
 2026-01-10 - Expand GoldMaster runner helpers and test coverage for options/reporting (SPEC-013, SPEC-014)
+
+2026-01-10 - Refined runtime and static UI filter panels and styling for clearer UX (SPEC-010, SPEC-013)

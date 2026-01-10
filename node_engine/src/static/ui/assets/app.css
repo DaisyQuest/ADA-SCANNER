@@ -5,7 +5,7 @@
 body {
   margin: 0;
   font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
-  background: #f8fafc;
+  background: #f2f5fb;
   color: #0f172a;
 }
 
@@ -19,7 +19,7 @@ body {
   justify-content: space-between;
   align-items: center;
   padding: 24px 32px;
-  background: #0f172a;
+  background: linear-gradient(120deg, #0f172a 0%, #1e293b 100%);
   color: #fff;
 }
 
@@ -58,7 +58,8 @@ body {
   background: #fff;
   border-radius: 12px;
   padding: 16px;
-  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.08);
+  box-shadow: 0 10px 20px rgba(15, 23, 42, 0.08);
+  border: 1px solid #e2e8f0;
 }
 
 .summary-label {
@@ -79,7 +80,8 @@ body {
   background: #fff;
   border-radius: 12px;
   padding: 20px;
-  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.08);
+  box-shadow: 0 10px 20px rgba(15, 23, 42, 0.08);
+  border: 1px solid #e2e8f0;
 }
 
 .panel-header {
@@ -111,8 +113,8 @@ body {
 }
 
 .filter-panel {
-  background: #eff6ff;
-  border: 1px solid #dbeafe;
+  background: #f1f5ff;
+  border: 1px solid #d6e2ff;
 }
 
 .filter-grid {
@@ -182,6 +184,10 @@ body {
   vertical-align: top;
 }
 
+.data-table tr:hover td {
+  background: #f8fafc;
+}
+
 .data-table th {
   font-size: 12px;
   text-transform: uppercase;
@@ -227,6 +233,43 @@ body {
 .issue-feed {
   display: grid;
   gap: 12px;
+}
+
+.filter-helper {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 16px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: #fff;
+  border: 1px dashed #c7d2fe;
+}
+
+.helper-title {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #1e293b;
+  margin-bottom: 4px;
+}
+
+.helper-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.chip {
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #eef2ff;
+  color: #312e81;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid rgba(99, 102, 241, 0.2);
 }
 
 .issue-item {
@@ -318,4 +361,16 @@ body {
   color: #475569;
   font-size: 13px;
   line-height: 1.5;
+}
+
+@media (max-width: 900px) {
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .filter-helper {
+    flex-direction: column;
+  }
 }
