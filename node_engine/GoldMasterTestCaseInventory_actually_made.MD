@@ -536,3 +536,215 @@ This file tracks GoldMaster documents that have been implemented in `node_engine
 | XAML-GM-099 | gm-xaml-099-deep-nesting-with-5-iframes-and-10-subforms.xaml | ✅ | Deep nesting with 5 iframes and 10 subforms (Combo) | Generated starter GoldMaster case. |
 | XAML-GM-100 | gm-xaml-100-full-regression-mix-contrast-labels-headings-nav-forms-iframe.xaml | ✅ | Full regression mix: contrast + labels + headings + nav + forms + iframe (Combo) | Generated starter GoldMaster case. |
 | XAML-GM-101 | gm-xaml-101-deep-nesting-frame-webbrowser.xaml | ✅ | Deep nesting with Frame/WebBrowser stack (MissingIframeTitleCheck + XamlMissingNameCheck) | Added complex nesting + iframe coverage. |
+
+## FTL (.ftl)
+
+| ID | File | Status | Checks Exercised | Notes |
+| --- | --- | --- | --- | --- |
+| FTL-GM-001 | gm-ftl-001-missing-label-on-text-input.ftl | ✅ | Missing label on text input (MissingLabelCheck) | Generated starter GoldMaster case. |
+| FTL-GM-002 | gm-ftl-002-empty-form-label-element.ftl | ✅ | Empty form label element (EmptyFormLabelCheck) | Generated starter GoldMaster case. |
+| FTL-GM-003 | gm-ftl-003-orphaned-label-not-associated-with-input.ftl | ✅ | Orphaned label not associated with input (OrphanedFormLabelCheck) | Generated starter GoldMaster case. |
+| FTL-GM-004 | gm-ftl-004-icon-only-button-without-accessible-name.ftl | ✅ | Icon-only button without accessible name (UnlabeledButtonCheck) | Generated starter GoldMaster case. |
+| FTL-GM-005 | gm-ftl-005-accessible-name-mismatch-with-visible-label.ftl | ✅ | Accessible name mismatch with visible label (LabelInNameCheck) | Generated starter GoldMaster case. |
+| FTL-GM-006 | gm-ftl-006-invalid-aria-role-on-element.ftl | ✅ | Invalid ARIA role on element (InvalidAriaRoleCheck) | Generated starter GoldMaster case. |
+| FTL-GM-007 | gm-ftl-007-duplicate-ids-across-nested-components.ftl | ✅ | Duplicate IDs across nested components (DuplicateIdCheck) | Generated starter GoldMaster case. |
+| FTL-GM-008 | gm-ftl-008-missing-page-title.ftl | ✅ | Missing page title (MissingPageTitleCheck) | Generated starter GoldMaster case. |
+| FTL-GM-009 | gm-ftl-009-missing-document-language.ftl | ✅ | Missing document language (MissingDocumentLanguageCheck) | Generated starter GoldMaster case. |
+| FTL-GM-010 | gm-ftl-010-mixed-language-span-without-lang-attribute.ftl | ✅ | Mixed-language span without lang attribute (LanguageOfPartsCheck) | Generated starter GoldMaster case. |
+| FTL-GM-011 | gm-ftl-011-heading-structure-skips-levels.ftl | ✅ | Heading structure skips levels (MissingHeadingStructureCheck) | Generated starter GoldMaster case. |
+| FTL-GM-012 | gm-ftl-012-empty-heading-element.ftl | ✅ | Empty heading element (EmptyHeadingCheck) | Generated starter GoldMaster case. |
+| FTL-GM-013 | gm-ftl-013-empty-link-element.ftl | ✅ | Empty link element (EmptyLinkCheck) | Generated starter GoldMaster case. |
+| FTL-GM-014 | gm-ftl-014-link-without-text-alternative.ftl | ✅ | Link without text alternative (MissingLinkTextCheck) | Generated starter GoldMaster case. |
+| FTL-GM-015 | gm-ftl-015-image-missing-alt-text.ftl | ✅ | Image missing alt text (MissingAltTextCheck) | Generated starter GoldMaster case. |
+| FTL-GM-016 | gm-ftl-016-image-of-text-used-for-cta.ftl | ✅ | Image of text used for CTA (ImagesOfTextCheck) | Generated starter GoldMaster case. |
+| FTL-GM-017 | gm-ftl-017-iframe-missing-title.ftl | ✅ | Iframe missing title (MissingIframeTitleCheck) | Generated starter GoldMaster case. |
+| FTL-GM-018 | gm-ftl-018-missing-skip-link-to-main-content.ftl | ✅ | Missing skip link to main content (MissingSkipLinkCheck) | Generated starter GoldMaster case. |
+| FTL-GM-019 | gm-ftl-019-navigation-landmarks-missing-or-misordered.ftl | ✅ | Navigation landmarks missing or misordered (NavigationStructureCheck) | Generated starter GoldMaster case. |
+| FTL-GM-020 | gm-ftl-020-navigation-hidden-via-css-display-none.ftl | ✅ | Navigation hidden via CSS display none (HiddenNavigationCheck) | Generated starter GoldMaster case. |
+| FTL-GM-021 | gm-ftl-021-hidden-focusable-element-remains-in-tab-order.ftl | ✅ | Hidden focusable element remains in tab order (HiddenFocusableElementCheck) | Generated starter GoldMaster case. |
+| FTL-GM-022 | gm-ftl-022-focus-indicator-removed-via-outline-none.ftl | ✅ | Focus indicator removed via outline none (FocusVisibleCheck) | Generated starter GoldMaster case. |
+| FTL-GM-023 | gm-ftl-023-hover-focus-content-not-dismissible-or-persistent.ftl | ✅ | Hover/focus content not dismissible or persistent (HoverFocusContentCheck) | Generated starter GoldMaster case. |
+| FTL-GM-024 | gm-ftl-024-sensory-only-instructions.ftl | ✅ | Sensory-only instructions (SensoryCharacteristicsCheck) | Generated starter GoldMaster case. |
+| FTL-GM-025 | gm-ftl-025-device-dependent-event-handler-only.ftl | ✅ | Device-dependent event handler only (DeviceDependentEventHandlerCheck) | Generated starter GoldMaster case. |
+| FTL-GM-026 | gm-ftl-026-interaction-limits-without-extension.ftl | ✅ | Interaction limits without extension (InteractionLimitsCheck) | Generated starter GoldMaster case. |
+| FTL-GM-027 | gm-ftl-027-orientation-locked-without-alternative.ftl | ✅ | Orientation locked without alternative (OrientationLockCheck) | Generated starter GoldMaster case. |
+| FTL-GM-028 | gm-ftl-028-fixed-width-layout-breaks-at-narrow-viewport.ftl | ✅ | Fixed width layout breaks at narrow viewport (FixedWidthLayoutCheck) | Generated starter GoldMaster case. |
+| FTL-GM-029 | gm-ftl-029-non-wrapping-container-causes-text-overflow.ftl | ✅ | Non-wrapping container causes text overflow (NonWrappingContainerCheck) | Generated starter GoldMaster case. |
+| FTL-GM-030 | gm-ftl-030-text-resize-at-200-clips-content.ftl | ✅ | Text resize at 200% clips content (TextResizeCheck) | Generated starter GoldMaster case. |
+| FTL-GM-031 | gm-ftl-031-text-spacing-overrides-break-layout.ftl | ✅ | Text spacing overrides break layout (TextSpacingCheck) | Generated starter GoldMaster case. |
+| FTL-GM-032 | gm-ftl-032-insufficient-contrast-default-text.ftl | ✅ | Insufficient contrast default text (InsufficientContrastCheck) | Generated starter GoldMaster case. |
+| FTL-GM-033 | gm-ftl-033-insufficient-contrast-for-visited-links.ftl | ✅ | Insufficient contrast for visited links (InsufficientContrastCheck) | Generated starter GoldMaster case. |
+| FTL-GM-034 | gm-ftl-034-insufficient-contrast-for-disabled-text.ftl | ✅ | Insufficient contrast for disabled text (InsufficientContrastCheck) | Generated starter GoldMaster case. |
+| FTL-GM-035 | gm-ftl-035-form-error-handling-missing-summary.ftl | ✅ | Form error handling missing summary (ErrorHandlingCheck) | Generated starter GoldMaster case. |
+| FTL-GM-036 | gm-ftl-036-inline-error-message-not-associated-with-input.ftl | ✅ | Inline error message not associated with input (ErrorHandlingCheck) | Generated starter GoldMaster case. |
+| FTL-GM-037 | gm-ftl-037-missing-autocomplete-attribute.ftl | ✅ | Missing autocomplete attribute (MissingAutocompleteCheck) | Generated starter GoldMaster case. |
+| FTL-GM-038 | gm-ftl-038-missing-fieldset-legend.ftl | ✅ | Missing fieldset legend (MissingFieldsetLegendCheck) | Generated starter GoldMaster case. |
+| FTL-GM-039 | gm-ftl-039-table-missing-header-cells.ftl | ✅ | Table missing header cells (MissingTableHeaderCheck) | Generated starter GoldMaster case. |
+| FTL-GM-040 | gm-ftl-040-layout-table-misused-for-data.ftl | ✅ | Layout table misused for data (LayoutTableCheck) | Generated starter GoldMaster case. |
+| FTL-GM-041 | gm-ftl-041-absolute-positioned-overlap-hides-text.ftl | ✅ | Absolute positioned overlap hides text (AbsolutePositioningCheck) | Generated starter GoldMaster case. |
+| FTL-GM-042 | gm-ftl-042-redundant-title-text-duplicates-visible-label.ftl | ✅ | Redundant title text duplicates visible label (RedundantTitleTextCheck) | Generated starter GoldMaster case. |
+| FTL-GM-043 | gm-ftl-043-video-without-captions-alt-media.ftl | ✅ | Video without captions/alt media (MediaAlternativeCheck) | Generated starter GoldMaster case. |
+| FTL-GM-044 | gm-ftl-044-audio-auto-play-without-controls.ftl | ✅ | Audio auto-play without controls (AudioControlCheck) | Generated starter GoldMaster case. |
+| FTL-GM-045 | gm-ftl-045-nested-iframe-missing-title.ftl | ✅ | Nested iframe missing title (MissingIframeTitleCheck) | Generated starter GoldMaster case. |
+| FTL-GM-046 | gm-ftl-046-deep-nesting-10-levels-with-headings.ftl | ✅ | Deep nesting 10 levels with headings (MissingHeadingStructureCheck) | Generated starter GoldMaster case. |
+| FTL-GM-047 | gm-ftl-047-deep-nesting-20-levels-with-lists-and-links.ftl | ✅ | Deep nesting 20 levels with lists and links (NavigationStructureCheck) | Generated starter GoldMaster case. |
+| FTL-GM-048 | gm-ftl-048-deep-nesting-tables-with-mixed-headers.ftl | ✅ | Deep nesting tables with mixed headers (MissingTableHeaderCheck) | Generated starter GoldMaster case. |
+| FTL-GM-049 | gm-ftl-049-multi-iframe-2-level-nesting.ftl | ✅ | Multi-iframe 2-level nesting (MissingIframeTitleCheck) | Generated starter GoldMaster case. |
+| FTL-GM-050 | gm-ftl-050-multi-iframe-3-level-nesting.ftl | ✅ | Multi-iframe 3-level nesting (MissingIframeTitleCheck) | Generated starter GoldMaster case. |
+| FTL-GM-051 | gm-ftl-051-iframe-containing-form-errors.ftl | ✅ | Iframe containing form errors (ErrorHandlingCheck) | Generated starter GoldMaster case. |
+| FTL-GM-052 | gm-ftl-052-iframe-with-contrast-failures-in-embedded-content.ftl | ✅ | Iframe with contrast failures in embedded content (InsufficientContrastCheck) | Generated starter GoldMaster case. |
+| FTL-GM-053 | gm-ftl-053-iframe-with-hidden-navigation-menu.ftl | ✅ | Iframe with hidden navigation menu (HiddenNavigationCheck) | Generated starter GoldMaster case. |
+| FTL-GM-054 | gm-ftl-054-iframe-duplicate-ids-across-host-iframe.ftl | ✅ | Iframe + duplicate IDs across host/iframe (DuplicateIdCheck) | Generated starter GoldMaster case. |
+| FTL-GM-055 | gm-ftl-055-skip-link-with-fixed-header-offset.ftl | ✅ | Skip link with fixed header offset (MissingSkipLinkCheck) | Generated starter GoldMaster case. |
+| FTL-GM-056 | gm-ftl-056-multiple-nav-landmarks-missing-labels.ftl | ✅ | Multiple nav landmarks missing labels (NavigationStructureCheck) | Generated starter GoldMaster case. |
+| FTL-GM-057 | gm-ftl-057-icon-link-with-aria-label-mismatch.ftl | ✅ | Icon link with aria-label mismatch (LabelInNameCheck) | Generated starter GoldMaster case. |
+| FTL-GM-058 | gm-ftl-058-div-role-button-without-accessible-name.ftl | ✅ | Div role=button without accessible name (MissingLabelCheck) | Generated starter GoldMaster case. |
+| FTL-GM-059 | gm-ftl-059-form-label-uses-placeholder-only.ftl | ✅ | Form label uses placeholder only (MissingLabelCheck) | Generated starter GoldMaster case. |
+| FTL-GM-060 | gm-ftl-060-nested-fieldsets-missing-legends.ftl | ✅ | Nested fieldsets missing legends (MissingFieldsetLegendCheck) | Generated starter GoldMaster case. |
+| FTL-GM-061 | gm-ftl-061-autocomplete-present-but-invalid-tokens.ftl | ✅ | Autocomplete present but invalid tokens (MissingAutocompleteCheck) | Generated starter GoldMaster case. |
+| FTL-GM-062 | gm-ftl-062-required-fields-without-error-messaging.ftl | ✅ | Required fields without error messaging (ErrorHandlingCheck) | Generated starter GoldMaster case. |
+| FTL-GM-063 | gm-ftl-063-error-summary-links-do-not-focus-inputs.ftl | ✅ | Error summary links do not focus inputs (ErrorHandlingCheck) | Generated starter GoldMaster case. |
+| FTL-GM-064 | gm-ftl-064-table-headers-with-incorrect-scope.ftl | ✅ | Table headers with incorrect scope (MissingTableHeaderCheck) | Generated starter GoldMaster case. |
+| FTL-GM-065 | gm-ftl-065-layout-table-with-hidden-spacer-cells.ftl | ✅ | Layout table with hidden spacer cells (LayoutTableCheck) | Generated starter GoldMaster case. |
+| FTL-GM-066 | gm-ftl-066-page-title-duplicates-h1-text.ftl | ✅ | Page title duplicates H1 text (RedundantTitleTextCheck) | Generated starter GoldMaster case. |
+| FTL-GM-067 | gm-ftl-067-multiple-languages-in-nested-spans.ftl | ✅ | Multiple languages in nested spans (LanguageOfPartsCheck) | Generated starter GoldMaster case. |
+| FTL-GM-068 | gm-ftl-068-document-language-mismatch-with-content.ftl | ✅ | Document language mismatch with content (MissingDocumentLanguageCheck) | Generated starter GoldMaster case. |
+| FTL-GM-069 | gm-ftl-069-form-instructions-rely-on-sensory-cues.ftl | ✅ | Form instructions rely on sensory cues (SensoryCharacteristicsCheck) | Generated starter GoldMaster case. |
+| FTL-GM-070 | gm-ftl-070-hover-tooltip-requires-focusable-trigger.ftl | ✅ | Hover tooltip requires focusable trigger (HoverFocusContentCheck) | Generated starter GoldMaster case. |
+| FTL-GM-071 | gm-ftl-071-focus-indicator-insufficient-contrast.ftl | ✅ | Focus indicator insufficient contrast (FocusVisibleCheck + InsufficientContrastCheck) | Generated starter GoldMaster case. |
+| FTL-GM-072 | gm-ftl-072-keyboard-trap-in-modal-dialog.ftl | ✅ | Keyboard trap in modal dialog (InteractionLimitsCheck) | Generated starter GoldMaster case. |
+| FTL-GM-073 | gm-ftl-073-orientation-lock-via-css-js.ftl | ✅ | Orientation lock via CSS/JS (OrientationLockCheck) | Generated starter GoldMaster case. |
+| FTL-GM-074 | gm-ftl-074-fixed-width-layout-with-absolute-units.ftl | ✅ | Fixed width layout with absolute units (FixedWidthLayoutCheck) | Generated starter GoldMaster case. |
+| FTL-GM-075 | gm-ftl-075-non-wrapping-container-in-card-grid.ftl | ✅ | Non-wrapping container in card grid (NonWrappingContainerCheck) | Generated starter GoldMaster case. |
+| FTL-GM-076 | gm-ftl-076-text-resize-with-absolute-positioned-elements.ftl | ✅ | Text resize with absolute positioned elements (TextResizeCheck + AbsolutePositioningCheck) | Generated starter GoldMaster case. |
+| FTL-GM-077 | gm-ftl-077-text-spacing-with-tight-line-height.ftl | ✅ | Text spacing with tight line-height (TextSpacingCheck) | Generated starter GoldMaster case. |
+| FTL-GM-078 | gm-ftl-078-contrast-failure-in-gradient-button.ftl | ✅ | Contrast failure in gradient button (InsufficientContrastCheck) | Generated starter GoldMaster case. |
+| FTL-GM-079 | gm-ftl-079-contrast-failure-for-focus-indicator.ftl | ✅ | Contrast failure for focus indicator (InsufficientContrastCheck) | Generated starter GoldMaster case. |
+| FTL-GM-080 | gm-ftl-080-image-of-text-in-logo-with-decorative-alt.ftl | ✅ | Image of text in logo with decorative alt (ImagesOfTextCheck) | Generated starter GoldMaster case. |
+| FTL-GM-081 | gm-ftl-081-hidden-focusable-element-in-accordion.ftl | ✅ | Hidden focusable element in accordion (HiddenFocusableElementCheck) | Generated starter GoldMaster case. |
+| FTL-GM-082 | gm-ftl-082-hidden-navigation-in-responsive-menu.ftl | ✅ | Hidden navigation in responsive menu (HiddenNavigationCheck) | Generated starter GoldMaster case. |
+| FTL-GM-083 | gm-ftl-083-drag-and-drop-only-interaction.ftl | ✅ | Drag-and-drop only interaction (DeviceDependentEventHandlerCheck) | Generated starter GoldMaster case. |
+| FTL-GM-084 | gm-ftl-084-touch-target-instructions-via-color.ftl | ✅ | Touch target instructions via color (SensoryCharacteristicsCheck) | Generated starter GoldMaster case. |
+| FTL-GM-085 | gm-ftl-085-audio-auto-play-with-no-pause.ftl | ✅ | Audio auto-play with no pause (AudioControlCheck) | Generated starter GoldMaster case. |
+| FTL-GM-086 | gm-ftl-086-video-without-text-alternative.ftl | ✅ | Video without text alternative (MediaAlternativeCheck) | Generated starter GoldMaster case. |
+| FTL-GM-087 | gm-ftl-087-absolute-positioned-tooltip-overlaps-body-text.ftl | ✅ | Absolute positioned tooltip overlaps body text (AbsolutePositioningCheck) | Generated starter GoldMaster case. |
+| FTL-GM-088 | gm-ftl-088-layout-table-used-for-form-alignment.ftl | ✅ | Layout table used for form alignment (LayoutTableCheck) | Generated starter GoldMaster case. |
+| FTL-GM-089 | gm-ftl-089-nested-iframes-with-mixed-languages.ftl | ✅ | Nested iframes with mixed languages (LanguageOfPartsCheck + MissingIframeTitleCheck) | Generated starter GoldMaster case. |
+| FTL-GM-090 | gm-ftl-090-iframe-with-sandbox-missing-title.ftl | ✅ | Iframe with sandbox missing title (MissingIframeTitleCheck) | Generated starter GoldMaster case. |
+| FTL-GM-091 | gm-ftl-091-inline-svg-link-missing-text-alternative.ftl | ✅ | Inline SVG link missing text alternative (MissingLinkTextCheck) | Generated starter GoldMaster case. |
+| FTL-GM-092 | gm-ftl-092-link-with-empty-href-and-no-text.ftl | ✅ | Link with empty href and no text (EmptyLinkCheck) | Generated starter GoldMaster case. |
+| FTL-GM-093 | gm-ftl-093-heading-jump-within-nested-section.ftl | ✅ | Heading jump within nested section (MissingHeadingStructureCheck) | Generated starter GoldMaster case. |
+| FTL-GM-094 | gm-ftl-094-button-text-redundant-with-title-attribute.ftl | ✅ | Button text redundant with title attribute (RedundantTitleTextCheck) | Generated starter GoldMaster case. |
+| FTL-GM-095 | gm-ftl-095-duplicate-ids-across-repeated-list-items.ftl | ✅ | Duplicate IDs across repeated list items (DuplicateIdCheck) | Generated starter GoldMaster case. |
+| FTL-GM-096 | gm-ftl-096-focusable-element-hidden-via-tabindex.ftl | ✅ | Focusable element hidden via tabindex (HiddenFocusableElementCheck) | Generated starter GoldMaster case. |
+| FTL-GM-097 | gm-ftl-097-custom-checkbox-missing-focus-outline.ftl | ✅ | Custom checkbox missing focus outline (FocusVisibleCheck) | Generated starter GoldMaster case. |
+| FTL-GM-098 | gm-ftl-098-missing-accessible-name-on-custom-component.ftl | ✅ | Missing accessible name on custom component (MissingLabelCheck) | Generated starter GoldMaster case. |
+| FTL-GM-099 | gm-ftl-099-deep-nesting-with-5-iframes-and-10-subforms.ftl | ✅ | Deep nesting with 5 iframes and 10 subforms (Combo) | Generated starter GoldMaster case. |
+| FTL-GM-100 | gm-ftl-100-full-regression-mix-contrast-labels-headings-nav-forms-iframe.ftl | ✅ | Full regression mix: contrast + labels + headings + nav + forms + iframe (Combo) | Generated starter GoldMaster case. |
+| FTL-GM-101 | gm-ftl-101-iframe-labyrinth-with-deep-nesting.ftl | ✅ | Iframe labyrinth with deep nesting and form errors (MissingIframeTitleCheck + MissingLabelCheck + DuplicateIdCheck) | Added complex nesting + iframe coverage. |
+
+## JS (.js)
+
+| ID | File | Status | Checks Exercised | Notes |
+| --- | --- | --- | --- | --- |
+| JS-GM-001 | gm-js-001-missing-label-on-text-input.js | ✅ | Missing label on text input (MissingLabelCheck) | Generated starter GoldMaster case. |
+| JS-GM-002 | gm-js-002-empty-form-label-element.js | ✅ | Empty form label element (EmptyFormLabelCheck) | Generated starter GoldMaster case. |
+| JS-GM-003 | gm-js-003-orphaned-label-not-associated-with-input.js | ✅ | Orphaned label not associated with input (OrphanedFormLabelCheck) | Generated starter GoldMaster case. |
+| JS-GM-004 | gm-js-004-icon-only-button-without-accessible-name.js | ✅ | Icon-only button without accessible name (UnlabeledButtonCheck) | Generated starter GoldMaster case. |
+| JS-GM-005 | gm-js-005-accessible-name-mismatch-with-visible-label.js | ✅ | Accessible name mismatch with visible label (LabelInNameCheck) | Generated starter GoldMaster case. |
+| JS-GM-006 | gm-js-006-invalid-aria-role-on-element.js | ✅ | Invalid ARIA role on element (InvalidAriaRoleCheck) | Generated starter GoldMaster case. |
+| JS-GM-007 | gm-js-007-duplicate-ids-across-nested-components.js | ✅ | Duplicate IDs across nested components (DuplicateIdCheck) | Generated starter GoldMaster case. |
+| JS-GM-008 | gm-js-008-missing-page-title.js | ✅ | Missing page title (MissingPageTitleCheck) | Generated starter GoldMaster case. |
+| JS-GM-009 | gm-js-009-missing-document-language.js | ✅ | Missing document language (MissingDocumentLanguageCheck) | Generated starter GoldMaster case. |
+| JS-GM-010 | gm-js-010-mixed-language-span-without-lang-attribute.js | ✅ | Mixed-language span without lang attribute (LanguageOfPartsCheck) | Generated starter GoldMaster case. |
+| JS-GM-011 | gm-js-011-heading-structure-skips-levels.js | ✅ | Heading structure skips levels (MissingHeadingStructureCheck) | Generated starter GoldMaster case. |
+| JS-GM-012 | gm-js-012-empty-heading-element.js | ✅ | Empty heading element (EmptyHeadingCheck) | Generated starter GoldMaster case. |
+| JS-GM-013 | gm-js-013-empty-link-element.js | ✅ | Empty link element (EmptyLinkCheck) | Generated starter GoldMaster case. |
+| JS-GM-014 | gm-js-014-link-without-text-alternative.js | ✅ | Link without text alternative (MissingLinkTextCheck) | Generated starter GoldMaster case. |
+| JS-GM-015 | gm-js-015-image-missing-alt-text.js | ✅ | Image missing alt text (MissingAltTextCheck) | Generated starter GoldMaster case. |
+| JS-GM-016 | gm-js-016-image-of-text-used-for-cta.js | ✅ | Image of text used for CTA (ImagesOfTextCheck) | Generated starter GoldMaster case. |
+| JS-GM-017 | gm-js-017-iframe-missing-title.js | ✅ | Iframe missing title (MissingIframeTitleCheck) | Generated starter GoldMaster case. |
+| JS-GM-018 | gm-js-018-missing-skip-link-to-main-content.js | ✅ | Missing skip link to main content (MissingSkipLinkCheck) | Generated starter GoldMaster case. |
+| JS-GM-019 | gm-js-019-navigation-landmarks-missing-or-misordered.js | ✅ | Navigation landmarks missing or misordered (NavigationStructureCheck) | Generated starter GoldMaster case. |
+| JS-GM-020 | gm-js-020-navigation-hidden-via-css-display-none.js | ✅ | Navigation hidden via CSS display none (HiddenNavigationCheck) | Generated starter GoldMaster case. |
+| JS-GM-021 | gm-js-021-hidden-focusable-element-remains-in-tab-order.js | ✅ | Hidden focusable element remains in tab order (HiddenFocusableElementCheck) | Generated starter GoldMaster case. |
+| JS-GM-022 | gm-js-022-focus-indicator-removed-via-outline-none.js | ✅ | Focus indicator removed via outline none (FocusVisibleCheck) | Generated starter GoldMaster case. |
+| JS-GM-023 | gm-js-023-hover-focus-content-not-dismissible-or-persistent.js | ✅ | Hover/focus content not dismissible or persistent (HoverFocusContentCheck) | Generated starter GoldMaster case. |
+| JS-GM-024 | gm-js-024-sensory-only-instructions.js | ✅ | Sensory-only instructions (SensoryCharacteristicsCheck) | Generated starter GoldMaster case. |
+| JS-GM-025 | gm-js-025-device-dependent-event-handler-only.js | ✅ | Device-dependent event handler only (DeviceDependentEventHandlerCheck) | Generated starter GoldMaster case. |
+| JS-GM-026 | gm-js-026-interaction-limits-without-extension.js | ✅ | Interaction limits without extension (InteractionLimitsCheck) | Generated starter GoldMaster case. |
+| JS-GM-027 | gm-js-027-orientation-locked-without-alternative.js | ✅ | Orientation locked without alternative (OrientationLockCheck) | Generated starter GoldMaster case. |
+| JS-GM-028 | gm-js-028-fixed-width-layout-breaks-at-narrow-viewport.js | ✅ | Fixed width layout breaks at narrow viewport (FixedWidthLayoutCheck) | Generated starter GoldMaster case. |
+| JS-GM-029 | gm-js-029-non-wrapping-container-causes-text-overflow.js | ✅ | Non-wrapping container causes text overflow (NonWrappingContainerCheck) | Generated starter GoldMaster case. |
+| JS-GM-030 | gm-js-030-text-resize-at-200-clips-content.js | ✅ | Text resize at 200% clips content (TextResizeCheck) | Generated starter GoldMaster case. |
+| JS-GM-031 | gm-js-031-text-spacing-overrides-break-layout.js | ✅ | Text spacing overrides break layout (TextSpacingCheck) | Generated starter GoldMaster case. |
+| JS-GM-032 | gm-js-032-insufficient-contrast-default-text.js | ✅ | Insufficient contrast default text (InsufficientContrastCheck) | Generated starter GoldMaster case. |
+| JS-GM-033 | gm-js-033-insufficient-contrast-for-visited-links.js | ✅ | Insufficient contrast for visited links (InsufficientContrastCheck) | Generated starter GoldMaster case. |
+| JS-GM-034 | gm-js-034-insufficient-contrast-for-disabled-text.js | ✅ | Insufficient contrast for disabled text (InsufficientContrastCheck) | Generated starter GoldMaster case. |
+| JS-GM-035 | gm-js-035-form-error-handling-missing-summary.js | ✅ | Form error handling missing summary (ErrorHandlingCheck) | Generated starter GoldMaster case. |
+| JS-GM-036 | gm-js-036-inline-error-message-not-associated-with-input.js | ✅ | Inline error message not associated with input (ErrorHandlingCheck) | Generated starter GoldMaster case. |
+| JS-GM-037 | gm-js-037-missing-autocomplete-attribute.js | ✅ | Missing autocomplete attribute (MissingAutocompleteCheck) | Generated starter GoldMaster case. |
+| JS-GM-038 | gm-js-038-missing-fieldset-legend.js | ✅ | Missing fieldset legend (MissingFieldsetLegendCheck) | Generated starter GoldMaster case. |
+| JS-GM-039 | gm-js-039-table-missing-header-cells.js | ✅ | Table missing header cells (MissingTableHeaderCheck) | Generated starter GoldMaster case. |
+| JS-GM-040 | gm-js-040-layout-table-misused-for-data.js | ✅ | Layout table misused for data (LayoutTableCheck) | Generated starter GoldMaster case. |
+| JS-GM-041 | gm-js-041-absolute-positioned-overlap-hides-text.js | ✅ | Absolute positioned overlap hides text (AbsolutePositioningCheck) | Generated starter GoldMaster case. |
+| JS-GM-042 | gm-js-042-redundant-title-text-duplicates-visible-label.js | ✅ | Redundant title text duplicates visible label (RedundantTitleTextCheck) | Generated starter GoldMaster case. |
+| JS-GM-043 | gm-js-043-video-without-captions-alt-media.js | ✅ | Video without captions/alt media (MediaAlternativeCheck) | Generated starter GoldMaster case. |
+| JS-GM-044 | gm-js-044-audio-auto-play-without-controls.js | ✅ | Audio auto-play without controls (AudioControlCheck) | Generated starter GoldMaster case. |
+| JS-GM-045 | gm-js-045-nested-iframe-missing-title.js | ✅ | Nested iframe missing title (MissingIframeTitleCheck) | Generated starter GoldMaster case. |
+| JS-GM-046 | gm-js-046-deep-nesting-10-levels-with-headings.js | ✅ | Deep nesting 10 levels with headings (MissingHeadingStructureCheck) | Generated starter GoldMaster case. |
+| JS-GM-047 | gm-js-047-deep-nesting-20-levels-with-lists-and-links.js | ✅ | Deep nesting 20 levels with lists and links (NavigationStructureCheck) | Generated starter GoldMaster case. |
+| JS-GM-048 | gm-js-048-deep-nesting-tables-with-mixed-headers.js | ✅ | Deep nesting tables with mixed headers (MissingTableHeaderCheck) | Generated starter GoldMaster case. |
+| JS-GM-049 | gm-js-049-multi-iframe-2-level-nesting.js | ✅ | Multi-iframe 2-level nesting (MissingIframeTitleCheck) | Generated starter GoldMaster case. |
+| JS-GM-050 | gm-js-050-multi-iframe-3-level-nesting.js | ✅ | Multi-iframe 3-level nesting (MissingIframeTitleCheck) | Generated starter GoldMaster case. |
+| JS-GM-051 | gm-js-051-iframe-containing-form-errors.js | ✅ | Iframe containing form errors (ErrorHandlingCheck) | Generated starter GoldMaster case. |
+| JS-GM-052 | gm-js-052-iframe-with-contrast-failures-in-embedded-content.js | ✅ | Iframe with contrast failures in embedded content (InsufficientContrastCheck) | Generated starter GoldMaster case. |
+| JS-GM-053 | gm-js-053-iframe-with-hidden-navigation-menu.js | ✅ | Iframe with hidden navigation menu (HiddenNavigationCheck) | Generated starter GoldMaster case. |
+| JS-GM-054 | gm-js-054-iframe-duplicate-ids-across-host-iframe.js | ✅ | Iframe + duplicate IDs across host/iframe (DuplicateIdCheck) | Generated starter GoldMaster case. |
+| JS-GM-055 | gm-js-055-skip-link-with-fixed-header-offset.js | ✅ | Skip link with fixed header offset (MissingSkipLinkCheck) | Generated starter GoldMaster case. |
+| JS-GM-056 | gm-js-056-multiple-nav-landmarks-missing-labels.js | ✅ | Multiple nav landmarks missing labels (NavigationStructureCheck) | Generated starter GoldMaster case. |
+| JS-GM-057 | gm-js-057-icon-link-with-aria-label-mismatch.js | ✅ | Icon link with aria-label mismatch (LabelInNameCheck) | Generated starter GoldMaster case. |
+| JS-GM-058 | gm-js-058-div-role-button-without-accessible-name.js | ✅ | Div role=button without accessible name (MissingLabelCheck) | Generated starter GoldMaster case. |
+| JS-GM-059 | gm-js-059-form-label-uses-placeholder-only.js | ✅ | Form label uses placeholder only (MissingLabelCheck) | Generated starter GoldMaster case. |
+| JS-GM-060 | gm-js-060-nested-fieldsets-missing-legends.js | ✅ | Nested fieldsets missing legends (MissingFieldsetLegendCheck) | Generated starter GoldMaster case. |
+| JS-GM-061 | gm-js-061-autocomplete-present-but-invalid-tokens.js | ✅ | Autocomplete present but invalid tokens (MissingAutocompleteCheck) | Generated starter GoldMaster case. |
+| JS-GM-062 | gm-js-062-required-fields-without-error-messaging.js | ✅ | Required fields without error messaging (ErrorHandlingCheck) | Generated starter GoldMaster case. |
+| JS-GM-063 | gm-js-063-error-summary-links-do-not-focus-inputs.js | ✅ | Error summary links do not focus inputs (ErrorHandlingCheck) | Generated starter GoldMaster case. |
+| JS-GM-064 | gm-js-064-table-headers-with-incorrect-scope.js | ✅ | Table headers with incorrect scope (MissingTableHeaderCheck) | Generated starter GoldMaster case. |
+| JS-GM-065 | gm-js-065-layout-table-with-hidden-spacer-cells.js | ✅ | Layout table with hidden spacer cells (LayoutTableCheck) | Generated starter GoldMaster case. |
+| JS-GM-066 | gm-js-066-page-title-duplicates-h1-text.js | ✅ | Page title duplicates H1 text (RedundantTitleTextCheck) | Generated starter GoldMaster case. |
+| JS-GM-067 | gm-js-067-multiple-languages-in-nested-spans.js | ✅ | Multiple languages in nested spans (LanguageOfPartsCheck) | Generated starter GoldMaster case. |
+| JS-GM-068 | gm-js-068-document-language-mismatch-with-content.js | ✅ | Document language mismatch with content (MissingDocumentLanguageCheck) | Generated starter GoldMaster case. |
+| JS-GM-069 | gm-js-069-form-instructions-rely-on-sensory-cues.js | ✅ | Form instructions rely on sensory cues (SensoryCharacteristicsCheck) | Generated starter GoldMaster case. |
+| JS-GM-070 | gm-js-070-hover-tooltip-requires-focusable-trigger.js | ✅ | Hover tooltip requires focusable trigger (HoverFocusContentCheck) | Generated starter GoldMaster case. |
+| JS-GM-071 | gm-js-071-focus-indicator-insufficient-contrast.js | ✅ | Focus indicator insufficient contrast (FocusVisibleCheck + InsufficientContrastCheck) | Generated starter GoldMaster case. |
+| JS-GM-072 | gm-js-072-keyboard-trap-in-modal-dialog.js | ✅ | Keyboard trap in modal dialog (InteractionLimitsCheck) | Generated starter GoldMaster case. |
+| JS-GM-073 | gm-js-073-orientation-lock-via-css-js.js | ✅ | Orientation lock via CSS/JS (OrientationLockCheck) | Generated starter GoldMaster case. |
+| JS-GM-074 | gm-js-074-fixed-width-layout-with-absolute-units.js | ✅ | Fixed width layout with absolute units (FixedWidthLayoutCheck) | Generated starter GoldMaster case. |
+| JS-GM-075 | gm-js-075-non-wrapping-container-in-card-grid.js | ✅ | Non-wrapping container in card grid (NonWrappingContainerCheck) | Generated starter GoldMaster case. |
+| JS-GM-076 | gm-js-076-text-resize-with-absolute-positioned-elements.js | ✅ | Text resize with absolute positioned elements (TextResizeCheck + AbsolutePositioningCheck) | Generated starter GoldMaster case. |
+| JS-GM-077 | gm-js-077-text-spacing-with-tight-line-height.js | ✅ | Text spacing with tight line-height (TextSpacingCheck) | Generated starter GoldMaster case. |
+| JS-GM-078 | gm-js-078-contrast-failure-in-gradient-button.js | ✅ | Contrast failure in gradient button (InsufficientContrastCheck) | Generated starter GoldMaster case. |
+| JS-GM-079 | gm-js-079-contrast-failure-for-focus-indicator.js | ✅ | Contrast failure for focus indicator (InsufficientContrastCheck) | Generated starter GoldMaster case. |
+| JS-GM-080 | gm-js-080-image-of-text-in-logo-with-decorative-alt.js | ✅ | Image of text in logo with decorative alt (ImagesOfTextCheck) | Generated starter GoldMaster case. |
+| JS-GM-081 | gm-js-081-hidden-focusable-element-in-accordion.js | ✅ | Hidden focusable element in accordion (HiddenFocusableElementCheck) | Generated starter GoldMaster case. |
+| JS-GM-082 | gm-js-082-hidden-navigation-in-responsive-menu.js | ✅ | Hidden navigation in responsive menu (HiddenNavigationCheck) | Generated starter GoldMaster case. |
+| JS-GM-083 | gm-js-083-drag-and-drop-only-interaction.js | ✅ | Drag-and-drop only interaction (DeviceDependentEventHandlerCheck) | Generated starter GoldMaster case. |
+| JS-GM-084 | gm-js-084-touch-target-instructions-via-color.js | ✅ | Touch target instructions via color (SensoryCharacteristicsCheck) | Generated starter GoldMaster case. |
+| JS-GM-085 | gm-js-085-audio-auto-play-with-no-pause.js | ✅ | Audio auto-play with no pause (AudioControlCheck) | Generated starter GoldMaster case. |
+| JS-GM-086 | gm-js-086-video-without-text-alternative.js | ✅ | Video without text alternative (MediaAlternativeCheck) | Generated starter GoldMaster case. |
+| JS-GM-087 | gm-js-087-absolute-positioned-tooltip-overlaps-body-text.js | ✅ | Absolute positioned tooltip overlaps body text (AbsolutePositioningCheck) | Generated starter GoldMaster case. |
+| JS-GM-088 | gm-js-088-layout-table-used-for-form-alignment.js | ✅ | Layout table used for form alignment (LayoutTableCheck) | Generated starter GoldMaster case. |
+| JS-GM-089 | gm-js-089-nested-iframes-with-mixed-languages.js | ✅ | Nested iframes with mixed languages (LanguageOfPartsCheck + MissingIframeTitleCheck) | Generated starter GoldMaster case. |
+| JS-GM-090 | gm-js-090-iframe-with-sandbox-missing-title.js | ✅ | Iframe with sandbox missing title (MissingIframeTitleCheck) | Generated starter GoldMaster case. |
+| JS-GM-091 | gm-js-091-inline-svg-link-missing-text-alternative.js | ✅ | Inline SVG link missing text alternative (MissingLinkTextCheck) | Generated starter GoldMaster case. |
+| JS-GM-092 | gm-js-092-link-with-empty-href-and-no-text.js | ✅ | Link with empty href and no text (EmptyLinkCheck) | Generated starter GoldMaster case. |
+| JS-GM-093 | gm-js-093-heading-jump-within-nested-section.js | ✅ | Heading jump within nested section (MissingHeadingStructureCheck) | Generated starter GoldMaster case. |
+| JS-GM-094 | gm-js-094-button-text-redundant-with-title-attribute.js | ✅ | Button text redundant with title attribute (RedundantTitleTextCheck) | Generated starter GoldMaster case. |
+| JS-GM-095 | gm-js-095-duplicate-ids-across-repeated-list-items.js | ✅ | Duplicate IDs across repeated list items (DuplicateIdCheck) | Generated starter GoldMaster case. |
+| JS-GM-096 | gm-js-096-focusable-element-hidden-via-tabindex.js | ✅ | Focusable element hidden via tabindex (HiddenFocusableElementCheck) | Generated starter GoldMaster case. |
+| JS-GM-097 | gm-js-097-custom-checkbox-missing-focus-outline.js | ✅ | Custom checkbox missing focus outline (FocusVisibleCheck) | Generated starter GoldMaster case. |
+| JS-GM-098 | gm-js-098-missing-accessible-name-on-custom-component.js | ✅ | Missing accessible name on custom component (MissingLabelCheck) | Generated starter GoldMaster case. |
+| JS-GM-099 | gm-js-099-deep-nesting-with-5-iframes-and-10-subforms.js | ✅ | Deep nesting with 5 iframes and 10 subforms (Combo) | Generated starter GoldMaster case. |
+| JS-GM-100 | gm-js-100-full-regression-mix-contrast-labels-headings-nav-forms-iframe.js | ✅ | Full regression mix: contrast + labels + headings + nav + forms + iframe (Combo) | Generated starter GoldMaster case. |
+| JS-GM-101 | gm-js-101-iframe-labyrinth-with-deep-nesting.js | ✅ | Iframe labyrinth with deep nesting and form errors (MissingIframeTitleCheck + MissingLabelCheck + DuplicateIdCheck) | Added complex nesting + iframe coverage. |

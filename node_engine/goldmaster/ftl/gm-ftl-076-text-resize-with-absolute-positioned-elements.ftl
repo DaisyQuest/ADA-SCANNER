@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>GoldMaster Case</title>
+<style>
+.hidden{display:none;} .nowrap{white-space:nowrap;} .fixed{width:1200px;}
+</style>
+</head>
+<body>
+<!-- Scenario: Text resize with absolute positioned elements (TextResizeCheck + AbsolutePositioningCheck) -->
+<div id="content">
+<main id="main">
+<h1>GoldMaster Case</h1>
+<div style="position:absolute;top:0;left:0;">Overlap</div>
+<div style="font-size:10px;">Small text</div>
+</main>
+</div>
+</body>
+</html>

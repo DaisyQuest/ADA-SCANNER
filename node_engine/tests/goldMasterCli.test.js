@@ -48,6 +48,8 @@ describe("goldmaster options", () => {
     expect(normalizeExtension()).toBeNull();
     expect(normalizeExtension("html")).toBe(".html");
     expect(normalizeExtension(".razor")).toBe(".razor");
+    expect(normalizeExtension("ftl")).toBe(".ftl");
+    expect(normalizeExtension("JS")).toBe(".js");
     expect(normalizeExtension("TXT")).toBeNull();
     expect(normalizeExtension(" ")).toBeNull();
   });
@@ -134,11 +136,11 @@ describe("goldmaster options", () => {
 
   test("parses mixed-case extensions and trims outputDir values", () => {
     const options = resolveGoldMasterOptions({
-      argv: ["--ext", "HTML, .HTM, razor", "--outputDir", "  /tmp/out  "],
+      argv: ["--ext", "HTML, .HTM, razor, ftl, JS", "--outputDir", "  /tmp/out  "],
       env: {},
       cwd: "/tmp"
     });
-    expect(options.extensions).toEqual([".html", ".htm", ".razor"]);
+    expect(options.extensions).toEqual([".html", ".htm", ".razor", ".ftl", ".js"]);
     expect(options.outputDir).toBe("/tmp/out");
   });
 
@@ -186,10 +188,11 @@ describe("goldmaster options", () => {
 
 describe("goldmaster helpers", () => {
   test("buildExtensionMap includes supported extensions only", () => {
-    const extensionMap = buildExtensionMap([".html", ".bogus"]);
+    const extensionMap = buildExtensionMap([".html", ".ftl", ".bogus"]);
     expect(extensionMap.has(".html")).toBe(true);
+    expect(extensionMap.has(".ftl")).toBe(true);
     expect(extensionMap.has(".bogus")).toBe(false);
-    expect(extensionMap.size).toBe(1);
+    expect(extensionMap.size).toBe(2);
   });
 
   test("buildExtensionMap handles non-array input", () => {
