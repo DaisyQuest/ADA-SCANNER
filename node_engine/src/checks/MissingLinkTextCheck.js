@@ -61,16 +61,21 @@ const MissingLinkTextCheck = {
     const issues = [];
     if (context.document?.querySelectorAll) {
       const elementIds = collectElementIdsFromDocument(context.document);
+      const sourceAnchors = context.content ? Array.from(context.content.matchAll(linkRegex)) : [];
+      let sourceIndex = 0;
       for (const link of context.document.querySelectorAll("a")) {
+        const sourceMatch = sourceAnchors[sourceIndex++] ?? null;
         if (hasAccessibleLabelFromElement(link, elementIds)) {
           continue;
         }
-        const evidence = link.outerHTML;
+        const evidence = sourceMatch ? sourceMatch[0] : link.outerHTML;
         issues.push({
           ruleId: rule.id,
           checkId: MissingLinkTextCheck.id,
           filePath: context.filePath,
-          line: getLineNumberForSnippet(context.content, evidence),
+          line: sourceMatch
+            ? getLineNumber(context.content, sourceMatch.index)
+            : getLineNumberForSnippet(context.content, evidence),
           message: "Link missing accessible text.",
           evidence
         });
