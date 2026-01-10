@@ -1,6 +1,7 @@
 (() => {
   const STYLE_ID = "ada-highlight-style";
   const HIGHLIGHT_CLASS = "ada-highlight";
+  const ACTIVE_CLASS = "ada-highlight-active";
   const ISSUE_COUNT_ATTR = "data-ada-issue-count";
   const ISSUE_MESSAGE_ATTR = "data-ada-issue-message";
   const ORIGINAL_TITLE_ATTR = "data-ada-original-title";
@@ -64,6 +65,14 @@
         .${HIGHLIGHT_CLASS}::before {
           transition: none;
         }
+      }
+      .${ACTIVE_CLASS} {
+        outline: 3px solid #38bdf8 !important;
+        outline-offset: 3px;
+        box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.35);
+      }
+      .${ACTIVE_CLASS}::after {
+        background: #38bdf8;
       }
     `;
     documentRoot.head.appendChild(style);
@@ -190,8 +199,17 @@
 
   const createHighlighter = ({ documentRoot }) => {
     const highlighted = new Set();
+    const activeTargets = new Set();
+
+    const clearActiveHighlights = () => {
+      for (const element of activeTargets) {
+        element.classList.remove(ACTIVE_CLASS);
+      }
+      activeTargets.clear();
+    };
 
     const clearHighlights = () => {
+      clearActiveHighlights();
       for (const element of highlighted) {
         element.classList.remove(HIGHLIGHT_CLASS);
         element.removeAttribute(ISSUE_COUNT_ATTR);
@@ -204,6 +222,20 @@
         }
       }
       highlighted.clear();
+    };
+
+    const focusIssue = (issue) => {
+      clearActiveHighlights();
+      const targets = resolveTargets(documentRoot, issue);
+      if (!targets.length) {
+        return false;
+      }
+      ensureStyles(documentRoot);
+      targets.forEach((element) => {
+        element.classList.add(ACTIVE_CLASS);
+        activeTargets.add(element);
+      });
+      return true;
     };
 
     const applyHighlights = (issues) => {
@@ -243,6 +275,7 @@
 
     return {
       applyHighlights,
+      focusIssue,
       clearHighlights,
       resolveTargets,
       filterIssuesForPage

@@ -37,6 +37,7 @@
 
   const createPopup = ({ documentRoot, chromeApi }) => {
     const enabledToggle = documentRoot.getElementById("enabled-toggle");
+    const sidebarToggle = documentRoot.getElementById("sidebar-toggle");
     const spiderToggle = documentRoot.getElementById("spider-toggle");
     const spiderDelayInput = documentRoot.getElementById("spider-delay");
     const serverUrlInput = documentRoot.getElementById("server-url");
@@ -59,6 +60,7 @@
 
     const applyState = (state) => {
       enabledToggle.checked = !!state.enabled;
+      sidebarToggle.checked = !!state.sidebarEnabled;
       spiderToggle.checked = !!state.spiderEnabled;
       spiderDelayInput.value = state.spiderRequestDelayMs ?? DEFAULT_SPIDER_REQUEST_DELAY_MS;
       serverUrlInput.value = state.serverUrl ?? DEFAULT_SERVER_URL;
@@ -75,6 +77,10 @@
       await chromeApi.storage.local.set({ spiderEnabled: enabled });
       chromeApi.runtime.sendMessage({ type: "set-spider", enabled });
       setStatus(enabledToggle.checked, enabled);
+    };
+
+    const updateSidebar = async (enabled) => {
+      await chromeApi.storage.local.set({ sidebarEnabled: enabled });
     };
 
     const updateSpiderDelay = async (value) => {
@@ -98,6 +104,10 @@
       updateEnabled(event.target.checked);
     });
 
+    sidebarToggle.addEventListener("change", (event) => {
+      updateSidebar(event.target.checked);
+    });
+
     spiderToggle.addEventListener("change", (event) => {
       updateSpider(event.target.checked);
     });
@@ -111,9 +121,16 @@
     });
 
     chromeApi.storage.onChanged?.addListener((changes) => {
-      if (changes.enabled || changes.spiderEnabled || changes.serverUrl || changes.spiderRequestDelayMs) {
+      if (
+        changes.enabled ||
+        changes.sidebarEnabled ||
+        changes.spiderEnabled ||
+        changes.serverUrl ||
+        changes.spiderRequestDelayMs
+      ) {
         readStorage(chromeApi.storage.local, {
           enabled: false,
+          sidebarEnabled: true,
           spiderEnabled: false,
           serverUrl: DEFAULT_SERVER_URL,
           spiderRequestDelayMs: DEFAULT_SPIDER_REQUEST_DELAY_MS
@@ -123,6 +140,7 @@
 
     readStorage(chromeApi.storage.local, {
       enabled: false,
+      sidebarEnabled: true,
       spiderEnabled: false,
       serverUrl: DEFAULT_SERVER_URL,
       spiderRequestDelayMs: DEFAULT_SPIDER_REQUEST_DELAY_MS
@@ -130,6 +148,7 @@
 
     return {
       updateEnabled,
+      updateSidebar,
       updateSpider,
       updateSpiderDelay,
       updateServerUrl,

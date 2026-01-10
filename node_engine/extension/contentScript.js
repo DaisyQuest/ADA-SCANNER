@@ -20,6 +20,8 @@
     const highlighter = createHighlighter({ documentRoot });
     let sidebar = null;
     let ajaxMonitor = null;
+    let extensionEnabled = false;
+    let sidebarEnabled = true;
 
     const getConfig = async () => {
       const config = await getDefaultConfig(chromeApi.storage.local);
@@ -107,14 +109,17 @@
     };
 
     const ensureSidebar = () => {
-      if (!createReportSidebar || sidebar || !isTopFrame()) {
+      if (!createReportSidebar || sidebar || !isTopFrame() || !sidebarEnabled) {
         return;
       }
 
       sidebar = createReportSidebar({
         documentRoot,
         windowObj,
-        resolveTargets: highlighter.resolveTargets
+        resolveTargets: highlighter.resolveTargets,
+        onIssueSelect: highlighter.focusIssue,
+        onToggleSidebar: (enabled) => chromeApi.storage.local.set({ sidebarEnabled: enabled }),
+        initialSidebarEnabled: sidebarEnabled
       });
     };
 
@@ -248,6 +253,7 @@
     };
 
     const start = () => {
+      extensionEnabled = true;
       if (!ajaxMonitor) {
         ajaxMonitor = createAjaxMonitor();
       }
@@ -288,6 +294,7 @@
     };
 
     const stop = () => {
+      extensionEnabled = false;
       if (ajaxMonitor) {
         ajaxMonitor.uninstall();
       }
@@ -305,6 +312,21 @@
         sidebar = null;
       }
       console.log("[ADA] stopped");
+    };
+
+    const setSidebarEnabled = (enabled) => {
+      sidebarEnabled = enabled;
+      if (!sidebarEnabled && sidebar) {
+        sidebar.destroy();
+        sidebar = null;
+        return;
+      }
+      if (sidebarEnabled && extensionEnabled) {
+        ensureSidebar();
+        if (sidebar) {
+          sidebar.render(lastIssues);
+        }
+      }
     };
 
     const handleToggle = (enabled) => {
@@ -335,9 +357,16 @@
       }
     });
 
-    chromeApi.storage.local.get({ enabled: false }, (state) => {
+    chromeApi.storage.local.get({ enabled: false, sidebarEnabled: true }, (state) => {
       console.log("[ADA] initial enabled state:", state.enabled);
+      sidebarEnabled = state.sidebarEnabled !== false;
       handleToggle(!!state.enabled);
+    });
+
+    chromeApi.storage.onChanged?.addListener((changes) => {
+      if (changes.sidebarEnabled) {
+        setSidebarEnabled(!!changes.sidebarEnabled.newValue);
+      }
     });
 
     return {
