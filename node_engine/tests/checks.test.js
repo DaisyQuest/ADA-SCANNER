@@ -74,6 +74,9 @@ const {
   parseXmlAttribute,
   resolveStaticColor,
   extractCssVarFallback,
+  extractCssVarName,
+  resolveCssVarFromStyle,
+  resolveColorWithContext,
   extractXamlFallback,
   normalizeColorValue,
   parseFontSize,
@@ -81,9 +84,17 @@ const {
   parseFontWeight,
   getRequiredContrastRatio,
   getCandidates,
-  blendColors
+  blendColors,
+  shouldDefaultBackground
 } = require("../src/checks/InsufficientContrastCheck");
-const { parseColor } = require("../src/checks/ColorContrastAnalyzer");
+const {
+  parseHexColor,
+  parseRgbValue,
+  parseAlphaValue,
+  parseRgbColor,
+  parseHslColor,
+  parseColor
+} = require("../src/checks/ColorContrastAnalyzer");
 const { XamlMissingNameCheck } = require("../src/checks/XamlMissingNameCheck");
 const { getAttributeValue } = require("../src/checks/AttributeParser");
 const { JSDOM } = require("jsdom");
@@ -997,13 +1008,32 @@ describe("InsufficientContrastCheck", () => {
     expect(extractCssVarFallback("var(--primary, #fff)")).toBe("#fff");
     expect(extractCssVarFallback("var(--primary)")).toBeNull();
     expect(extractCssVarFallback("color")).toBeNull();
+    expect(extractCssVarName("var(--primary)")).toBe("--primary");
+    expect(resolveCssVarFromStyle("var(--primary)", "--primary: #333; color: var(--primary);"))
+      .toBe("#333");
+    expect(resolveColorWithContext("var(--primary)", "--primary: #333; color: var(--primary);"))
+      .toBe("#333");
+    expect(shouldDefaultBackground("html")).toBe(true);
+    expect(shouldDefaultBackground("xaml")).toBe(false);
+    expect(parseHexColor("#12")).toBeNull();
+    expect(parseHexColor("#gggggg")).toBeNull();
+    expect(parseRgbValue("")).toBeNull();
+    expect(parseAlphaValue("")).toBeNull();
+    expect(parseRgbColor("rgb(10 20)")).toBeNull();
+    expect(parseRgbColor("not-a-color")).toBeNull();
+    expect(parseHslColor("hsl(0 0%)")).toBeNull();
+    expect(parseColor("hsl(bad 0% 0%)")).toBeNull();
     expect(extractXamlFallback("{Binding FallbackValue=#000}")) .toBe("#000");
     expect(extractXamlFallback("{Binding Value=#000}")).toBeNull();
     expect(resolveStaticColor("var(--primary, #fff)")).toBe("#fff");
     expect(resolveStaticColor("{Binding FallbackValue=#fff}")).toBe("#fff");
     expect(resolveStaticColor("")) .toBeNull();
     expect(parseColor("hsl(0, 0%, 0%)")).toEqual({ r: 0, g: 0, b: 0, a: 1 });
+    expect(parseColor("hsl(0 0% 0% / 50%)")).toEqual({ r: 0, g: 0, b: 0, a: 0.5 });
+    expect(parseColor("hsl(3.1416rad 0% 0%)")).toEqual({ r: 0, g: 0, b: 0, a: 1 });
+    expect(parseColor("hsl(0.5turn 100% 50%)")).toEqual({ r: 0, g: 1, b: 1, a: 1 });
     expect(parseColor("red")).toEqual({ r: 1, g: 0, b: 0, a: 1 });
+    expect(parseColor("rgb(255 255 255 / 50%)")).toEqual({ r: 1, g: 1, b: 1, a: 0.5 });
     expect(blendColors({ r: 1, g: 1, b: 1, a: 0.5 }, { r: 0, g: 0, b: 0, a: 1 }))
       .toEqual({ r: 0.5, g: 0.5, b: 0.5, a: 1 });
 
@@ -1011,7 +1041,13 @@ describe("InsufficientContrastCheck", () => {
     expect(InsufficientContrastCheck.run(htmlContext, rule)).toHaveLength(1);
 
     const htmlMissing = createContext('<div style="color:#777"></div>', "html");
-    expect(InsufficientContrastCheck.run(htmlMissing, rule)).toHaveLength(0);
+    expect(InsufficientContrastCheck.run(htmlMissing, rule)).toHaveLength(1);
+
+    const htmlVar = createContext(
+      '<div style="--bg:#888;color:#777;background-color:var(--bg)"></div>',
+      "html"
+    );
+    expect(InsufficientContrastCheck.run(htmlVar, rule)).toHaveLength(1);
 
     const cssContext = createContext('.a { color: #777; background-color: #888; }', "css");
     expect(InsufficientContrastCheck.run(cssContext, rule)).toHaveLength(1);
@@ -1032,11 +1068,17 @@ describe("InsufficientContrastCheck", () => {
     expect(InsufficientContrastCheck.run(xamlAlpha, rule)).toHaveLength(1);
 
     expect(getCandidates(htmlContext)).toHaveLength(1);
+
+    const cssNoForeground = createContext(".a { background-color: #000; }", "css");
+    expect(getCandidates(cssNoForeground)).toHaveLength(0);
+
+    const htmlNoForeground = createContext('<div style="background-color:#000"></div>', "html");
+    expect(getCandidates(htmlNoForeground)).toHaveLength(0);
   });
 
   test("skips candidates with missing colors or sufficient contrast", () => {
     const cssContext = createContext(".a { color: #fff; }", "css");
-    expect(InsufficientContrastCheck.run(cssContext, rule)).toHaveLength(0);
+    expect(InsufficientContrastCheck.run(cssContext, rule)).toHaveLength(1);
 
     const highContrast = createContext('<div style="color:#000;background-color:#fff"></div>', "html");
     expect(InsufficientContrastCheck.run(highContrast, rule)).toHaveLength(0);
@@ -1062,7 +1104,7 @@ describe("InsufficientContrastCheck", () => {
       '<div style="color:#777;background-image:url(hero.png)"></div>',
       "html"
     );
-    expect(InsufficientContrastCheck.run(backgroundImageNoColor, rule)).toHaveLength(0);
+    expect(InsufficientContrastCheck.run(backgroundImageNoColor, rule)).toHaveLength(1);
   });
 
   test("uses large text thresholds when font size is present", () => {
@@ -1095,23 +1137,36 @@ describe("InsufficientContrastCheck", () => {
     expect(extractXamlFallback("{Binding FallbackValue=#123456")).toBe("#123456");
     expect(resolveStaticColor("{Binding FallbackValue=}")).toBeNull();
     expect(resolveStaticColor("{Binding FallbackValue=#fff")).toBe("{Binding FallbackValue=#fff");
+    expect(extractColorTokens("transparent black")).toEqual(["transparent", "black"]);
+    expect(extractCssVarName("")).toBeNull();
+    expect(resolveCssVarFromStyle("var(--missing)", "")).toBeNull();
+    expect(resolveCssVarFromStyle("red", "--primary: #333;")).toBeNull();
+    expect(resolveColorWithContext(" ", "--primary: #333;")).toBeNull();
+    expect(resolveColorWithContext("var(--missing)", "")).toBeNull();
     expect(parseFontSize("big")).toBeNull();
     expect(parseFontSize(".px")).toBeNull();
     expect(parseFontSize("12vh")).toBeNull();
+    expect(parseFontSize("2em")).toBe(32);
     expect(blendColors({ r: 0, g: 0, b: 0 }, { r: 1, g: 1, b: 1, a: 1 }))
       .toEqual({ r: 0, g: 0, b: 0, a: 1 });
 
     const unresolvedBackground = createContext(
-      '<div style="color:#777;background-color:var(--missing)"></div>',
+      '<div style="color:#999;background-color:var(--missing)"></div>',
       "html"
     );
-    expect(InsufficientContrastCheck.run(unresolvedBackground, rule)).toHaveLength(0);
+    expect(InsufficientContrastCheck.run(unresolvedBackground, rule)).toHaveLength(1);
 
     const invalidBackground = createContext(
-      '<div style="color:#777;background-color:not-a-color"></div>',
+      '<div style="color:#999;background-color:not-a-color"></div>',
       "html"
     );
-    expect(InsufficientContrastCheck.run(invalidBackground, rule)).toHaveLength(0);
+    expect(InsufficientContrastCheck.run(invalidBackground, rule)).toHaveLength(1);
+
+    const invalidXamlBackground = createContext(
+      '<TextBlock Foreground="#777" Background="not-a-color" />',
+      "xaml"
+    );
+    expect(InsufficientContrastCheck.run(invalidXamlBackground, rule)).toHaveLength(0);
   });
 });
 
