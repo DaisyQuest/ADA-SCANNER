@@ -1,4 +1,4 @@
-const { getLineNumber } = require("./TextUtilities");
+const { getLineNumber, getLineNumberForSnippet } = require("./TextUtilities");
 
 const titleRegex = /<\s*title(?<attrs>[^>]*)>(?<content>.*?)<\/\s*title\s*>/gis;
 
@@ -6,6 +6,40 @@ const MissingPageTitleCheck = {
   id: "missing-page-title",
   applicableKinds: ["html", "htm"],
   run(context, rule) {
+    if (context.document?.querySelectorAll) {
+      const titles = Array.from(context.document.querySelectorAll("title"));
+      if (titles.length === 0) {
+        return [
+          {
+            ruleId: rule.id,
+            checkId: MissingPageTitleCheck.id,
+            filePath: context.filePath,
+            line: 1,
+            message: "Document title is missing.",
+            evidence: context.content
+          }
+        ];
+      }
+
+      const hasContent = titles.some((title) => (title.textContent || "").trim());
+      if (hasContent) {
+        return [];
+      }
+
+      const emptyTitle = titles[0];
+      const evidence = emptyTitle.outerHTML;
+      return [
+        {
+          ruleId: rule.id,
+          checkId: MissingPageTitleCheck.id,
+          filePath: context.filePath,
+          line: getLineNumberForSnippet(context.content, evidence),
+          message: "Document title is missing or empty.",
+          evidence
+        }
+      ];
+    }
+
     const matches = Array.from(context.content.matchAll(titleRegex));
     if (matches.length === 0) {
       return [

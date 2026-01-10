@@ -1,0 +1,10 @@
+{
+  "id": "label-in-name-001",
+  "description": "Ensure visible labels are included in accessible names for interactive controls.",
+  "severity": "medium",
+  "checkId": "label-in-name",
+  "appliesTo": "html, htm, cshtml, razor",
+  "recommendation": "Keep aria-label or aria-labelledby text in sync with the visible label.",
+  "wcagCriteria": "2.5.3",
+  "problemTags": "label-in-name, accessible-name"
+}
