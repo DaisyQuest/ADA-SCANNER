@@ -112,6 +112,7 @@ This file tracks GoldMaster documents that have been implemented in `node_engine
 | HTML-GM-099 | gm-html-099-deep-nesting-with-5-iframes-and-10-subforms.html | ✅ | Deep nesting with 5 iframes and 10 subforms (Combo) | Generated starter GoldMaster case. |
 | HTML-GM-100 | gm-html-100-full-regression-mix-contrast-labels-headings-nav-forms-iframe.html | ✅ | Full regression mix: contrast + labels + headings + nav + forms + iframe (Combo) | Generated starter GoldMaster case. |
 | HTML-GM-101 | gm-html-101-iframe-labyrinth-with-deep-nesting.html | ✅ | Iframe labyrinth with deep nesting and form errors (MissingIframeTitleCheck + MissingLabelCheck + DuplicateIdCheck) | Added complex nesting + iframe coverage. |
+| HTML-GM-102 | gm-html-102-pointer-gesture-motion-shortcuts.html | ✅ | Pointer gestures + motion actuation + character key shortcuts (InteractionLimitsCheck) | Added WCAG 2.1 AA interaction limits coverage. |
 
 ## HTM (.htm)
 
@@ -218,6 +219,7 @@ This file tracks GoldMaster documents that have been implemented in `node_engine
 | HTM-GM-099 | gm-htm-099-deep-nesting-with-5-iframes-and-10-subforms.htm | ✅ | Deep nesting with 5 iframes and 10 subforms (Combo) | Generated starter GoldMaster case. |
 | HTM-GM-100 | gm-htm-100-full-regression-mix-contrast-labels-headings-nav-forms-iframe.htm | ✅ | Full regression mix: contrast + labels + headings + nav + forms + iframe (Combo) | Generated starter GoldMaster case. |
 | HTM-GM-101 | gm-htm-101-iframe-stack-with-deep-nesting.htm | ✅ | Deep nesting with iframe stack and duplicate IDs (MissingIframeTitleCheck + DuplicateIdCheck + MissingLabelCheck) | Added complex nesting + iframe coverage. |
+| HTM-GM-102 | gm-htm-102-pointer-gesture-motion-shortcuts.htm | ✅ | Pointer gestures + motion actuation + character key shortcuts (InteractionLimitsCheck) | Added WCAG 2.1 AA interaction limits coverage. |
 
 ## CSHTML (.cshtml)
 
@@ -324,6 +326,7 @@ This file tracks GoldMaster documents that have been implemented in `node_engine
 | CSHTML-GM-099 | gm-cshtml-099-deep-nesting-with-5-iframes-and-10-subforms.cshtml | ✅ | Deep nesting with 5 iframes and 10 subforms (Combo) | Generated starter GoldMaster case. |
 | CSHTML-GM-100 | gm-cshtml-100-full-regression-mix-contrast-labels-headings-nav-forms-iframe.cshtml | ✅ | Full regression mix: contrast + labels + headings + nav + forms + iframe (Combo) | Generated starter GoldMaster case. |
 | CSHTML-GM-101 | gm-cshtml-101-iframe-labyrinth-with-deep-nesting.cshtml | ✅ | Iframe labyrinth with deep nesting and unlabeled inputs (MissingIframeTitleCheck + MissingLabelCheck + DuplicateIdCheck) | Added complex nesting + iframe coverage. |
+| CSHTML-GM-102 | gm-cshtml-102-pointer-gesture-motion-shortcuts.cshtml | ✅ | Pointer gestures + motion actuation + character key shortcuts (InteractionLimitsCheck) | Added WCAG 2.1 AA interaction limits coverage. |
 
 ## RAZOR (.razor)
 
@@ -430,6 +433,7 @@ This file tracks GoldMaster documents that have been implemented in `node_engine
 | RAZOR-GM-099 | gm-razor-099-deep-nesting-with-5-iframes-and-10-subforms.razor | ✅ | Deep nesting with 5 iframes and 10 subforms (Combo) | Generated starter GoldMaster case. |
 | RAZOR-GM-100 | gm-razor-100-full-regression-mix-contrast-labels-headings-nav-forms-iframe.razor | ✅ | Full regression mix: contrast + labels + headings + nav + forms + iframe (Combo) | Generated starter GoldMaster case. |
 | RAZOR-GM-101 | gm-razor-101-iframe-labyrinth-with-deep-nesting.razor | ✅ | Iframe labyrinth with deep nesting and form errors (MissingIframeTitleCheck + MissingLabelCheck + DuplicateIdCheck) | Added complex nesting + iframe coverage. |
+| RAZOR-GM-102 | gm-razor-102-pointer-gesture-motion-shortcuts.razor | ✅ | Pointer gestures + motion actuation + character key shortcuts (InteractionLimitsCheck) | Added WCAG 2.1 AA interaction limits coverage. |
 
 ## XAML (.xaml)
 
@@ -642,6 +646,7 @@ This file tracks GoldMaster documents that have been implemented in `node_engine
 | FTL-GM-099 | gm-ftl-099-deep-nesting-with-5-iframes-and-10-subforms.ftl | ✅ | Deep nesting with 5 iframes and 10 subforms (Combo) | Generated starter GoldMaster case. |
 | FTL-GM-100 | gm-ftl-100-full-regression-mix-contrast-labels-headings-nav-forms-iframe.ftl | ✅ | Full regression mix: contrast + labels + headings + nav + forms + iframe (Combo) | Generated starter GoldMaster case. |
 | FTL-GM-101 | gm-ftl-101-iframe-labyrinth-with-deep-nesting.ftl | ✅ | Iframe labyrinth with deep nesting and form errors (MissingIframeTitleCheck + MissingLabelCheck + DuplicateIdCheck) | Added complex nesting + iframe coverage. |
+| FTL-GM-102 | gm-ftl-102-pointer-gesture-motion-shortcuts.ftl | ✅ | Pointer gestures + motion actuation + character key shortcuts (InteractionLimitsCheck) | Added WCAG 2.1 AA interaction limits coverage. |
 
 ## JS (.js)
 
@@ -748,3 +753,4 @@ This file tracks GoldMaster documents that have been implemented in `node_engine
 | JS-GM-099 | gm-js-099-deep-nesting-with-5-iframes-and-10-subforms.js | ✅ | Deep nesting with 5 iframes and 10 subforms (Combo) | Generated starter GoldMaster case. |
 | JS-GM-100 | gm-js-100-full-regression-mix-contrast-labels-headings-nav-forms-iframe.js | ✅ | Full regression mix: contrast + labels + headings + nav + forms + iframe (Combo) | Generated starter GoldMaster case. |
 | JS-GM-101 | gm-js-101-iframe-labyrinth-with-deep-nesting.js | ✅ | Iframe labyrinth with deep nesting and form errors (MissingIframeTitleCheck + MissingLabelCheck + DuplicateIdCheck) | Added complex nesting + iframe coverage. |
+| JS-GM-102 | gm-js-102-pointer-gesture-motion-shortcuts.js | ✅ | Pointer gestures + motion actuation + character key shortcuts (InteractionLimitsCheck) | Added WCAG 2.1 AA interaction limits coverage. |

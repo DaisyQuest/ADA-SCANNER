@@ -226,7 +226,12 @@ describe("goldmaster helpers", () => {
 
 describe("goldmaster runner", () => {
   test("requires rootDir and rulesRoot", async () => {
-    await expect(runGoldMaster({})).rejects.toThrow("GoldMaster rootDir and rulesRoot are required.");
+    await expect(runGoldMaster({})).rejects.toThrow("GoldMaster rootDir, rulesRoot, and outputDir are required.");
+  });
+
+  test("requires outputDir for report generation", async () => {
+    await expect(runGoldMaster({ rootDir: "/tmp/root", rulesRoot: "/tmp/rules" }))
+      .rejects.toThrow("GoldMaster rootDir, rulesRoot, and outputDir are required.");
   });
 
   test("writes custom analyzer output into report files", async () => {
@@ -290,6 +295,28 @@ describe("goldmaster runner", () => {
     expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining(".razor"));
     expect(result.summary.totalDocuments).toBeGreaterThanOrEqual(0);
     expect(result.summary.totalIssues).toBeGreaterThanOrEqual(0);
+  });
+
+  test("marks unsupported extensions as unsupported and skips analysis", async () => {
+    const rulesRoot = createTempRules();
+    const rootDir = createGoldMasterRoot();
+    const outputDir = fs.mkdtempSync(path.join(os.tmpdir(), "ada-gm-out-"));
+    const logger = { warn: jest.fn(), log: jest.fn(), error: jest.fn() };
+    const analyzerFactory = jest.fn();
+
+    const result = await runGoldMaster({
+      rootDir,
+      rulesRoot,
+      outputDir,
+      extensions: [".bogus"],
+      logger,
+      analyzerFactory
+    });
+
+    expect(result.summary.results).toHaveLength(1);
+    expect(result.summary.results[0].status).toBe("unsupported");
+    expect(logger.warn).toHaveBeenCalledWith("GoldMaster extension unsupported: .bogus");
+    expect(analyzerFactory).not.toHaveBeenCalled();
   });
 
   test("writes an empty summary when no extensions are provided", async () => {

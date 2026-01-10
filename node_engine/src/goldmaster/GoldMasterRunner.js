@@ -46,8 +46,8 @@ const runGoldMaster = async ({
     new StaticAnalyzer({ extensionMap, ignoredDirs: DEFAULT_IGNORED_DIRS }),
   reportBuilder = new StaticReportBuilder()
 } = {}) => {
-  if (!rootDir || !rulesRoot) {
-    throw new Error("GoldMaster rootDir and rulesRoot are required.");
+  if (!rootDir || !rulesRoot || !outputDir) {
+    throw new Error("GoldMaster rootDir, rulesRoot, and outputDir are required.");
   }
 
   ensureDirectory(outputDir);
@@ -66,6 +66,19 @@ const runGoldMaster = async ({
 
   for (const extension of extensions) {
     const subDir = path.join(rootDir, formatExtensionLabel(extension));
+    const extensionMap = buildExtensionMap([extension]);
+    if (extensionMap.size === 0) {
+      summary.results.push({
+        extension,
+        rootDir: subDir,
+        status: "unsupported",
+        documentCount: 0,
+        issueCount: 0,
+        reportPath: null
+      });
+      logger.warn(`GoldMaster extension unsupported: ${extension}`);
+      continue;
+    }
     if (!fs.existsSync(subDir)) {
       summary.results.push({
         extension,
@@ -79,7 +92,6 @@ const runGoldMaster = async ({
       continue;
     }
 
-    const extensionMap = buildExtensionMap([extension]);
     const analyzer = analyzerFactory(extensionMap);
     const scanResult = analyzer.scanRoot({ rootDir: subDir, rulesRoot });
     const report = reportBuilder.build({
