@@ -58,3 +58,5 @@
 2026-01-10 - Expand listener CLI/server test coverage and align expectations (SPEC-013, SPEC-019)
 
 2026-01-10 - Enhance tab order overlay iframe/AJAX detection with expanded tests (SPEC-019, SPEC-013)
+
+2026-01-10 - Added complex node_engine sample fixtures and expanded check coverage tests. (SPEC-008)
