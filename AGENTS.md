@@ -19,3 +19,7 @@ These rules apply to the entire repository.
 ## Team selection rules
 - Infer the team from context (e.g., contrast work → `contrast` team).
 - If no team is specified, choose a team at random and record the selected team in the work summary.
+
+## GoldMaster testing expectations
+- After changes in `node_engine`, run the GoldMaster tests (the GoldMaster portion of the test suite).
+- When new edge cases are identified, extend the GoldMaster suite with corresponding test coverage.

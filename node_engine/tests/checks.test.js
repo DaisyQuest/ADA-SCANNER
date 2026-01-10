@@ -1780,6 +1780,20 @@ describe("InteractionLimitsCheck", () => {
     const issues = InteractionLimitsCheck.run(context, rule);
     expect(issues.length).toBeGreaterThan(5);
   });
+
+  test("flags WCAG 2.1 interaction limits for shortcuts, gestures, and motion", () => {
+    const context = createContext(
+      '<button accesskey="s" onpointerdown="handlePointer()"></button>' +
+        '<div ontouchstart="handleTouch()"></div>' +
+        '<script>window.addEventListener("devicemotion", () => {});</script>',
+      "html"
+    );
+    const issues = InteractionLimitsCheck.run(context, rule);
+    const messages = issues.map((issue) => issue.message);
+    expect(messages).toContain("Character key shortcut detected; allow remapping or disable shortcuts.");
+    expect(messages).toContain("Pointer gesture handler detected; ensure single-pointer alternatives.");
+    expect(messages).toContain("Motion-based interaction detected; provide UI alternatives and disable options.");
+  });
 });
 
 describe("NavigationStructureCheck", () => {
