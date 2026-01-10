@@ -8,6 +8,7 @@ const {
   hasTitle,
   hasTextContent
 } = require("./AccessibleNameUtilities");
+const { hasImageAltText, hasImageAltTextFromElement } = require("./MissingLinkTextCheck");
 
 const linkRegex = /<a(?<attrs>[^>]*)>(?<content>[\s\S]*?)<\/a>/gi;
 
@@ -38,6 +39,10 @@ const EmptyLinkCheck = {
         }
 
         if (hasTextContent(link.textContent || "")) {
+          continue;
+        }
+
+        if (hasImageAltTextFromElement(link)) {
           continue;
         }
 
@@ -84,6 +89,10 @@ const EmptyLinkCheck = {
 
       const content = match.groups?.content ?? "";
       if (hasTextContent(content)) {
+        continue;
+      }
+
+      if (hasImageAltText(content)) {
         continue;
       }
 
