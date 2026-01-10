@@ -57,15 +57,31 @@
       <div class="filter-grid">
         <label class="field">
           <span>File search</span>
-          <input id="fileSearchInput" type="search" placeholder="Filter files by path" />
+          <input id="fileSearchInput" type="search" placeholder="Filter files by path" spellcheck="false" />
         </label>
         <label class="field">
           <span>Domain filter</span>
-          <input id="domainSearchInput" type="search" placeholder="Filter by domain (e.g., *.example.com)" />
+          <input
+            id="domainSearchInput"
+            type="search"
+            placeholder="Filter by domain (e.g., *.example.com)"
+            list="domainSuggestions"
+            spellcheck="false"
+          />
+          <datalist id="domainSuggestions">
+            <option value="localhost"></option>
+            <option value="*.example.com"></option>
+            <option value="*.internal"></option>
+          </datalist>
         </label>
         <label class="field">
           <span>Issue search</span>
-          <input id="issueSearchInput" type="search" placeholder="Search issues by message or file" />
+          <input
+            id="issueSearchInput"
+            type="search"
+            placeholder="Search issues by message or file"
+            spellcheck="false"
+          />
         </label>
         <label class="field">
           <span>Rule focus</span>
@@ -84,6 +100,19 @@
             <option value="unknown">Unknown</option>
           </select>
         </label>
+      </div>
+      <div class="filter-helper">
+        <div>
+          <div class="helper-title">Quick tips</div>
+          <p class="muted">
+            Combine a rule filter with severity to isolate high-impact findings, or clear filters to see all results.
+          </p>
+        </div>
+        <div class="helper-chips">
+          <span class="chip">Rule: missing-label</span>
+          <span class="chip">Severity: High</span>
+          <span class="chip">*.example.com</span>
+        </div>
       </div>
     </section>
 

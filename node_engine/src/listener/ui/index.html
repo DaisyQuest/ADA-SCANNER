@@ -64,15 +64,26 @@
         <div class="filter-grid">
           <label class="field">
             <span>Rule search</span>
-            <input id="ruleSearchInput" type="search" placeholder="Filter by rule ID or description" />
+            <input id="ruleSearchInput" type="search" placeholder="Filter by rule ID or description" spellcheck="false" />
           </label>
           <label class="field">
             <span>File search</span>
-            <input id="fileSearchInput" type="search" placeholder="Filter by file path" />
+            <input id="fileSearchInput" type="search" placeholder="Filter by file path" spellcheck="false" />
           </label>
           <label class="field">
             <span>Domain filter</span>
-            <input id="domainSearchInput" type="search" placeholder="Filter by domain (e.g., *.example.com)" />
+            <input
+              id="domainSearchInput"
+              type="search"
+              placeholder="Filter by domain (e.g., *.example.com)"
+              list="domainSuggestions"
+              spellcheck="false"
+            />
+            <datalist id="domainSuggestions">
+              <option value="localhost"></option>
+              <option value="*.example.com"></option>
+              <option value="*.internal"></option>
+            </datalist>
           </label>
           <label class="field">
             <span>Severity focus</span>
@@ -85,6 +96,20 @@
               <option value="unknown">Unknown</option>
             </select>
           </label>
+        </div>
+        <div class="filter-helper">
+          <div>
+            <div class="helper-title">Quick tips</div>
+            <p class="muted">
+              Use wildcards for domains, combine multiple filters to isolate noisy sources,
+              and reset to view the full runtime timeline.
+            </p>
+          </div>
+          <div class="helper-chips">
+            <span class="chip">*.example.com</span>
+            <span class="chip">Severity: High</span>
+            <span class="chip">Rule: missing-label</span>
+          </div>
         </div>
       </section>
 
