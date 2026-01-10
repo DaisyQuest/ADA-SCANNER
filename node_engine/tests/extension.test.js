@@ -27,6 +27,12 @@ const {
 } = require("../extension/background");
 const { createContentScript } = require("../extension/contentScript");
 const { createPopup, normalizeServerUrl, normalizeSpiderDelayMs: normalizeSpiderDelayMsInPopup } = require("../extension/popup");
+const { TextDecoder, TextEncoder } = require("util");
+
+global.TextDecoder = TextDecoder;
+global.TextEncoder = TextEncoder;
+
+const { JSDOM } = require("jsdom");
 const { setTimeout: setTimeoutFn, clearTimeout: clearTimeoutFn } = require("timers");
 
 beforeEach(() => {
@@ -797,6 +803,136 @@ describe("Extension tab order overlay", () => {
     expect(markers.map((marker) => marker.textContent)).toEqual(["1", "2"]);
     overlay.destroy();
     window.getComputedStyle = originalGetComputedStyle;
+  });
+
+  test("includes focusable elements inside same-origin iframes", () => {
+    document.body.innerHTML = `
+      <button id="before"></button>
+      <iframe id="frame" tabindex="-1"></iframe>
+      <button id="after"></button>
+    `;
+
+    const frame = document.getElementById("frame");
+    const frameDom = new JSDOM('<button id="inside"></button>');
+    Object.defineProperty(frame, "contentDocument", {
+      value: frameDom.window.document
+    });
+    Object.defineProperty(frame, "contentWindow", {
+      value: frameDom.window
+    });
+
+    const originalGetComputedStyle = window.getComputedStyle;
+    window.getComputedStyle = () => ({ display: "block", visibility: "visible", opacity: "1" });
+    frameDom.window.getComputedStyle = () => ({ display: "block", visibility: "visible", opacity: "1" });
+
+    const before = document.getElementById("before");
+    const after = document.getElementById("after");
+    before.getBoundingClientRect = jest.fn(() => ({
+      left: 10,
+      top: 10,
+      width: 10,
+      height: 10,
+      right: 20,
+      bottom: 20
+    }));
+    after.getBoundingClientRect = jest.fn(() => ({
+      left: 200,
+      top: 10,
+      width: 10,
+      height: 10,
+      right: 210,
+      bottom: 20
+    }));
+    frame.getBoundingClientRect = jest.fn(() => ({
+      left: 100,
+      top: 50,
+      width: 50,
+      height: 50,
+      right: 150,
+      bottom: 100
+    }));
+
+    const inside = frameDom.window.document.getElementById("inside");
+    inside.getBoundingClientRect = jest.fn(() => ({
+      left: 5,
+      top: 5,
+      width: 10,
+      height: 10,
+      right: 15,
+      bottom: 15
+    }));
+
+    const overlay = createTabOrderOverlay({ documentRoot: document, windowObj: window });
+    overlay.enable();
+
+    const markers = Array.from(document.querySelectorAll(".ada-tab-order-marker"));
+    expect(markers.map((marker) => marker.style.left)).toEqual(["15px", "110px", "205px"]);
+    overlay.destroy();
+    window.getComputedStyle = originalGetComputedStyle;
+  });
+
+  test("refreshes tab order when the DOM changes", async () => {
+    document.body.innerHTML = '<button id="first"></button>';
+    const originalGetComputedStyle = window.getComputedStyle;
+    window.getComputedStyle = () => ({ display: "block", visibility: "visible", opacity: "1" });
+    const first = document.getElementById("first");
+    first.getBoundingClientRect = jest.fn(() => ({
+      left: 10,
+      top: 10,
+      width: 10,
+      height: 10,
+      right: 20,
+      bottom: 20
+    }));
+
+    const overlay = createTabOrderOverlay({ documentRoot: document, windowObj: window });
+    try {
+      overlay.enable();
+      expect(document.querySelectorAll(".ada-tab-order-marker")).toHaveLength(1);
+
+      const added = document.createElement("button");
+      added.id = "second";
+      added.getBoundingClientRect = jest.fn(() => ({
+        left: 30,
+        top: 10,
+        width: 10,
+        height: 10,
+        right: 40,
+        bottom: 20
+      }));
+      document.body.appendChild(added);
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(document.querySelectorAll(".ada-tab-order-marker")).toHaveLength(2);
+    } finally {
+      overlay.destroy();
+      window.getComputedStyle = originalGetComputedStyle;
+    }
+  });
+
+  test("skips iframe traversal when content access throws", () => {
+    document.body.innerHTML = '<iframe id="frame" tabindex="-1"></iframe>';
+    const frame = document.getElementById("frame");
+    Object.defineProperty(frame, "contentDocument", {
+      get: () => {
+        throw new Error("cross-origin");
+      }
+    });
+    Object.defineProperty(frame, "contentWindow", {
+      get: () => {
+        throw new Error("cross-origin");
+      }
+    });
+    const originalGetComputedStyle = window.getComputedStyle;
+    window.getComputedStyle = () => ({ display: "block", visibility: "visible", opacity: "1" });
+
+    const overlay = createTabOrderOverlay({ documentRoot: document, windowObj: window });
+    expect(() => overlay.enable()).not.toThrow();
+    overlay.destroy();
+    window.getComputedStyle = originalGetComputedStyle;
+    document.body.innerHTML = "";
   });
 });
 

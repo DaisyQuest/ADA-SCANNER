@@ -56,3 +56,5 @@
 2026-01-10 - Added complex admin demo sample files for node_engine. (SPEC-008)
 2026-01-10 - Team backend: add static coverage gap reporting, UI updates, and expanded tests for static analysis reporting. (SPEC-001, SPEC-004, SPEC-008)
 2026-01-10 - Expand listener CLI/server test coverage and align expectations (SPEC-013, SPEC-019)
+
+2026-01-10 - Enhance tab order overlay iframe/AJAX detection with expanded tests (SPEC-019, SPEC-013)
