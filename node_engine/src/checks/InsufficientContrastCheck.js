@@ -1,7 +1,7 @@
 const { getLineNumber } = require("./TextUtilities");
 const { parseColor, contrastRatio, clamp01 } = require("./ColorContrastAnalyzer");
 
-const styleRegex = /style="(?<style>[^"]+)"/gi;
+const styleRegex = /style\s*=\s*(?:"(?<styleDouble>[^"]+)"|'(?<styleSingle>[^']+)')/gi;
 const xamlElementRegex = /<(?<tag>[\w:.-]+)(?<attrs>[^>]*?)>/gi;
 const cssBlockRegex = /(?<selector>[^\{]+)\{(?<body>[^}]+)\}/gis;
 
@@ -310,7 +310,7 @@ const getCandidates = (context) => {
 
   return Array.from(context.content.matchAll(styleRegex))
     .map((match) => {
-      const style = match.groups.style;
+      const style = match.groups.styleDouble ?? match.groups.styleSingle;
       const foreground = parseCssColor(style, "color");
       const backgroundColors = parseCssBackgroundColors(style);
       if (!foreground) {

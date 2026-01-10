@@ -889,6 +889,16 @@ public sealed class ChecksTests
     }
 
     [Fact]
+    public void InsufficientContrastCheck_FlagsLowContrastWithSingleQuotedStyle()
+    {
+        var check = new InsufficientContrastCheck();
+        var content = "<strong style = 'opacity: 1; color: rgb(255, 255, 255); background-color: rgb(255, 255, 255);'>Text</strong>";
+        var issues = check.Run(new CheckContext("index.html", content, "html"), Rule(check.Id)).ToList();
+
+        Assert.Single(issues);
+    }
+
+    [Fact]
     public void InsufficientContrastCheck_AllowsSufficientContrast()
     {
         var check = new InsufficientContrastCheck();

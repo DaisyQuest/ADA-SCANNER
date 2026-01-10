@@ -1367,6 +1367,13 @@ describe("InsufficientContrastCheck", () => {
     const htmlContext = createContext('<div style="color:#777; background-color:#888"></div>', "html");
     expect(InsufficientContrastCheck.run(htmlContext, rule)).toHaveLength(1);
 
+    const htmlSingleQuotedStyle = createContext(
+      "<strong style = 'opacity: 1; color: rgb(255, 255, 255); background-color: rgb(255, 255, 255);'></strong>",
+      "html"
+    );
+    expect(InsufficientContrastCheck.run(htmlSingleQuotedStyle, rule)).toHaveLength(1);
+    expect(getCandidates(htmlSingleQuotedStyle)).toHaveLength(1);
+
     const htmlMissing = createContext('<div style="color:#777"></div>', "html");
     expect(InsufficientContrastCheck.run(htmlMissing, rule)).toHaveLength(1);
 
