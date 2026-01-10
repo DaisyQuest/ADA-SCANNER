@@ -5,8 +5,9 @@ class StaticReportBuilder {
     this.reportBuilder = reportBuilder;
   }
 
-  build({ documents = [], issues = [] } = {}) {
+  build({ documents = [], issues = [], rules = [] } = {}) {
     const base = this.reportBuilder.build({ documents, issues });
+    const coverage = this.buildCoverage({ rules, issues });
     const fileMap = new Map();
     const stylesheetIssuesByFile = this.reportBuilder.buildStylesheetIssueMap({ documents, issues });
 
@@ -47,18 +48,82 @@ class StaticReportBuilder {
       summary: {
         ...base.summary,
         documents: fileCount,
-        files: fileCount
+        files: fileCount,
+        coverage
       },
-      byFile
+      byFile,
+      coverage
     };
   }
 
-  buildFileSummaries({ documents = [], issues = [] } = {}) {
-    return this.build({ documents, issues }).byFile;
+  buildFileSummaries({ documents = [], issues = [], rules = [] } = {}) {
+    return this.build({ documents, issues, rules }).byFile;
   }
 
   buildFileReport({ filePath, documents = [], issues = [] } = {}) {
     return this.reportBuilder.buildFileReport({ filePath, documents, issues });
+  }
+
+  buildCoverage({ rules = [], issues = [] } = {}) {
+    const ruleMap = new Map();
+    for (const rule of Array.isArray(rules) ? rules : []) {
+      const ruleId = rule?.id ?? rule?.ruleId ?? "";
+      if (!ruleId) {
+        continue;
+      }
+      const teamName = rule?.teamName ?? rule?.team ?? "unassigned";
+      const key = `${teamName}::${ruleId}`;
+      if (!ruleMap.has(key)) {
+        ruleMap.set(key, {
+          ruleId,
+          teamName,
+          description: rule?.description ?? "",
+          severity: rule?.severity ?? "",
+          checkId: rule?.checkId ?? "",
+          wcagCriteria: rule?.wcagCriteria ?? null,
+          problemTags: rule?.problemTags ?? null
+        });
+      }
+    }
+
+    const triggered = new Set();
+    for (const issue of issues) {
+      const ruleId = issue?.ruleId ?? "";
+      if (!ruleId) {
+        continue;
+      }
+      const teamName = issue?.teamName ?? "unassigned";
+      const key = `${teamName}::${ruleId}`;
+      if (ruleMap.has(key)) {
+        triggered.add(key);
+      }
+    }
+
+    const missingRules = Array.from(ruleMap.entries())
+      .filter(([key]) => !triggered.has(key))
+      .map(([, rule]) => rule)
+      .sort((a, b) => {
+        const teamCompare = String(a.teamName).localeCompare(String(b.teamName));
+        if (teamCompare !== 0) {
+          return teamCompare;
+        }
+        return String(a.ruleId).localeCompare(String(b.ruleId));
+      });
+
+    const totalRules = ruleMap.size;
+    const triggeredRules = triggered.size;
+    const missingRuleCount = missingRules.length;
+    const coveragePercent = totalRules
+      ? Math.round((triggeredRules / totalRules) * 100)
+      : 0;
+
+    return {
+      totalRules,
+      triggeredRules,
+      missingRuleCount,
+      coveragePercent,
+      missingRules
+    };
   }
 }
 

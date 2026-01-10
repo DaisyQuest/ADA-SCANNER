@@ -33,6 +33,14 @@
         <div class="summary-value" id="ruleCount">0</div>
       </div>
       <div class="summary-card">
+        <div class="summary-label">Coverage</div>
+        <div class="summary-value" id="coveragePercent">0%</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-label">Missing rules</div>
+        <div class="summary-value" id="missingRuleCount">0</div>
+      </div>
+      <div class="summary-card">
         <div class="summary-label">Last updated</div>
         <div class="summary-value" id="lastUpdated">—</div>
       </div>
@@ -111,6 +119,19 @@
         </div>
       </div>
       <div id="issueFeed" class="issue-feed"></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <div>
+          <h2>Coverage gaps</h2>
+          <p class="muted">Rules configured in the ruleset that did not trigger in this scan.</p>
+        </div>
+        <div class="panel-meta">
+          <span class="meta-chip">Missing <strong id="missingRuleResultCount">0</strong></span>
+        </div>
+      </div>
+      <div id="missingRuleList" class="issue-feed"></div>
     </section>
 
     <section class="panel">

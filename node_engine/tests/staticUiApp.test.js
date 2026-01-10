@@ -8,6 +8,8 @@ const setupDom = () => {
     <div id="fileCount"></div>
     <div id="issueCount"></div>
     <div id="ruleCount"></div>
+    <div id="coveragePercent"></div>
+    <div id="missingRuleCount"></div>
     <input id="fileSearchInput" />
     <input id="issueSearchInput" />
     <select id="ruleFilterSelect">
@@ -20,8 +22,10 @@ const setupDom = () => {
     <button id="clearFilters"></button>
     <div id="fileResultCount"></div>
     <div id="issueResultCount"></div>
+    <div id="missingRuleResultCount"></div>
     <table><tbody id="fileTable"></tbody></table>
     <div id="issueFeed"></div>
+    <div id="missingRuleList"></div>
   `;
 };
 
@@ -50,6 +54,22 @@ describe("Static analysis UI app", () => {
     app.state.report = {
       summary: { files: 2, issues: 1 },
       byRule: [{ ruleId: "rule-1", count: 1 }],
+      coverage: {
+        totalRules: 3,
+        triggeredRules: 1,
+        missingRuleCount: 2,
+        coveragePercent: 33,
+        missingRules: [
+          {
+            ruleId: "rule-2",
+            teamName: "team-a",
+            checkId: "missing-label",
+            severity: "low",
+            description: "Missing label"
+          },
+          { ruleId: "rule-3", teamName: "team-b", checkId: "missing-alt-text", severity: "high" }
+        ]
+      },
       byFile: [
         {
           filePath: "file-a.html",
@@ -78,6 +98,8 @@ describe("Static analysis UI app", () => {
     expect(app.elements.documentCount.textContent).toBe("1");
     expect(app.elements.issueCount.textContent).toBe("1");
     expect(app.elements.ruleCount.textContent).toBe("1");
+    expect(app.elements.coveragePercent.textContent).toBe("33%");
+    expect(app.elements.missingRuleCount.textContent).toBe("2");
     expect(app.elements.fileTable.innerHTML).toContain("file-a.html");
     expect(app.elements.fileTable.innerHTML).toContain("Save JSON");
     expect(app.elements.fileTable.innerHTML).toContain("styles.css (2)");
@@ -85,6 +107,9 @@ describe("Static analysis UI app", () => {
     expect(app.elements.issueFeed.innerHTML).toContain("Problem");
     expect(app.elements.fileResultCount.textContent).toBe("2 of 2");
     expect(app.elements.issueResultCount.textContent).toBe("1 of 1");
+    expect(app.elements.missingRuleList.innerHTML).toContain("rule-2");
+    expect(app.elements.missingRuleList.innerHTML).toContain("Missing label");
+    expect(app.elements.missingRuleResultCount.textContent).toBe("2");
   });
 
   test("handles empty issue feed and connection state", () => {
@@ -101,6 +126,9 @@ describe("Static analysis UI app", () => {
 
     app.renderIssues();
     expect(app.elements.issueFeed.innerHTML).toContain("No issues detected yet.");
+
+    app.renderMissingRules();
+    expect(app.elements.missingRuleList.innerHTML).toContain("All configured rules");
 
     app.setConnectionStatus(false);
     expect(app.elements.connectionStatus.textContent).toBe("Offline");
@@ -188,6 +216,60 @@ describe("Static analysis UI app", () => {
     expect(app.getFilteredFiles()).toEqual([]);
   });
 
+  test("getFilteredFiles filters by severity when not all", () => {
+    const app = require("../src/static/ui/assets/app");
+    app.state.report = {
+      summary: { files: 2, issues: 1 },
+      byRule: [],
+      byFile: [
+        {
+          filePath: "file-a.html",
+          issueCount: 1,
+          rules: [],
+          severities: [{ severity: "high", count: 1 }]
+        },
+        {
+          filePath: "file-b.html",
+          issueCount: 1,
+          rules: [],
+          severities: [{ severity: "low", count: 1 }]
+        }
+      ]
+    };
+    app.state.filters = {
+      fileQuery: "",
+      issueQuery: "",
+      ruleId: "all",
+      severity: "high"
+    };
+
+    const filtered = app.getFilteredFiles();
+    expect(filtered.map((file) => file.filePath)).toEqual(["file-a.html"]);
+  });
+
+  test("getFilteredFiles returns empty when severities are missing", () => {
+    const app = require("../src/static/ui/assets/app");
+    app.state.report = {
+      summary: { files: 1, issues: 1 },
+      byRule: [],
+      byFile: [
+        {
+          filePath: "file-a.html",
+          issueCount: 1,
+          rules: []
+        }
+      ]
+    };
+    app.state.filters = {
+      fileQuery: "",
+      issueQuery: "",
+      ruleId: "all",
+      severity: "high"
+    };
+
+    expect(app.getFilteredFiles()).toEqual([]);
+  });
+
   test("getFilteredIssues treats empty ruleId as all", () => {
     const app = require("../src/static/ui/assets/app");
     app.state.filters = { fileQuery: "", issueQuery: "", ruleId: "" };
@@ -233,10 +315,55 @@ describe("Static analysis UI app", () => {
     expect(() => app.renderSummary()).not.toThrow();
   });
 
+  test("renderSummary skips coverage outputs when elements are missing", () => {
+    const app = require("../src/static/ui/assets/app");
+    app.state.report = {
+      summary: { files: 1, issues: 1 },
+      byRule: [],
+      byFile: [],
+      coverage: { coveragePercent: 50, missingRuleCount: 2 }
+    };
+    app.elements.coveragePercent = null;
+    app.elements.missingRuleCount = null;
+
+    expect(() => app.renderSummary()).not.toThrow();
+  });
+
   test("renderFilters safely exits when select is missing", () => {
     const app = require("../src/static/ui/assets/app");
     app.elements.ruleFilterSelect = null;
     expect(() => app.renderFilters()).not.toThrow();
+  });
+
+  test("renderMissingRules exits when list container is missing", () => {
+    const app = require("../src/static/ui/assets/app");
+    app.state.report = { coverage: { missingRules: [{ ruleId: "rule-1" }] } };
+    app.elements.missingRuleList = null;
+    expect(() => app.renderMissingRules()).not.toThrow();
+  });
+
+  test("renderMissingRules handles missing result count element", () => {
+    const app = require("../src/static/ui/assets/app");
+    app.state.report = { coverage: { missingRules: [{ ruleId: "rule-1" }] } };
+    app.elements.missingRuleResultCount = null;
+
+    expect(() => app.renderMissingRules()).not.toThrow();
+  });
+
+  test("renderMissingRules fills in default metadata", () => {
+    const app = require("../src/static/ui/assets/app");
+    app.state.report = {
+      coverage: {
+        missingRules: [
+          { ruleId: "rule-1" }
+        ]
+      }
+    };
+
+    app.renderMissingRules();
+
+    expect(app.elements.missingRuleList.innerHTML).toContain("Unassigned");
+    expect(app.elements.missingRuleList.innerHTML).toContain("unknown");
   });
 
   test("renderFiles handles missing result count element", () => {

@@ -454,7 +454,8 @@ describe("StaticAnalysisServer", () => {
 
     const server = new StaticAnalysisServer({
       documents: result.documents,
-      issues: result.issues
+      issues: result.issues,
+      rules: result.rules
     });
     const port = await server.start();
 
@@ -465,6 +466,8 @@ describe("StaticAnalysisServer", () => {
     const report = await fetch(`${baseUrl}/report`);
     const reportPayload = await report.json();
     expect(reportPayload.summary.files).toBe(result.documents.length);
+    expect(reportPayload.coverage.totalRules).toBe(1);
+    expect(reportPayload.coverage.triggeredRules).toBe(1);
 
     const documents = await fetch(`${baseUrl}/documents`);
     const documentsPayload = await documents.json();
@@ -658,6 +661,7 @@ describe("Static analysis CLI", () => {
     expect(ServerClass).toHaveBeenCalledWith({
       documents: [],
       issues: [],
+      rules: [],
       reportBuilder: expect.any(Object),
       port: 0
     });
@@ -715,11 +719,17 @@ describe("StaticReportBuilder", () => {
     const builder = new StaticReportBuilder();
     const report = builder.build({
       documents: [{ url: "file-a.html" }, { url: "file-b.css" }, { url: "" }, null],
-      issues: []
+      issues: [],
+      rules: [
+        { id: "rule-1", teamName: "team-a", checkId: "missing-label" },
+        { id: "rule-2", teamName: "team-a", checkId: "missing-alt-text" }
+      ]
     });
 
     expect(report.summary.files).toBe(2);
     expect(report.byFile.map((entry) => entry.filePath).sort()).toEqual(["file-a.html", "file-b.css"]);
+    expect(report.coverage.missingRuleCount).toBe(2);
+    expect(report.coverage.coveragePercent).toBe(0);
   });
 
   test("includes linked stylesheet issues in file summaries", () => {
@@ -729,12 +739,14 @@ describe("StaticReportBuilder", () => {
         { url: "page.html", stylesheets: ["styles.css"] },
         { url: "styles.css" }
       ],
-      issues: [{ ruleId: "rule-1", checkId: "check", filePath: "styles.css" }]
+      issues: [{ ruleId: "rule-1", checkId: "check", filePath: "styles.css", teamName: "team-a" }],
+      rules: [{ id: "rule-1", teamName: "team-a", checkId: "check" }]
     });
 
     const entry = report.byFile.find((file) => file.filePath === "page.html");
     expect(entry.linkedStylesheetsWithIssues).toEqual([{ filePath: "styles.css", count: 1 }]);
     expect(entry.linkedStylesheetIssueCount).toBe(1);
+    expect(report.coverage.missingRuleCount).toBe(0);
   });
 
   test("returns file report with document info when present", () => {
@@ -770,5 +782,113 @@ describe("StaticReportBuilder", () => {
     expect(fileReport.issueCount).toBe(0);
     const defaultReport = builder.buildFileReport();
     expect(defaultReport.filePath).toBe("unknown");
+  });
+
+  test("coverage ignores empty rule ids and sorts by team", () => {
+    const builder = new StaticReportBuilder();
+    const coverage = builder.buildCoverage({
+      rules: [
+        { id: "", teamName: "team-b", checkId: "check" },
+        { id: "rule-2", teamName: "team-b", checkId: "check" },
+        { id: "rule-1", teamName: "team-a", checkId: "check" },
+        { id: "rule-3", teamName: "team-a", checkId: "check" }
+      ],
+      issues: [
+        { ruleId: "", teamName: "team-a" },
+        { ruleId: "rule-1", teamName: "team-a" }
+      ]
+    });
+
+    expect(coverage.totalRules).toBe(3);
+    expect(coverage.triggeredRules).toBe(1);
+    expect(coverage.missingRules).toEqual([
+      expect.objectContaining({ ruleId: "rule-3", teamName: "team-a" }),
+      expect.objectContaining({ ruleId: "rule-2", teamName: "team-b" })
+    ]);
+  });
+
+  test("coverage handles ruleId and team fallbacks", () => {
+    const builder = new StaticReportBuilder();
+    const coverage = builder.buildCoverage({
+      rules: [
+        { ruleId: "rule-1", team: "team-x", description: "desc", severity: "low" },
+        { ruleId: "rule-2", description: "desc", severity: "low" }
+      ],
+      issues: [
+        { ruleId: "rule-1", teamName: "team-x" },
+        { ruleId: "rule-2" },
+        { ruleId: "rule-missing", teamName: "team-x" }
+      ]
+    });
+
+    expect(coverage.totalRules).toBe(2);
+    expect(coverage.triggeredRules).toBe(2);
+    expect(coverage.missingRuleCount).toBe(0);
+  });
+
+  test("coverage defaults to zero when no rules array is provided", () => {
+    const builder = new StaticReportBuilder();
+    const coverage = builder.buildCoverage({ rules: null, issues: [{ ruleId: "rule-1" }] });
+
+    expect(coverage.totalRules).toBe(0);
+    expect(coverage.coveragePercent).toBe(0);
+    expect(coverage.missingRules).toEqual([]);
+  });
+
+  test("coverage uses default arguments when omitted", () => {
+    const builder = new StaticReportBuilder();
+    const coverage = builder.buildCoverage();
+
+    expect(coverage.totalRules).toBe(0);
+    expect(coverage.triggeredRules).toBe(0);
+  });
+
+  test("coverage deduplicates rules and skips empty issue ids", () => {
+    const builder = new StaticReportBuilder();
+    const coverage = builder.buildCoverage({
+      rules: [
+        { id: "rule-1", teamName: "team-a" },
+        { id: "rule-1", teamName: "team-a" }
+      ],
+      issues: [
+        { ruleId: null },
+        { ruleId: "rule-1", teamName: "team-a" }
+      ]
+    });
+
+    expect(coverage.totalRules).toBe(1);
+    expect(coverage.triggeredRules).toBe(1);
+  });
+
+  test("coverage skips rules without identifiers", () => {
+    const builder = new StaticReportBuilder();
+    const coverage = builder.buildCoverage({
+      rules: [{}],
+      issues: []
+    });
+
+    expect(coverage.totalRules).toBe(0);
+    expect(coverage.missingRules).toEqual([]);
+  });
+
+  test("build fills missing stylesheet fields from the report builder", () => {
+    const reportBuilder = {
+      build: () => ({
+        summary: { documents: 0, issues: 0, files: 1, rules: 0, teams: 0, checks: 0 },
+        byFile: [{ filePath: "file-a.html", issueCount: 0 }],
+        byRule: [],
+        byTeam: [],
+        bySeverity: [],
+        byCheck: []
+      }),
+      buildStylesheetIssueMap: () => new Map(),
+      sumIssueCounts: () => 0,
+      buildFileReport: jest.fn()
+    };
+    const builder = new StaticReportBuilder({ reportBuilder });
+    const report = builder.build({ documents: [], issues: [] });
+
+    expect(report.byFile[0].linkedStylesheetsWithIssues).toEqual([]);
+    expect(report.byFile[0].linkedStylesheetIssueCount).toBe(0);
   });
 });

@@ -57,6 +57,7 @@ const startStaticAnalysis = async ({
   const server = new ServerClass({
     documents: result.documents,
     issues: result.issues,
+    rules: result.rules ?? [],
     reportBuilder: new StaticReportBuilder(),
     port: port ?? 0
   });

@@ -53,6 +53,8 @@ The static analysis dashboard is served by the static analysis server once a sca
 * **Documents captured**: Parsed documents available for inspection.
 * **Issues found**: Total rule violations detected.
 * **Rules triggered**: Unique rule IDs that fired.
+* **Coverage**: Percentage of configured rules that triggered at least once.
+* **Missing rules**: Rules in the ruleset that did not trigger in this scan.
 * **Last updated**: Timestamp of the most recent data refresh.
 
 ### Filters
@@ -72,6 +74,10 @@ The Files table summarizes each scanned file and its top rules. Use the download
 ### Recent issues feed
 
 The issue feed shows the latest eight issues that match the active filters. Use this to triage recent findings quickly.
+
+### Coverage gaps
+
+The Coverage gaps panel lists rules that never triggered during the scan. Use it to confirm whether the rules are obsolete, mismatched to the codebase, or missing test coverage in the scanned project.
 
 ## Troubleshooting
 
