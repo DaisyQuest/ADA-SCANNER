@@ -10,6 +10,16 @@ const setupDom = () => {
     <div id="teamCount"></div>
     <div id="fileCount"></div>
     <div id="checkCount"></div>
+    <input id="ruleSearchInput" />
+    <input id="fileSearchInput" />
+    <select id="severityFilterSelect">
+      <option value="all">All severities</option>
+      <option value="high">High</option>
+    </select>
+    <button id="clearFilters"></button>
+    <div id="ruleResultCount"></div>
+    <div id="fileResultCount"></div>
+    <div id="issueResultCount"></div>
     <table><tbody id="ruleTable"></tbody></table>
     <table><tbody id="fileTable"></tbody></table>
     <div id="issueFeed"></div>
@@ -116,6 +126,7 @@ describe("Runtime listener UI app", () => {
     expect(app.elements.ruleTable.innerHTML).toContain("—");
     expect(app.elements.ruleTable.innerHTML).toContain("badge--team");
     expect(app.elements.ruleTable.innerHTML).toContain("badge--severity-high");
+    expect(app.elements.ruleResultCount.textContent).toBe("2 of 2");
     expect(app.elements.fileTable.innerHTML).toContain("Save JSON");
     expect(app.elements.fileTable.innerHTML).toContain("Save HTML");
     expect(app.elements.fileTable.innerHTML).toContain("report-file-b.json");
@@ -123,10 +134,12 @@ describe("Runtime listener UI app", () => {
     expect(app.elements.fileTable.innerHTML).toContain("styles.css");
     expect(app.elements.fileTable.innerHTML).toContain("badge--file");
     expect(app.elements.fileTable.innerHTML).toContain("badge--team");
+    expect(app.elements.fileResultCount.textContent).toBe("2 of 2");
     expect(app.elements.issueFeed.innerHTML).toContain("Problem");
     expect(app.elements.issueFeed.innerHTML).toContain("line ?");
     expect(app.elements.issueFeed.innerHTML).toContain("badge--severity-high");
     expect(app.elements.issueFeed.innerHTML).toContain("badge--team");
+    expect(app.elements.issueResultCount.textContent).toBe("2 of 2");
     expect(app.elements.severityBreakdown.innerHTML).toContain("badge--severity-high");
     expect(app.elements.checkBreakdown.innerHTML).toContain("check-a");
   });
@@ -145,6 +158,61 @@ describe("Runtime listener UI app", () => {
     expect(app.elements.ruleTable.innerHTML).toBe("");
     expect(app.elements.fileTable.innerHTML).toBe("");
     expect(app.elements.severityBreakdown.innerHTML).toContain("—");
+  });
+
+  test("renderSummary prefers explicit summary values", () => {
+    const app = require("../src/listener/ui/assets/app");
+    app.state.report = {
+      summary: { documents: 5, issues: 4, files: 3, rules: 10, teams: 2, checks: 7 },
+      byRule: [{ ruleId: "rule-1" }],
+      byTeam: [{ teamName: "team-a" }],
+      byCheck: [{ checkId: "check-a" }]
+    };
+
+    app.renderSummary();
+
+    expect(app.elements.ruleCount.textContent).toBe("10");
+    expect(app.elements.teamCount.textContent).toBe("2");
+    expect(app.elements.checkCount.textContent).toBe("7");
+  });
+
+  test("renders empty states when no issues are available", () => {
+    const app = require("../src/listener/ui/assets/app");
+    app.state.report = {
+      summary: { documents: 0, issues: 0, files: 0 },
+      byRule: [],
+      byFile: [],
+      byTeam: [],
+      bySeverity: [],
+      byCheck: []
+    };
+    app.state.issues = [];
+
+    app.renderIssues();
+
+    expect(app.elements.issueFeed.innerHTML).toContain("No issues detected yet.");
+    expect(app.elements.issueResultCount.textContent).toBe("0 of 0");
+  });
+
+  test("renders filtered issue empty state when filters exclude issues", () => {
+    const app = require("../src/listener/ui/assets/app");
+    app.state.report = {
+      summary: { documents: 1, issues: 1, files: 1 },
+      byRule: [],
+      byFile: [],
+      byTeam: [],
+      bySeverity: [],
+      byCheck: []
+    };
+    app.state.issues = [
+      { message: "Issue A", ruleId: "rule-1", filePath: "file-a", severity: "high" }
+    ];
+
+    app.elements.ruleSearchInput.value = "missing";
+    app.renderAll();
+
+    expect(app.elements.issueFeed.innerHTML).toContain("No issues match the current filters.");
+    expect(app.elements.issueResultCount.textContent).toBe("0 of 1");
   });
 
   test("loads initial data and updates DOM", async () => {
@@ -289,6 +357,18 @@ describe("Runtime listener UI app", () => {
     expect(app.resolveSeverityVariant("Medium")).toBe("severity-medium");
     expect(app.resolveSeverityVariant("Low")).toBe("severity-low");
     expect(app.resolveSeverityVariant("")).toBe("severity-unknown");
+    expect(app.matchesSeverity("high", "high")).toBe(true);
+    expect(app.matchesSeverity("low", "high")).toBe(false);
+    expect(app.matchesSeverity("low", "all")).toBe(true);
+
+    const ruleTarget = app.buildRuleSearchTarget({
+      ruleId: "rule-1",
+      description: "Needs label",
+      teamName: "team-a",
+      severity: "high"
+    });
+    expect(ruleTarget).toContain("rule-1");
+    expect(ruleTarget).toContain("Needs label");
 
     const badge = app.renderBadge({ label: "Rule-1", count: 2, variant: "rule" });
     expect(badge).toContain("badge--rule");
@@ -321,5 +401,253 @@ describe("Runtime listener UI app", () => {
 
     expect(app.formatCounts([], "ruleId")).toBe("—");
     expect(app.formatCounts([{ ruleId: "rule-1", count: 2 }], "ruleId")).toBe("rule-1 (2)");
+  });
+
+  test("filters by rule query, file query, and severity", () => {
+    const app = require("../src/listener/ui/assets/app");
+    app.state.report = {
+      summary: { documents: 1, issues: 2, files: 2 },
+      byRule: [
+        {
+          ruleId: "rule-1",
+          description: "Must have label",
+          severity: "high",
+          teamName: "team-a",
+          count: 1,
+          files: ["file-a"]
+        },
+        {
+          ruleId: "rule-2",
+          description: "Low issue",
+          severity: "low",
+          teamName: "team-b",
+          count: 1,
+          files: ["file-b"]
+        }
+      ],
+      byFile: [
+        {
+          filePath: "file-a",
+          issueCount: 1,
+          rules: [{ ruleId: "rule-1", count: 1 }],
+          teams: [{ teamName: "team-a", count: 1 }],
+          severities: [{ severity: "high", count: 1 }],
+          linkedStylesheetsWithIssues: []
+        },
+        {
+          filePath: "file-b",
+          issueCount: 1,
+          rules: [{ ruleId: "rule-2", count: 1 }],
+          teams: [{ teamName: "team-b", count: 1 }],
+          severities: [{ severity: "low", count: 1 }],
+          linkedStylesheetsWithIssues: []
+        }
+      ],
+      byTeam: [],
+      bySeverity: [],
+      byCheck: []
+    };
+    app.state.issues = [
+      { message: "Issue A", ruleId: "rule-1", filePath: "file-a", severity: "high" },
+      { message: "Issue B", ruleId: "rule-2", filePath: "file-b", severity: "low" }
+    ];
+
+    app.elements.ruleSearchInput.value = "rule-1";
+    app.elements.fileSearchInput.value = "file-a";
+    app.elements.severityFilterSelect.value = "high";
+
+    app.renderAll();
+
+    expect(app.elements.ruleTable.innerHTML).toContain("rule-1");
+    expect(app.elements.ruleTable.innerHTML).not.toContain("rule-2");
+    expect(app.elements.fileTable.innerHTML).toContain("file-a");
+    expect(app.elements.fileTable.innerHTML).not.toContain("file-b");
+    expect(app.elements.issueFeed.innerHTML).toContain("Issue A");
+    expect(app.elements.issueFeed.innerHTML).not.toContain("Issue B");
+    expect(app.elements.ruleResultCount.textContent).toBe("1 of 2");
+  });
+
+  test("resetFilters clears inputs safely", () => {
+    const app = require("../src/listener/ui/assets/app");
+    app.elements.ruleSearchInput.value = "rule";
+    app.elements.fileSearchInput.value = "file";
+    app.elements.severityFilterSelect.value = "high";
+
+    app.resetFilters();
+
+    expect(app.elements.ruleSearchInput.value).toBe("");
+    expect(app.elements.fileSearchInput.value).toBe("");
+    expect(app.elements.severityFilterSelect.value).toBe("all");
+  });
+
+  test("syncFiltersFromInputs handles missing inputs", () => {
+    const app = require("../src/listener/ui/assets/app");
+    app.elements.ruleSearchInput = null;
+    app.elements.fileSearchInput = null;
+    app.elements.severityFilterSelect = null;
+
+    app.syncFiltersFromInputs();
+
+    expect(app.state.filters).toEqual({
+      ruleQuery: "",
+      fileQuery: "",
+      severity: "all"
+    });
+  });
+
+  test("bindEvents prevents duplicate bindings", () => {
+    const app = require("../src/listener/ui/assets/app");
+    const ruleSpy = jest.spyOn(app.elements.ruleSearchInput, "addEventListener");
+    const fileSpy = jest.spyOn(app.elements.fileSearchInput, "addEventListener");
+
+    app.bindEvents();
+    app.bindEvents();
+
+    expect(ruleSpy).toHaveBeenCalledTimes(1);
+    expect(fileSpy).toHaveBeenCalledTimes(1);
+    ruleSpy.mockRestore();
+    fileSpy.mockRestore();
+  });
+
+  test("renderIssues skips missing result count element", () => {
+    const app = require("../src/listener/ui/assets/app");
+    app.elements.issueResultCount = null;
+    app.state.issues = [
+      { message: "Issue A", ruleId: "rule-1", filePath: "file-a", severity: "high" }
+    ];
+
+    expect(() => app.renderIssues()).not.toThrow();
+    expect(app.elements.issueFeed.innerHTML).toContain("Issue A");
+  });
+
+  test("renders empty state when filters remove all rules and files", () => {
+    const app = require("../src/listener/ui/assets/app");
+    app.state.report = {
+      summary: { documents: 1, issues: 1, files: 1 },
+      byRule: [
+        {
+          ruleId: "rule-1",
+          description: "desc",
+          severity: "high",
+          teamName: "team-a",
+          count: 1,
+          files: ["file-a"]
+        }
+      ],
+      byFile: [
+        {
+          filePath: "file-a",
+          issueCount: 1,
+          rules: [{ ruleId: "rule-1", count: 1 }],
+          teams: [{ teamName: "team-a", count: 1 }],
+          severities: [{ severity: "high", count: 1 }],
+          linkedStylesheetsWithIssues: []
+        }
+      ],
+      byTeam: [],
+      bySeverity: [],
+      byCheck: []
+    };
+
+    app.elements.ruleSearchInput.value = "missing";
+    app.elements.fileSearchInput.value = "missing";
+
+    app.renderAll();
+
+    expect(app.elements.ruleTable.innerHTML).toContain("No rules match the current filters.");
+    expect(app.elements.fileTable.innerHTML).toContain("No files match the current filters.");
+  });
+
+  test("renderFiles skips missing result count element", () => {
+    const app = require("../src/listener/ui/assets/app");
+    app.state.report = {
+      summary: { documents: 1, issues: 1, files: 1 },
+      byRule: [],
+      byFile: [
+        {
+          filePath: "file-a",
+          issueCount: 1,
+          rules: [{ ruleId: "rule-1", count: 1 }],
+          teams: [],
+          severities: [],
+          linkedStylesheetsWithIssues: []
+        }
+      ],
+      byTeam: [],
+      bySeverity: [],
+      byCheck: []
+    };
+    app.elements.fileResultCount = null;
+
+    expect(() => app.renderFiles()).not.toThrow();
+    expect(app.elements.fileTable.innerHTML).toContain("file-a");
+  });
+
+  test("renderBreakdowns falls back to empty arrays", () => {
+    const app = require("../src/listener/ui/assets/app");
+    app.state.report = {
+      summary: { documents: 0, issues: 0, files: 0 },
+      byRule: [],
+      byFile: [],
+      byTeam: [],
+      bySeverity: undefined,
+      byCheck: undefined
+    };
+
+    app.renderBreakdowns();
+
+    expect(app.elements.severityBreakdown.innerHTML).toContain("—");
+    expect(app.elements.checkBreakdown.innerHTML).toContain("—");
+  });
+
+  test("renderRules skips missing result count element", () => {
+    const app = require("../src/listener/ui/assets/app");
+    app.state.report = {
+      summary: { documents: 1, issues: 1, files: 1 },
+      byRule: [
+        {
+          ruleId: "rule-1",
+          description: "desc",
+          severity: "high",
+          teamName: "team-a",
+          count: 1,
+          files: ["file-a"]
+        }
+      ],
+      byFile: [],
+      byTeam: [],
+      bySeverity: [],
+      byCheck: []
+    };
+    app.elements.ruleResultCount = null;
+
+    expect(() => app.renderRules()).not.toThrow();
+    expect(app.elements.ruleTable.innerHTML).toContain("rule-1");
+  });
+
+  test("renderFiles treats empty severity as no filter", () => {
+    const app = require("../src/listener/ui/assets/app");
+    app.state.report = {
+      summary: { documents: 1, issues: 1, files: 1 },
+      byRule: [],
+      byFile: [
+        {
+          filePath: "file-a",
+          issueCount: 1,
+          rules: [],
+          teams: [],
+          severities: [],
+          linkedStylesheetsWithIssues: []
+        }
+      ],
+      byTeam: [],
+      bySeverity: [],
+      byCheck: []
+    };
+    app.state.filters.severity = "";
+
+    app.renderFiles();
+
+    expect(app.elements.fileTable.innerHTML).toContain("file-a");
   });
 });

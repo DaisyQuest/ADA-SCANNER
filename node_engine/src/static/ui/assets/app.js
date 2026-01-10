@@ -5,7 +5,8 @@ const state = {
   filters: {
     fileQuery: "",
     issueQuery: "",
-    ruleId: "all"
+    ruleId: "all",
+    severity: "all"
   }
 };
 
@@ -19,6 +20,7 @@ const elements = {
   fileSearchInput: document.getElementById("fileSearchInput"),
   issueSearchInput: document.getElementById("issueSearchInput"),
   ruleFilterSelect: document.getElementById("ruleFilterSelect"),
+  severityFilterSelect: document.getElementById("severityFilterSelect"),
   clearFiltersButton: document.getElementById("clearFilters"),
   fileResultCount: document.getElementById("fileResultCount"),
   issueResultCount: document.getElementById("issueResultCount"),
@@ -54,6 +56,38 @@ const buildDownloadName = (filePath, extension = "json") => {
   return safe ? `report-${safe}.${normalizedExtension}` : `report.${normalizedExtension}`;
 };
 
+const normalizeToken = (value) =>
+  String(value ?? "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "") || "unknown";
+
+const resolveSeverityVariant = (severity) => {
+  const normalized = normalizeToken(severity);
+  if (["critical", "high"].includes(normalized)) {
+    return "severity-high";
+  }
+  if (["medium", "moderate"].includes(normalized)) {
+    return "severity-medium";
+  }
+  if (["low", "minor"].includes(normalized)) {
+    return "severity-low";
+  }
+  return "severity-unknown";
+};
+
+const matchesSeverity = (severityValue, activeSeverity) => {
+  if (!activeSeverity || activeSeverity === "all") {
+    return true;
+  }
+  return normalizeToken(severityValue) === activeSeverity;
+};
+
+const renderBadge = (label, severity) => {
+  const variant = resolveSeverityVariant(severity);
+  return `<span class="badge badge--${variant}">${label}</span>`;
+};
+
 const formatCounts = (items, label) => {
   if (!items.length) {
     return "—";
@@ -78,7 +112,8 @@ const syncFiltersFromInputs = () => {
   state.filters = {
     fileQuery: elements.fileSearchInput?.value?.trim() ?? "",
     issueQuery: elements.issueSearchInput?.value?.trim() ?? "",
-    ruleId: elements.ruleFilterSelect?.value || "all"
+    ruleId: elements.ruleFilterSelect?.value || "all",
+    severity: elements.severityFilterSelect?.value || "all"
   };
 };
 
@@ -91,6 +126,9 @@ const resetFilters = () => {
   }
   if (elements.ruleFilterSelect) {
     elements.ruleFilterSelect.value = "all";
+  }
+  if (elements.severityFilterSelect) {
+    elements.severityFilterSelect.value = "all";
   }
   syncFiltersFromInputs();
   renderAll();
@@ -107,9 +145,13 @@ const getFilteredFiles = () => {
   if (!state.report || !Array.isArray(state.report.byFile)) {
     return [];
   }
-  const { fileQuery, ruleId } = state.filters;
+  const { fileQuery, ruleId, severity } = state.filters;
   return state.report.byFile.filter((file) =>
-    matchesQuery(file.filePath, fileQuery) && matchesRule(ruleId, file.rules)
+    matchesQuery(file.filePath, fileQuery)
+    && matchesRule(ruleId, file.rules)
+    && (severity === "all"
+      ? true
+      : (file.severities ?? []).some((entry) => matchesSeverity(entry.severity, severity)))
   );
 };
 
@@ -121,11 +163,12 @@ const buildIssueSearchTarget = (issue) => [
 ].filter(Boolean).join(" ");
 
 const getFilteredIssues = () => {
-  const { issueQuery, ruleId } = state.filters;
+  const { issueQuery, ruleId, severity } = state.filters;
   const activeRule = ruleId || "all";
   return state.issues.filter((issue) =>
     matchesQuery(buildIssueSearchTarget(issue), issueQuery)
     && (activeRule === "all" || issue.ruleId === activeRule)
+    && matchesSeverity(issue.severity ?? "unknown", severity)
   );
 };
 
@@ -169,7 +212,7 @@ const renderFiles = () => {
   if (!filteredFiles.length) {
     elements.fileTable.innerHTML = `
       <tr>
-        <td colspan="4" class="empty-state">No files match the current filters.</td>
+        <td colspan="6" class="empty-state">No files match the current filters.</td>
       </tr>
     `;
     return;
@@ -179,6 +222,7 @@ const renderFiles = () => {
     .map((file) => {
     const topRules = file.rules.slice(0, 3).map((rule) => `${rule.ruleId} (${rule.count})`).join(", ");
     const stylesheetIssues = formatCounts(file.linkedStylesheetsWithIssues ?? [], "filePath");
+    const severitySummary = formatCounts(file.severities ?? [], "severity");
     const downloadUrl = `/report/file?path=${encodeURIComponent(file.filePath)}`;
     const downloadHtmlUrl = `/report/file?path=${encodeURIComponent(file.filePath)}&format=html`;
     const downloadName = buildDownloadName(file.filePath);
@@ -189,6 +233,7 @@ const renderFiles = () => {
         <td>${file.issueCount}</td>
         <td>${topRules || "—"}</td>
         <td>${stylesheetIssues}</td>
+        <td>${severitySummary}</td>
         <td>
           <a class="pill-button" href="${downloadUrl}" download="${downloadName}">Save JSON</a>
           <a class="pill-button pill-button--secondary" href="${downloadHtmlUrl}" download="${downloadHtmlName}">Save HTML</a>
@@ -215,13 +260,14 @@ const renderIssues = () => {
 
   elements.issueFeed.innerHTML = issues
     .map((issue) => `
-      <div class="issue-item">
+      <div class="issue-item issue-item--${resolveSeverityVariant(issue.severity)}">
         <div class="issue-title">
           ${issue.message}
-          <span class="badge">${issue.ruleId}</span>
+          ${renderBadge(issue.ruleId, issue.severity)}
         </div>
         <div class="issue-meta">
           ${issue.filePath} • line ${issue.line ?? "?"} • ${issue.teamName || "Unassigned"}
+          ${renderBadge(issue.severity || "unknown", issue.severity)}
         </div>
       </div>
     `)
@@ -245,6 +291,7 @@ const bindEvents = () => {
   elements.fileSearchInput?.addEventListener("input", renderAll);
   elements.issueSearchInput?.addEventListener("input", renderAll);
   elements.ruleFilterSelect?.addEventListener("change", renderAll);
+  elements.severityFilterSelect?.addEventListener("change", renderAll);
   elements.clearFiltersButton?.addEventListener("click", resetFilters);
 };
 
@@ -296,6 +343,10 @@ if (typeof module !== "undefined") {
     renderIssues,
     renderAll,
     buildDownloadName,
+    normalizeToken,
+    resolveSeverityVariant,
+    matchesSeverity,
+    renderBadge,
     getRuleOptions,
     syncFiltersFromInputs,
     resetFilters,

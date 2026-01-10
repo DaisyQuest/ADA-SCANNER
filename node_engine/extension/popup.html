@@ -8,31 +8,42 @@
   </head>
   <body>
     <div class="container">
-      <h1>ADA Scanner</h1>
-      <div class="control">
+      <header class="app-header">
+        <div class="app-title">
+          <h1>ADA Scanner</h1>
+          <p class="subtitle">Capture runtime accessibility insights in seconds.</p>
+        </div>
+        <span class="status-pill" id="status-text" role="status"></span>
+      </header>
+
+      <section class="card">
+        <h2>Capture controls</h2>
         <label class="toggle">
           <input type="checkbox" id="enabled-toggle" />
-          <span>Send to listener</span>
+          <span>Send captures to the listener</span>
         </label>
-      </div>
-      <div class="control">
         <div class="spider-row">
           <label class="toggle">
             <input type="checkbox" id="spider-toggle" />
             <span>Spider visible links</span>
           </label>
           <label class="spider-delay">
-            <span>Req delay ms</span>
+            <span>Request delay (ms)</span>
             <input type="number" id="spider-delay" min="0" step="100" />
           </label>
         </div>
-      </div>
-      <div class="control">
+      </section>
+
+      <section class="card">
+        <h2>Listener configuration</h2>
         <label for="server-url">Listener URL</label>
         <input id="server-url" type="text" placeholder="http://127.0.0.1:45892/capture" />
         <div id="server-status" class="hint" role="status"></div>
-      </div>
-      <div id="status-text" class="status" role="status"></div>
+      </section>
+
+      <footer class="footer">
+        <span class="meta">Need help? Keep the listener running while you browse.</span>
+      </footer>
     </div>
     <script src="popup.js"></script>
   </body>

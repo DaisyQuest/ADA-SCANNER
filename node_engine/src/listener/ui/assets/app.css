@@ -12,6 +12,7 @@
   --warning: #f59e0b;
   --danger: #ef4444;
   --info: #38bdf8;
+  --focus: #1d4ed8;
 }
 
 * {
@@ -23,6 +24,11 @@ body {
   font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
   background: var(--bg);
   color: var(--text);
+}
+
+* :focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
 }
 
 .app-header {
@@ -146,6 +152,10 @@ body {
 .panel-header {
   padding: 20px 24px 12px;
   border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
 }
 
 .panel-header h2 {
@@ -161,6 +171,22 @@ body {
 
 .panel-body {
   padding: 16px 24px 24px;
+}
+
+.panel-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.meta-chip {
+  background: #eef2ff;
+  color: #1e3a8a;
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid rgba(59, 130, 246, 0.2);
 }
 
 .data-table {
@@ -181,6 +207,7 @@ body {
 .data-table td {
   padding: 10px 0;
   border-top: 1px solid var(--border);
+  vertical-align: top;
 }
 
 .pill-button {
@@ -194,6 +221,7 @@ body {
   font-size: 12px;
   font-weight: 600;
   text-decoration: none;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
 }
 
 .pill-button--secondary {
@@ -203,6 +231,8 @@ body {
 
 .pill-button:hover {
   background: #e7edff;
+  box-shadow: 0 8px 16px rgba(37, 99, 235, 0.15);
+  transform: translateY(-1px);
 }
 
 .pill-button--secondary:hover {
@@ -212,6 +242,57 @@ body {
 .status-actions {
   display: flex;
   gap: 8px;
+}
+
+.filter-panel {
+  background: #f8faff;
+  border: 1px solid #dbeafe;
+}
+
+.filter-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.field input,
+.field select {
+  padding: 10px 12px;
+  border: 1px solid #cbd5f5;
+  border-radius: 10px;
+  font-size: 14px;
+  background: #fff;
+  color: var(--text);
+}
+
+.field input::placeholder {
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.ghost-button {
+  border: 1px solid #bfdbfe;
+  background: #fff;
+  color: #1d4ed8;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease, border 0.2s ease;
+}
+
+.ghost-button:hover {
+  background: #e0e7ff;
+  border-color: #a5b4fc;
 }
 
 .issue-feed {
@@ -226,6 +307,7 @@ body {
   border-radius: 10px;
   background: #fbfcff;
   border-left: 4px solid var(--border);
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06);
 }
 
 .issue-item--severity-critical,
@@ -332,6 +414,13 @@ body {
 }
 
 .muted {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.empty-state {
+  padding: 16px 0;
+  text-align: center;
   color: var(--muted);
   font-size: 13px;
 }

@@ -2364,7 +2364,7 @@ describe("Extension popup", () => {
 
     expect(document.getElementById("server-url").value).toBe(DEFAULT_SERVER_URL);
     expect(document.getElementById("spider-delay").value).toBe("0");
-    expect(document.getElementById("status-text").textContent).toContain("Spider mode running");
+    expect(document.getElementById("status-text").textContent).toContain("Spider on");
     expect(document.getElementById("server-status").classList.contains("error")).toBe(false);
   });
 
@@ -2375,7 +2375,7 @@ describe("Extension popup", () => {
 
     popup.applyState({ enabled: false, spiderEnabled: false, serverUrl: null });
 
-    expect(document.getElementById("status-text").textContent).toContain("Forwarding disabled");
+    expect(document.getElementById("status-text").textContent).toContain("Forwarding off");
     expect(document.getElementById("server-url").value).toBe(DEFAULT_SERVER_URL);
   });
 

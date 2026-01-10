@@ -1,7 +1,12 @@
 const state = {
   documents: [],
   issues: [],
-  report: null
+  report: null,
+  filters: {
+    ruleQuery: "",
+    fileQuery: "",
+    severity: "all"
+  }
 };
 
 const elements = {
@@ -13,6 +18,13 @@ const elements = {
   teamCount: document.getElementById("teamCount"),
   fileCount: document.getElementById("fileCount"),
   checkCount: document.getElementById("checkCount"),
+  ruleSearchInput: document.getElementById("ruleSearchInput"),
+  fileSearchInput: document.getElementById("fileSearchInput"),
+  severityFilterSelect: document.getElementById("severityFilterSelect"),
+  clearFiltersButton: document.getElementById("clearFilters"),
+  ruleResultCount: document.getElementById("ruleResultCount"),
+  fileResultCount: document.getElementById("fileResultCount"),
+  issueResultCount: document.getElementById("issueResultCount"),
   ruleTable: document.getElementById("ruleTable"),
   fileTable: document.getElementById("fileTable"),
   issueFeed: document.getElementById("issueFeed"),
@@ -21,6 +33,15 @@ const elements = {
 };
 
 const formatTime = () => new Date().toLocaleTimeString();
+
+const normalizeText = (value) => String(value ?? "").toLowerCase();
+
+const matchesQuery = (value, query) => {
+  if (!query) {
+    return true;
+  }
+  return normalizeText(value).includes(normalizeText(query));
+};
 
 const updateTimestamp = () => {
   elements.lastUpdated.textContent = formatTime();
@@ -39,6 +60,28 @@ const renderSummary = () => {
   elements.teamCount.textContent = report ? report.summary.teams ?? report.byTeam.length : 0;
   elements.fileCount.textContent = report ? report.summary.files : 0;
   elements.checkCount.textContent = report ? report.summary.checks ?? report.byCheck?.length ?? 0 : 0;
+};
+
+const syncFiltersFromInputs = () => {
+  state.filters = {
+    ruleQuery: elements.ruleSearchInput?.value?.trim() ?? "",
+    fileQuery: elements.fileSearchInput?.value?.trim() ?? "",
+    severity: elements.severityFilterSelect?.value || "all"
+  };
+};
+
+const resetFilters = () => {
+  if (elements.ruleSearchInput) {
+    elements.ruleSearchInput.value = "";
+  }
+  if (elements.fileSearchInput) {
+    elements.fileSearchInput.value = "";
+  }
+  if (elements.severityFilterSelect) {
+    elements.severityFilterSelect.value = "all";
+  }
+  syncFiltersFromInputs();
+  renderAll();
 };
 
 const formatCounts = (items, label) => {
@@ -67,6 +110,21 @@ const resolveSeverityVariant = (severity) => {
   }
   return "severity-unknown";
 };
+
+const matchesSeverity = (severityValue, activeSeverity) => {
+  if (!activeSeverity || activeSeverity === "all") {
+    return true;
+  }
+  const normalized = normalizeToken(severityValue);
+  return normalized === activeSeverity;
+};
+
+const buildRuleSearchTarget = (rule) => [
+  rule.ruleId,
+  rule.description,
+  rule.teamName,
+  rule.severity
+].filter(Boolean).join(" ");
 
 const renderBadge = ({ label, count, variant = "rule" }) => {
   const safeLabel = label?.toString().trim() || "Unknown";
@@ -116,7 +174,27 @@ const renderRules = () => {
     return;
   }
 
-  elements.ruleTable.innerHTML = state.report.byRule
+  const { ruleQuery, severity } = state.filters;
+  const filteredRules = state.report.byRule.filter(
+    (rule) =>
+      matchesQuery(buildRuleSearchTarget(rule), ruleQuery)
+      && matchesSeverity(rule.severity || "unknown", severity)
+  );
+
+  if (elements.ruleResultCount) {
+    elements.ruleResultCount.textContent = `${filteredRules.length} of ${state.report.byRule.length}`;
+  }
+
+  if (!filteredRules.length) {
+    elements.ruleTable.innerHTML = `
+      <tr>
+        <td colspan="5" class="empty-state">No rules match the current filters.</td>
+      </tr>
+    `;
+    return;
+  }
+
+  elements.ruleTable.innerHTML = filteredRules
     .map((rule) => {
       const files = rule.files.length ? rule.files.join(", ") : "—";
       const severityVariant = resolveSeverityVariant(rule.severity || "");
@@ -145,7 +223,29 @@ const renderFiles = () => {
     return;
   }
 
-  elements.fileTable.innerHTML = state.report.byFile
+  const { fileQuery, severity } = state.filters;
+  const filteredFiles = state.report.byFile.filter((file) => {
+    const matchesFile = matchesQuery(file.filePath, fileQuery);
+    const matchesFileSeverity = !severity || severity === "all"
+      ? true
+      : (file.severities ?? []).some((entry) => matchesSeverity(entry.severity, severity));
+    return matchesFile && matchesFileSeverity;
+  });
+
+  if (elements.fileResultCount) {
+    elements.fileResultCount.textContent = `${filteredFiles.length} of ${state.report.byFile.length}`;
+  }
+
+  if (!filteredFiles.length) {
+    elements.fileTable.innerHTML = `
+      <tr>
+        <td colspan="7" class="empty-state">No files match the current filters.</td>
+      </tr>
+    `;
+    return;
+  }
+
+  elements.fileTable.innerHTML = filteredFiles
     .map((file) => {
       const topRules = file.rules.length
         ? renderBadgeGroup(file.rules.slice(0, 3), "ruleId", { variant: "rule" })
@@ -178,7 +278,29 @@ const renderFiles = () => {
 };
 
 const renderIssues = () => {
-  const issues = state.issues.slice(-8).reverse();
+  const { ruleQuery, fileQuery, severity } = state.filters;
+  const filteredIssues = state.issues.filter((issue) => {
+    const matchesRuleQuery = matchesQuery(
+      [issue.ruleId, issue.message].filter(Boolean).join(" "),
+      ruleQuery
+    );
+    const matchesFileQuery = matchesQuery(issue.filePath, fileQuery);
+    const matchesIssueSeverity = matchesSeverity(issue.severity || "unknown", severity);
+    return matchesRuleQuery && matchesFileQuery && matchesIssueSeverity;
+  });
+
+  if (elements.issueResultCount) {
+    elements.issueResultCount.textContent = `${filteredIssues.length} of ${state.issues.length}`;
+  }
+
+  const issues = filteredIssues.slice(-8).reverse();
+  if (!issues.length) {
+    const message = state.issues.length
+      ? "No issues match the current filters."
+      : "No issues detected yet.";
+    elements.issueFeed.innerHTML = `<p class="muted empty-state">${message}</p>`;
+    return;
+  }
   elements.issueFeed.innerHTML = issues
     .map((issue) => {
       const severityVariant = resolveSeverityVariant(issue.severity || "");
@@ -224,6 +346,7 @@ const renderBreakdowns = () => {
 };
 
 const renderAll = () => {
+  syncFiltersFromInputs();
   renderSummary();
   renderRules();
   renderFiles();
@@ -231,6 +354,19 @@ const renderAll = () => {
   renderBreakdowns();
   updateTimestamp();
 };
+
+const bindEvents = () => {
+  if (bindEvents.bound) {
+    return;
+  }
+  bindEvents.bound = true;
+  elements.ruleSearchInput?.addEventListener("input", renderAll);
+  elements.fileSearchInput?.addEventListener("input", renderAll);
+  elements.severityFilterSelect?.addEventListener("change", renderAll);
+  elements.clearFiltersButton?.addEventListener("click", resetFilters);
+};
+
+bindEvents.bound = false;
 
 const loadInitialData = async () => {
   const [documents, issues, report] = await Promise.all([
@@ -272,6 +408,7 @@ const connectStream = () => {
 };
 
 const bootstrap = () => {
+  bindEvents();
   loadInitialData()
     .then(() => {
       connectStream();
@@ -303,11 +440,18 @@ if (typeof module !== "undefined") {
     renderBreakdowns,
     renderAll,
     formatCounts,
+    normalizeText,
+    matchesQuery,
     normalizeToken,
     resolveSeverityVariant,
+    matchesSeverity,
+    buildRuleSearchTarget,
     renderBadge,
     renderBadgeGroup,
     buildDownloadName,
+    syncFiltersFromInputs,
+    resetFilters,
+    bindEvents,
     loadInitialData,
     connectStream,
     bootstrap
