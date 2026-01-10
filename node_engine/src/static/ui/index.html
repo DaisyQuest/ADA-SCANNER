@@ -15,180 +15,206 @@
       <div class="status" id="connectionStatus">Loading…</div>
     </header>
 
-    <section class="summary">
-      <div class="summary-card">
-        <div class="summary-label">Files scanned</div>
-        <div class="summary-value" id="fileCount">0</div>
-      </div>
-      <div class="summary-card">
-        <div class="summary-label">Documents captured</div>
-        <div class="summary-value" id="documentCount">0</div>
-      </div>
-      <div class="summary-card">
-        <div class="summary-label">Issues found</div>
-        <div class="summary-value" id="issueCount">0</div>
-      </div>
-      <div class="summary-card">
-        <div class="summary-label">Rules triggered</div>
-        <div class="summary-value" id="ruleCount">0</div>
-      </div>
-      <div class="summary-card">
-        <div class="summary-label">Coverage</div>
-        <div class="summary-value" id="coveragePercent">0%</div>
-      </div>
-      <div class="summary-card">
-        <div class="summary-label">Missing rules</div>
-        <div class="summary-value" id="missingRuleCount">0</div>
-      </div>
-      <div class="summary-card">
-        <div class="summary-label">Last updated</div>
-        <div class="summary-value" id="lastUpdated">—</div>
-      </div>
-    </section>
+    <main class="tab-shell" data-tab-shell data-active-tab="home">
+      <nav class="tab-bar" role="tablist" aria-label="Static analysis views">
+        <button class="tab-button" id="tab-home" role="tab" aria-selected="true" data-tab-target="home" type="button">
+          Home
+        </button>
+        <button class="tab-button" id="tab-files" role="tab" aria-selected="false" data-tab-target="files" type="button">
+          Files
+        </button>
+        <button class="tab-button" id="tab-issues" role="tab" aria-selected="false" data-tab-target="issues" type="button">
+          Recent issues
+        </button>
+        <button
+          class="tab-button"
+          id="tab-coverage"
+          role="tab"
+          aria-selected="false"
+          data-tab-target="coverage"
+          type="button"
+        >
+          Coverage gaps
+        </button>
+      </nav>
 
-    <section class="panel filter-panel">
-      <div class="panel-header">
-        <div>
-          <h2>Filter insights</h2>
-          <p class="muted">Refine file lists and recent issues by path, domain, rule, and severity.</p>
-        </div>
-        <button class="ghost-button" id="clearFilters" type="button">Clear filters</button>
-      </div>
-      <div class="filter-grid">
-        <label class="field">
-          <span>File search</span>
-          <input id="fileSearchInput" type="search" placeholder="Filter files by path" spellcheck="false" />
-        </label>
-        <label class="field">
-          <span>Domain filter</span>
-          <input
-            id="domainSearchInput"
-            type="search"
-            placeholder="Filter by domain (e.g., *.example.com)"
-            list="domainSuggestions"
-            spellcheck="false"
-          />
-          <datalist id="domainSuggestions">
-            <option value="localhost"></option>
-            <option value="*.example.com"></option>
-            <option value="*.internal"></option>
-          </datalist>
-        </label>
-        <label class="field">
-          <span>Issue search</span>
-          <input
-            id="issueSearchInput"
-            type="search"
-            placeholder="Search issues by message or file"
-            spellcheck="false"
-          />
-        </label>
-        <label class="field">
-          <span>Rule focus</span>
-          <select id="ruleFilterSelect">
-            <option value="all">All rules</option>
-          </select>
-        </label>
-        <label class="field">
-          <span>Severity focus</span>
-          <select id="severityFilterSelect">
-            <option value="all">All severities</option>
-            <option value="critical">Critical</option>
-            <option value="high">High</option>
-            <option value="medium">Medium</option>
-            <option value="low">Low</option>
-            <option value="unknown">Unknown</option>
-          </select>
-        </label>
-      </div>
-      <div class="filter-helper">
-        <div>
-          <div class="helper-title">Quick tips</div>
-          <p class="muted">
-            Combine a rule filter with severity to isolate high-impact findings, or clear filters to see all results.
-          </p>
-        </div>
-        <div class="helper-chips">
-          <span class="chip">Rule: missing-label</span>
-          <span class="chip">Severity: High</span>
-          <span class="chip">*.example.com</span>
-        </div>
-      </div>
-    </section>
+      <div class="tab-panels">
+        <section class="summary" id="panel-summary" data-tab-panel="shared">
+          <div class="summary-card">
+            <div class="summary-label">Files scanned</div>
+            <div class="summary-value" id="fileCount">0</div>
+          </div>
+          <div class="summary-card">
+            <div class="summary-label">Documents captured</div>
+            <div class="summary-value" id="documentCount">0</div>
+          </div>
+          <div class="summary-card">
+            <div class="summary-label">Issues found</div>
+            <div class="summary-value" id="issueCount">0</div>
+          </div>
+          <div class="summary-card">
+            <div class="summary-label">Rules triggered</div>
+            <div class="summary-value" id="ruleCount">0</div>
+          </div>
+          <div class="summary-card">
+            <div class="summary-label">Coverage</div>
+            <div class="summary-value" id="coveragePercent">0%</div>
+          </div>
+          <div class="summary-card">
+            <div class="summary-label">Missing rules</div>
+            <div class="summary-value" id="missingRuleCount">0</div>
+          </div>
+          <div class="summary-card">
+            <div class="summary-label">Last updated</div>
+            <div class="summary-value" id="lastUpdated">—</div>
+          </div>
+        </section>
 
-    <section class="panel">
-      <div class="panel-header">
-        <div>
-          <h2>Files</h2>
-          <p class="muted">Download JSON or HTML reports per file.</p>
-        </div>
-        <div class="panel-meta">
-          <span class="meta-chip">Showing <strong id="fileResultCount">0</strong></span>
-        </div>
-      </div>
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>File</th>
-            <th>Issues</th>
-            <th>Top rules</th>
-            <th>Stylesheet issues</th>
-            <th>Severity mix</th>
-            <th>Downloads</th>
-          </tr>
-        </thead>
-        <tbody id="fileTable"></tbody>
-      </table>
-    </section>
+        <section class="panel filter-panel" id="panel-filters" data-tab-panel="shared">
+          <div class="panel-header">
+            <div>
+              <h2>Filter insights</h2>
+              <p class="muted">Refine file lists and recent issues by path, domain, rule, and severity.</p>
+            </div>
+            <button class="ghost-button" id="clearFilters" type="button">Clear filters</button>
+          </div>
+          <div class="filter-grid">
+            <label class="field">
+              <span>File search</span>
+              <input id="fileSearchInput" type="search" placeholder="Filter files by path" spellcheck="false" />
+            </label>
+            <label class="field">
+              <span>Domain filter</span>
+              <input
+                id="domainSearchInput"
+                type="search"
+                placeholder="Filter by domain (e.g., *.example.com)"
+                list="domainSuggestions"
+                spellcheck="false"
+              />
+              <datalist id="domainSuggestions">
+                <option value="localhost"></option>
+                <option value="*.example.com"></option>
+                <option value="*.internal"></option>
+              </datalist>
+            </label>
+            <label class="field">
+              <span>Issue search</span>
+              <input
+                id="issueSearchInput"
+                type="search"
+                placeholder="Search issues by message or file"
+                spellcheck="false"
+              />
+            </label>
+            <label class="field">
+              <span>Rule focus</span>
+              <select id="ruleFilterSelect">
+                <option value="all">All rules</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>Severity focus</span>
+              <select id="severityFilterSelect">
+                <option value="all">All severities</option>
+                <option value="critical">Critical</option>
+                <option value="high">High</option>
+                <option value="medium">Medium</option>
+                <option value="low">Low</option>
+                <option value="unknown">Unknown</option>
+              </select>
+            </label>
+          </div>
+          <div class="filter-helper">
+            <div>
+              <div class="helper-title">Quick tips</div>
+              <p class="muted">
+                Combine a rule filter with severity to isolate high-impact findings, or clear filters to see all results.
+              </p>
+            </div>
+            <div class="helper-chips">
+              <span class="chip">Rule: missing-label</span>
+              <span class="chip">Severity: High</span>
+              <span class="chip">*.example.com</span>
+            </div>
+          </div>
+        </section>
 
-    <section class="panel">
-      <div class="panel-header">
-        <div>
-          <h2>Recent issues</h2>
-          <p class="muted">Latest eight issues that match your filters.</p>
-        </div>
-        <div class="panel-meta">
-          <span class="meta-chip">Showing <strong id="issueResultCount">0</strong></span>
-        </div>
-      </div>
-      <div id="issueFeed" class="issue-feed"></div>
-    </section>
+        <section class="panel" id="panel-files" data-tab-panel="files">
+          <div class="panel-header">
+            <div>
+              <h2>Files</h2>
+              <p class="muted">Download JSON or HTML reports per file.</p>
+            </div>
+            <div class="panel-meta">
+              <span class="meta-chip">Showing <strong id="fileResultCount">0</strong></span>
+            </div>
+          </div>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>File</th>
+                <th>Issues</th>
+                <th>Top rules</th>
+                <th>Stylesheet issues</th>
+                <th>Severity mix</th>
+                <th>Downloads</th>
+              </tr>
+            </thead>
+            <tbody id="fileTable"></tbody>
+          </table>
+        </section>
 
-    <section class="panel">
-      <div class="panel-header">
-        <div>
-          <h2>Coverage gaps</h2>
-          <p class="muted">Rules configured in the ruleset that did not trigger in this scan.</p>
-        </div>
-        <div class="panel-meta">
-          <span class="meta-chip">Missing <strong id="missingRuleResultCount">0</strong></span>
-        </div>
-      </div>
-      <div id="missingRuleList" class="issue-feed"></div>
-    </section>
+        <section class="panel" id="panel-issues" data-tab-panel="issues">
+          <div class="panel-header">
+            <div>
+              <h2>Recent issues</h2>
+              <p class="muted">Latest eight issues that match your filters.</p>
+            </div>
+            <div class="panel-meta">
+              <span class="meta-chip">Showing <strong id="issueResultCount">0</strong></span>
+            </div>
+          </div>
+          <div id="issueFeed" class="issue-feed"></div>
+        </section>
 
-    <section class="panel">
-      <div class="panel-header">
-        <div>
-          <h2>How to use this dashboard</h2>
-          <p class="muted">Quick guidance for reviewing static analysis output.</p>
-        </div>
+        <section class="panel" id="panel-coverage" data-tab-panel="coverage">
+          <div class="panel-header">
+            <div>
+              <h2>Coverage gaps</h2>
+              <p class="muted">Rules configured in the ruleset that did not trigger in this scan.</p>
+            </div>
+            <div class="panel-meta">
+              <span class="meta-chip">Missing <strong id="missingRuleResultCount">0</strong></span>
+            </div>
+          </div>
+          <div id="missingRuleList" class="issue-feed"></div>
+        </section>
+
+        <section class="panel" id="panel-guide" data-tab-panel="home">
+          <div class="panel-header">
+            <div>
+              <h2>How to use this dashboard</h2>
+              <p class="muted">Quick guidance for reviewing static analysis output.</p>
+            </div>
+          </div>
+          <div class="guide-grid">
+            <div class="guide-card">
+              <h3>Scan overview</h3>
+              <p>Review counts at the top to confirm files, issues, and rules after a scan completes.</p>
+            </div>
+            <div class="guide-card">
+              <h3>Filters</h3>
+              <p>Use the search boxes or rule filter to narrow the file list and recent issues list instantly.</p>
+            </div>
+            <div class="guide-card">
+              <h3>Downloads</h3>
+              <p>Export per-file JSON or HTML reports for deep dives or to share with your team.</p>
+            </div>
+          </div>
+        </section>
       </div>
-      <div class="guide-grid">
-        <div class="guide-card">
-          <h3>Scan overview</h3>
-          <p>Review counts at the top to confirm files, issues, and rules after a scan completes.</p>
-        </div>
-        <div class="guide-card">
-          <h3>Filters</h3>
-          <p>Use the search boxes or rule filter to narrow the file list and recent issues list instantly.</p>
-        </div>
-        <div class="guide-card">
-          <h3>Downloads</h3>
-          <p>Export per-file JSON or HTML reports for deep dives or to share with your team.</p>
-        </div>
-      </div>
-    </section>
+    </main>
 
     <script src="/assets/app.js"></script>
   </body>

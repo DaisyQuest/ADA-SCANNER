@@ -31,7 +31,10 @@ const elements = {
   fileTable: document.getElementById("fileTable"),
   issueFeed: document.getElementById("issueFeed"),
   severityBreakdown: document.getElementById("severityBreakdown"),
-  checkBreakdown: document.getElementById("checkBreakdown")
+  checkBreakdown: document.getElementById("checkBreakdown"),
+  tabShell: document.querySelector("[data-tab-shell]"),
+  tabButtons: Array.from(document.querySelectorAll("[data-tab-target]")),
+  tabPanels: Array.from(document.querySelectorAll("[data-tab-panel]"))
 };
 
 const formatTime = () => new Date().toLocaleTimeString();
@@ -81,6 +84,31 @@ const updateTimestamp = () => {
 const setConnectionStatus = (isConnected) => {
   elements.connectionStatus.textContent = isConnected ? "Live connection" : "Connecting…";
   elements.connectionStatus.classList.toggle("connected", isConnected);
+};
+
+const setActiveTab = (tabId) => {
+  if (!elements.tabShell) {
+    return;
+  }
+  const availableTabs = elements.tabButtons ?? [];
+  const fallbackTab = elements.tabShell.dataset.activeTab
+    || availableTabs[0]?.dataset.tabTarget
+    || "home";
+  const nextTab = tabId || fallbackTab;
+  elements.tabShell.dataset.activeTab = nextTab;
+
+  availableTabs.forEach((button) => {
+    const isActive = button.dataset.tabTarget === nextTab;
+    button.setAttribute("aria-selected", isActive ? "true" : "false");
+    button.tabIndex = isActive ? 0 : -1;
+  });
+
+  (elements.tabPanels ?? []).forEach((panel) => {
+    const panelTab = panel.dataset.tabPanel;
+    const isShared = panelTab === "shared";
+    const shouldShow = isShared || nextTab === "home" || panelTab === nextTab;
+    panel.hidden = !shouldShow;
+  });
 };
 
 const renderSummary = () => {
@@ -405,6 +433,10 @@ const bindEvents = () => {
   elements.domainSearchInput?.addEventListener("input", renderAll);
   elements.severityFilterSelect?.addEventListener("change", renderAll);
   elements.clearFiltersButton?.addEventListener("click", resetFilters);
+  (elements.tabButtons ?? []).forEach((button) => {
+    button.addEventListener("click", () => setActiveTab(button.dataset.tabTarget));
+  });
+  setActiveTab(elements.tabShell?.dataset.activeTab);
 };
 
 bindEvents.bound = false;
@@ -496,6 +528,7 @@ if (typeof module !== "undefined") {
     syncFiltersFromInputs,
     resetFilters,
     bindEvents,
+    setActiveTab,
     loadInitialData,
     connectStream,
     bootstrap
