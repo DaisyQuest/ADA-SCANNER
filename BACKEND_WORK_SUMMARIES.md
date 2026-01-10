@@ -64,3 +64,4 @@
 2026-01-10 - Define node_engine GoldMaster testing inventories and ADA coverage requirements. (SPEC-013, SPEC-008)
 
 2026-01-10 - Add GoldMaster CLI, fixtures, and inventories with test coverage and npm integration. (SPEC-013, SPEC-007, SPEC-014)
+2026-01-10 - Add Firefox extension bundle reusing Chrome assets with manifest parity tests. (SPEC-013, SPEC-019)

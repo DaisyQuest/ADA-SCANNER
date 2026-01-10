@@ -1,0 +1,1 @@
+../extension/highlighter.js
