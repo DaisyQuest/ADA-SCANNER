@@ -7,7 +7,9 @@
   "scripts": {
     "start": "cross-env RULES_ROOT=../rules PORT=45892 node ./src/cli/startListener.js",
     "static_analysis": "node ./src/static/cli.js",
-    "test": "jest --coverage"
+    "test": "jest --coverage && npm run gold_master -- --all --outputDir ./goldmaster_output",
+    "gold_master": "node ./src/goldmaster/cli.js",
+    "gm": "npm run gold_master --"
   },
   "bin": {
     "static_analysis": "src/static/cli.js"

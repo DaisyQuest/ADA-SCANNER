@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>GoldMaster Case</title>
+<style>
+.hidden{display:none;} .nowrap{white-space:nowrap;} .fixed{width:1200px;}
+</style>
+</head>
+<body>
+<!-- Scenario: Iframe + duplicate IDs across host/iframe (DuplicateIdCheck) -->
+<div id="content">
+<main id="main">
+<h1>GoldMaster Case</h1>
+<iframe srcdoc="<p>Inner frame</p>"></iframe>
+<div id="dup"></div><span id="dup"></span>
+</main>
+</div>
+</body>
+</html>

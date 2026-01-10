@@ -1,0 +1,7 @@
+<UserControl xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+<!-- Scenario: Keyboard trap in modal dialog (InteractionLimitsCheck) -->
+<Grid>
+  <TextBox x:Name="InputBox" />
+</Grid>
+</UserControl>
