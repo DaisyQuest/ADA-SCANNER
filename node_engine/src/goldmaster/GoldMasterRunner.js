@@ -33,6 +33,9 @@ const buildGoldMasterReport = ({ report, extension, rootDir, generatedAt }) => (
   report
 });
 
+const GoldMaster_Report = ({ report, extension, rootDir, generatedAt }) =>
+  buildGoldMasterReport({ report, extension, rootDir, generatedAt });
+
 const runGoldMaster = async ({
   rootDir,
   rulesRoot,
@@ -82,7 +85,7 @@ const runGoldMaster = async ({
       rules: scanResult.rules
     });
 
-    const reportPayload = buildGoldMasterReport({
+    const reportPayload = GoldMaster_Report({
       report,
       extension,
       rootDir: subDir,
@@ -113,5 +116,6 @@ module.exports = {
   runGoldMaster,
   buildExtensionMap,
   ensureDirectory,
-  buildGoldMasterReport
+  buildGoldMasterReport,
+  GoldMaster_Report
 };
