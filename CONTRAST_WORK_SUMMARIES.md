@@ -25,3 +25,4 @@
 2026-01-10 - Hardened GoldMaster runner validation and added unsupported-extension/output directory edge case tests. (SPEC-013)
 
 2026-01-10 - Added WCAG 2.1 interaction-limits GoldMaster cases and targeted InteractionLimitsCheck coverage. (SPEC-008, SPEC-013)
+2026-01-10 - Validate contrast selector usage in evidence and expand tests (SPEC-008)

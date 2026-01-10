@@ -99,13 +99,16 @@ const {
   extractCssVarName,
   resolveCssVarFromStyle,
   resolveColorWithContext,
+  formatEvidenceSample,
   extractXamlFallback,
   normalizeColorValue,
   parseFontSize,
   parseCssFontSize,
   parseFontWeight,
   getRequiredContrastRatio,
+  formatColor,
   getCandidates,
+  getSelectorUsage,
   blendColors,
   shouldDefaultBackground
 } = require("../src/checks/InsufficientContrastCheck");
@@ -1385,6 +1388,7 @@ describe("InsufficientContrastCheck", () => {
     expect(extractCssVarFallback("var(--primary, #fff)")).toBe("#fff");
     expect(extractCssVarFallback("var(--primary)")).toBeNull();
     expect(extractCssVarFallback("color")).toBeNull();
+    expect([...extractCssVariableDefinitions("")]).toEqual([]);
     expect([...extractCssVariableDefinitions("--base-3:#fff; --base-4: rgb(1, 2, 3);")].sort())
       .toEqual([
         ["--base-3", "#fff"],
@@ -1422,6 +1426,7 @@ describe("InsufficientContrastCheck", () => {
     expect(parseColor("rgb(255 255 255 / 50%)")).toEqual({ r: 1, g: 1, b: 1, a: 0.5 });
     expect(blendColors({ r: 1, g: 1, b: 1, a: 0.5 }, { r: 0, g: 0, b: 0, a: 1 }))
       .toEqual({ r: 0.5, g: 0.5, b: 0.5, a: 1 });
+    expect(formatColor({ r: 0, g: 0, b: 0, a: 0.4 })).toBe("rgba(0, 0, 0, 0.4)");
 
     const htmlContext = createContext('<div style="color:#777; background-color:#888"></div>', "html");
     const htmlIssues = InsufficientContrastCheck.run(htmlContext, rule);
@@ -1479,6 +1484,41 @@ describe("InsufficientContrastCheck", () => {
 
     const htmlNoForeground = createContext('<div style="background-color:#000"></div>', "html");
     expect(getCandidates(htmlNoForeground)).toHaveLength(0);
+  });
+
+  test("validates selector usage and records evidence details", () => {
+    const usedContent = '<style>.used { color: #777; background-color: #888; }</style><p class="used">Hello</p>';
+    const usedDocument = new JSDOM(usedContent).window.document;
+    const usedContext = { ...createContext(usedContent, "html"), document: usedDocument };
+    const usedIssues = InsufficientContrastCheck.run(usedContext, rule);
+    expect(usedIssues).toHaveLength(1);
+    expect(usedIssues[0].evidence).toContain("Selector: .used");
+    expect(usedIssues[0].evidence).toContain("Matched elements: 1");
+    expect(usedIssues[0].evidence).toContain('Sample: <p class="used">Hello</p>');
+
+    const unusedContent = '<style>.unused { color: #777; background-color: #888; }</style><p>Hello</p>';
+    const unusedDocument = new JSDOM(unusedContent).window.document;
+    const unusedContext = { ...createContext(unusedContent, "html"), document: unusedDocument };
+    expect(InsufficientContrastCheck.run(unusedContext, rule)).toHaveLength(0);
+  });
+
+  test("captures selector evaluation errors in evidence", () => {
+    const content = '<style>.bad[ { color: #777; background-color: #888; }</style><p class="bad">Hello</p>';
+    const document = new JSDOM(content).window.document;
+    const context = { ...createContext(content, "html"), document };
+    const issues = InsufficientContrastCheck.run(context, rule);
+    expect(issues).toHaveLength(1);
+    expect(issues[0].evidence).toContain("Selector evaluation:");
+  });
+
+  test("covers selector evidence helpers", () => {
+    expect(formatEvidenceSample("")).toBeNull();
+    const longSample = "a".repeat(250);
+    expect(formatEvidenceSample(longSample)).toBe(`${"a".repeat(200)}…`);
+    expect(getSelectorUsage("   ", new JSDOM("<p></p>").window.document)).toBeNull();
+
+    const emptyStyle = createContext("<style></style>", "html");
+    expect(getCandidates(emptyStyle)).toHaveLength(0);
   });
 
   test("flags the 100-issue contrast sample file", () => {
