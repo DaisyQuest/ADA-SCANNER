@@ -28,6 +28,8 @@ const resolveGoldMasterOptions = ({ argv = [], env = process.env, cwd = process.
     outputDir: env.GOLDMASTER_OUTPUT_DIR ?? path.resolve(cwd, "goldmaster_output"),
     extensions: [],
     all: false,
+    comparePath: null,
+    savePath: null,
     errors: []
   };
 
@@ -60,6 +62,28 @@ const resolveGoldMasterOptions = ({ argv = [], env = process.env, cwd = process.
       options.outputDir = value ? value.trim() : "";
       if (!options.outputDir) {
         options.errors.push("--outputDir requires a value.");
+      }
+    } else if (arg === "--compare") {
+      const value = argv[index + 1];
+      if (!value || value.startsWith("--")) {
+        options.errors.push("--compare requires a value.");
+        continue;
+      }
+      index += 1;
+      options.comparePath = value ? value.trim() : "";
+      if (!options.comparePath) {
+        options.errors.push("--compare requires a value.");
+      }
+    } else if (arg === "--save") {
+      const value = argv[index + 1];
+      if (!value || value.startsWith("--")) {
+        options.errors.push("--save requires a value.");
+        continue;
+      }
+      index += 1;
+      options.savePath = value ? value.trim() : "";
+      if (!options.savePath) {
+        options.errors.push("--save requires a value.");
       }
     } else if (arg?.startsWith("--")) {
       options.errors.push(`Unknown option: ${arg}`);

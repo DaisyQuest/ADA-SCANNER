@@ -38,12 +38,15 @@ Run GoldMaster scans via npm scripts:
 npm run gold_master -- --all --outputDir <path>
 npm run gold_master -- --ext html --outputDir <path>
 npm run gm -- --ext razor
+npm run gold_master -- --all --compare <baseline-report.json> --save <report.json>
 ```
 
 ### Options
 - `--all`: Scan every supported extension.
 - `--ext <extension>`: Limit scans to a single extension (repeatable or comma-separated).
 - `--outputDir <path>`: Output directory for JSON reports.
+- `--compare <path>`: Compare the current run against a saved report file.
+- `--save <path>`: Save a combined report bundle to the provided path.
 
 ### Defaults
 - `goldmaster` folder defaults to `node_engine/goldmaster/` (override with `GOLDMASTER_ROOT_DIR`).
@@ -54,6 +57,8 @@ npm run gm -- --ext razor
 The command writes JSON files to `outputDir`:
 - `goldmaster-summary.json`: One summary entry per extension.
 - `goldmaster-<ext>.json`: Full report for each extension (`goldmaster-html.json`, `goldmaster-xaml.json`, etc.).
+
+When `--save` is provided, the command also writes a combined report bundle (summary + per-extension reports) to the specified path.
 
 ## Required ADA coverage (must be represented in GoldMaster files)
 All supported checks under `node_engine/src/checks` must be exercised in the GoldMaster suite. The current coverage list is:

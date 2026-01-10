@@ -66,3 +66,4 @@
 2026-01-10 - Add GoldMaster CLI, fixtures, and inventories with test coverage and npm integration. (SPEC-013, SPEC-007, SPEC-014)
 2026-01-10 - Add Firefox extension bundle reusing Chrome assets with manifest parity tests. (SPEC-013, SPEC-019)
 2026-01-10 - Expand goldmaster option and CLI test coverage for node_engine reporting flows. (SPEC-013, SPEC-014, SPEC-015)
+2026-01-10 - Add GoldMaster report comparison/save output and expand reporting tests. (SPEC-013, SPEC-014, SPEC-015)
