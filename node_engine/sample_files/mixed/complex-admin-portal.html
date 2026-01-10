@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Admin Portal Demo</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f7fb;
+      color: #1f2933;
+    }
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #1b2a4e;
+      color: #ffffff;
+      padding: 16px 24px;
+    }
+    .muted {
+      color: #94a3b8;
+    }
+    .icon-button {
+      background: transparent;
+      border: none;
+      color: #ffffff;
+      font-size: 18px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 20px;
+      padding: 24px;
+    }
+    .card {
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    }
+    .kpi {
+      display: flex;
+      gap: 16px;
+    }
+    .kpi span {
+      display: block;
+    }
+    .kpi .label {
+      font-size: 12px;
+      color: #9ca3af;
+    }
+    .kpi .value {
+      font-size: 24px;
+      color: #9ca3af;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th, td {
+      border-bottom: 1px solid #e2e8f0;
+      padding: 10px;
+      text-align: left;
+    }
+    .status {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: #fde68a;
+      color: #9a3412;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>Atlas Admin</h1>
+      <p class="muted">Monday 08:45 AM</p>
+    </div>
+    <div>
+      <button class="icon-button">🔔</button>
+      <button class="icon-button">⚙️</button>
+    </div>
+  </header>
+
+  <main class="grid">
+    <section class="card">
+      <h2>Quarterly overview</h2>
+      <div class="kpi">
+        <div>
+          <span class="label">New signups</span>
+          <span class="value">2,340</span>
+        </div>
+        <div>
+          <span class="label">Active trials</span>
+          <span class="value">180</span>
+        </div>
+        <div>
+          <span class="label">Churned</span>
+          <span class="value">12</span>
+        </div>
+      </div>
+      <p class="muted">Updated 2 minutes ago.</p>
+    </section>
+
+    <aside class="card">
+      <h2>Quick actions</h2>
+      <form>
+        <label for="team">Team</label>
+        <select id="team">
+          <option>Marketing</option>
+          <option>Support</option>
+        </select>
+
+        <input id="team" type="text" placeholder="Duplicate id input" />
+
+        <input type="text" placeholder="Missing label" />
+
+        <button type="submit">Create report</button>
+      </form>
+    </aside>
+
+    <section class="card">
+      <h2>Recent requests</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Requester</th>
+            <th>Region</th>
+            <th>Status</th>
+            <th>ETA</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Renee Dawson</td>
+            <td>East</td>
+            <td><span class="status">Pending</span></td>
+            <td>Today</td>
+          </tr>
+          <tr>
+            <td>Devon Clarke</td>
+            <td>South</td>
+            <td><span class="status">Review</span></td>
+            <td>Tomorrow</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <aside class="card">
+      <h2>Notes</h2>
+      <ul>
+        <li>Share quarterly outcomes with the board.</li>
+        <li>Update account owners for top 5 clients.</li>
+        <li>Follow up on support backlog.</li>
+      </ul>
+      <button>View audit log</button>
+    </aside>
+  </main>
+</body>
+</html>
