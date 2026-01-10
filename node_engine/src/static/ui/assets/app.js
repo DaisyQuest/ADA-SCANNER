@@ -17,6 +17,8 @@ const elements = {
   fileCount: document.getElementById("fileCount"),
   issueCount: document.getElementById("issueCount"),
   ruleCount: document.getElementById("ruleCount"),
+  coveragePercent: document.getElementById("coveragePercent"),
+  missingRuleCount: document.getElementById("missingRuleCount"),
   fileSearchInput: document.getElementById("fileSearchInput"),
   issueSearchInput: document.getElementById("issueSearchInput"),
   ruleFilterSelect: document.getElementById("ruleFilterSelect"),
@@ -24,8 +26,10 @@ const elements = {
   clearFiltersButton: document.getElementById("clearFilters"),
   fileResultCount: document.getElementById("fileResultCount"),
   issueResultCount: document.getElementById("issueResultCount"),
+  missingRuleResultCount: document.getElementById("missingRuleResultCount"),
   fileTable: document.getElementById("fileTable"),
-  issueFeed: document.getElementById("issueFeed")
+  issueFeed: document.getElementById("issueFeed"),
+  missingRuleList: document.getElementById("missingRuleList")
 };
 
 const formatTime = () => new Date().toLocaleTimeString();
@@ -180,6 +184,15 @@ const renderSummary = () => {
   elements.fileCount.textContent = report ? report.summary.files : 0;
   elements.issueCount.textContent = report ? report.summary.issues : 0;
   elements.ruleCount.textContent = report ? report.byRule.length : 0;
+  const coverage = report?.coverage ?? report?.summary?.coverage ?? null;
+  if (elements.coveragePercent) {
+    elements.coveragePercent.textContent = coverage
+      ? `${coverage.coveragePercent ?? 0}%`
+      : "0%";
+  }
+  if (elements.missingRuleCount) {
+    elements.missingRuleCount.textContent = coverage?.missingRuleCount ?? 0;
+  }
 };
 
 const renderFilters = () => {
@@ -274,12 +287,40 @@ const renderIssues = () => {
     .join("");
 };
 
+const renderMissingRules = () => {
+  const missingRules = state.report?.coverage?.missingRules ?? [];
+  if (elements.missingRuleResultCount) {
+    elements.missingRuleResultCount.textContent = String(missingRules.length);
+  }
+  if (!elements.missingRuleList) {
+    return;
+  }
+  if (!missingRules.length) {
+    elements.missingRuleList.innerHTML = `<p class="muted">All configured rules triggered at least once.</p>`;
+    return;
+  }
+
+  elements.missingRuleList.innerHTML = missingRules
+    .map((rule) => `
+      <div class="issue-item issue-item--severity-unknown">
+        <div class="issue-title">
+          ${rule.ruleId} ${renderBadge(rule.severity || "unknown", rule.severity)}
+        </div>
+        <div class="issue-meta">
+          ${rule.teamName || "Unassigned"} • ${rule.checkId || "unknown"}${rule.description ? ` • ${rule.description}` : ""}
+        </div>
+      </div>
+    `)
+    .join("");
+};
+
 const renderAll = () => {
   syncFiltersFromInputs();
   renderSummary();
   renderFilters();
   renderFiles();
   renderIssues();
+  renderMissingRules();
   updateTimestamp();
 };
 
@@ -354,6 +395,7 @@ if (typeof module !== "undefined") {
     getFilteredFiles,
     buildIssueSearchTarget,
     getFilteredIssues,
+    renderMissingRules,
     bindEvents,
     loadInitialData,
     bootstrap

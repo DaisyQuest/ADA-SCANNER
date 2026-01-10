@@ -9,6 +9,7 @@ class StaticAnalysisServer {
     port = 0,
     documents = [],
     issues = [],
+    rules = [],
     reportBuilder = new StaticReportBuilder(),
     htmlReportBuilder = new HtmlReportBuilder(),
     uiRoot = path.join(__dirname, "ui")
@@ -16,6 +17,7 @@ class StaticAnalysisServer {
     this.port = port;
     this.documents = documents;
     this.issues = issues;
+    this.rules = rules;
     this.reportBuilder = reportBuilder;
     this.htmlReportBuilder = htmlReportBuilder;
     this.uiRoot = uiRoot;
@@ -92,7 +94,8 @@ class StaticAnalysisServer {
     if (method === "GET" && pathname === "/report") {
       const report = this.reportBuilder.build({
         documents: this.documents,
-        issues: this.issues
+        issues: this.issues,
+        rules: this.rules
       });
       const format = requestUrl?.searchParams.get("format");
       if (format === "html") {
@@ -107,7 +110,8 @@ class StaticAnalysisServer {
     if (method === "GET" && pathname === "/report/html") {
       const report = this.reportBuilder.build({
         documents: this.documents,
-        issues: this.issues
+        issues: this.issues,
+        rules: this.rules
       });
       const html = this.htmlReportBuilder.buildReport({ report });
       this.writeHtml(response, 200, html, { "Content-Disposition": "attachment; filename=\"report.html\"" });
@@ -118,7 +122,8 @@ class StaticAnalysisServer {
       this.writeJson(response, 200, {
         files: this.reportBuilder.buildFileSummaries({
           documents: this.documents,
-          issues: this.issues
+          issues: this.issues,
+          rules: this.rules
         })
       });
       return;
