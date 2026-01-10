@@ -5,6 +5,7 @@
   const MARKER_CLASS = "ada-tab-order-marker";
   const LINE_CLASS = "ada-tab-order-line";
   const ARROW_ID = "ada-tab-order-arrow";
+  const OBSERVED_ATTRIBUTES = ["tabindex", "disabled", "style", "hidden", "aria-disabled", "contenteditable", "aria-hidden"];
 
   const ensureStyles = (documentRoot) => {
     if (documentRoot.getElementById(STYLE_ID)) {
@@ -94,44 +95,102 @@
     return tabIndex >= 0;
   };
 
-  const getFocusableElements = (documentRoot, windowObj) => {
-    const selector = [
-      "a[href]",
-      "area[href]",
-      "button",
-      "input",
-      "select",
-      "textarea",
-      "iframe",
-      "[tabindex]",
-      "[contenteditable]",
-      "audio[controls]",
-      "video[controls]",
-      "summary"
-    ].join(",");
-
-    const nodes = Array.from(documentRoot.querySelectorAll(selector));
-    const seen = new Set();
-    const positives = [];
-    const normals = [];
-
-    nodes.forEach((node, index) => {
-      if (seen.has(node)) {
-        return;
+  const compareOrderKeys = (left, right) => {
+    const length = Math.max(left.length, right.length);
+    for (let i = 0; i < length; i += 1) {
+      if (left[i] == null) {
+        return -1;
       }
-      seen.add(node);
+      if (right[i] == null) {
+        return 1;
+      }
+      if (left[i] !== right[i]) {
+        return left[i] - right[i];
+      }
+    }
+    return 0;
+  };
+
+  const getFrameDocument = (frame) => {
+    try {
+      return frame.contentDocument || null;
+    } catch (error) {
+      return null;
+    }
+  };
+
+  const getFrameWindow = (frame) => {
+    try {
+      return frame.contentWindow || null;
+    } catch (error) {
+      return null;
+    }
+  };
+
+  const collectFocusableEntries = ({ documentRoot, windowObj, orderPath, offset }) => {
+    const root = documentRoot.body || documentRoot;
+    if (!root) {
+      return [];
+    }
+    const nodeFilter = (documentRoot.defaultView && documentRoot.defaultView.NodeFilter) || globalThis.NodeFilter;
+    if (!nodeFilter) {
+      return [];
+    }
+    const walker = documentRoot.createTreeWalker(root, nodeFilter.SHOW_ELEMENT);
+    const entries = [];
+    let index = 0;
+    while (walker.nextNode()) {
+      const node = walker.currentNode;
+      index += 1;
+      const orderKey = orderPath.concat(index);
+
+      if (node.tagName === "IFRAME") {
+        if (isVisible(windowObj, node)) {
+          const frameDocument = getFrameDocument(node);
+          const frameWindow = getFrameWindow(node);
+          if (frameDocument && frameWindow) {
+            const frameRect = node.getBoundingClientRect();
+            entries.push(
+              ...collectFocusableEntries({
+                documentRoot: frameDocument,
+                windowObj: frameWindow,
+                orderPath: orderKey,
+                offset: {
+                  x: offset.x + frameRect.left,
+                  y: offset.y + frameRect.top
+                }
+              })
+            );
+          }
+        }
+      }
 
       if (!isFocusable(node)) {
-        return;
+        continue;
       }
 
       if (!isVisible(windowObj, node)) {
-        return;
+        continue;
       }
 
       const tabIndex = getTabIndexValue(node);
-      const entry = { element: node, tabIndex, order: index };
-      if (tabIndex > 0) {
+      entries.push({ element: node, tabIndex, orderKey, offset });
+    }
+    return entries;
+  };
+
+  const getFocusableElements = (documentRoot, windowObj) => {
+    const entries = collectFocusableEntries({
+      documentRoot,
+      windowObj,
+      orderPath: [],
+      offset: { x: 0, y: 0 }
+    });
+    const positives = [];
+    const normals = [];
+
+    entries.forEach((entry) => {
+      if (entry.tabIndex > 0) {
         positives.push(entry);
       } else {
         normals.push(entry);
@@ -142,10 +201,12 @@
       if (a.tabIndex !== b.tabIndex) {
         return a.tabIndex - b.tabIndex;
       }
-      return a.order - b.order;
+      return compareOrderKeys(a.orderKey, b.orderKey);
     });
 
-    return positives.concat(normals).map((entry) => entry.element);
+    normals.sort((a, b) => compareOrderKeys(a.orderKey, b.orderKey));
+
+    return positives.concat(normals);
   };
 
   const createSvgLayer = (documentRoot) => {
@@ -178,6 +239,85 @@
     let svg = null;
     let enabled = false;
     let markers = [];
+    let renderScheduled = false;
+    const observers = new Map();
+    const frameListeners = new Map();
+
+    const scheduleRender = () => {
+      if (!enabled || renderScheduled) {
+        return;
+      }
+      renderScheduled = true;
+      const callback = () => {
+        renderScheduled = false;
+        render();
+      };
+      if (typeof windowObj.requestAnimationFrame === "function") {
+        const runOnce = () => {
+          if (!renderScheduled) {
+            return;
+          }
+          callback();
+        };
+        windowObj.requestAnimationFrame(runOnce);
+        windowObj.setTimeout(runOnce, 0);
+        return;
+      }
+      windowObj.setTimeout(callback, 0);
+    };
+
+    const observeDocument = (targetDocument) => {
+      if (observers.has(targetDocument)) {
+        return;
+      }
+      const observerWindow = targetDocument.defaultView || windowObj;
+      if (!observerWindow || !observerWindow.MutationObserver) {
+        return;
+      }
+      const observer = new observerWindow.MutationObserver(() => {
+        scheduleRender();
+      });
+      const rootNode = targetDocument.body || targetDocument.documentElement || targetDocument;
+      observer.observe(rootNode, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: OBSERVED_ATTRIBUTES
+      });
+      observers.set(targetDocument, observer);
+    };
+
+    const disconnectObservers = () => {
+      observers.forEach((observer) => observer.disconnect());
+      observers.clear();
+      frameListeners.forEach((handler, frame) => {
+        frame.removeEventListener("load", handler);
+      });
+      frameListeners.clear();
+    };
+
+    const registerFrameListener = (frame) => {
+      if (frameListeners.has(frame)) {
+        return;
+      }
+      const handler = () => {
+        syncFrameObservers();
+        scheduleRender();
+      };
+      frame.addEventListener("load", handler);
+      frameListeners.set(frame, handler);
+    };
+
+    const syncFrameObservers = () => {
+      const frames = Array.from(documentRoot.querySelectorAll("iframe"));
+      frames.forEach((frame) => {
+        registerFrameListener(frame);
+        const frameDocument = getFrameDocument(frame);
+        if (frameDocument) {
+          observeDocument(frameDocument);
+        }
+      });
+    };
 
     const clearMarkers = () => {
       markers.forEach((marker) => marker.remove());
@@ -208,16 +348,19 @@
       ensureOverlay();
       clearMarkers();
 
+      syncFrameObservers();
+      observeDocument(documentRoot);
+
       const elements = getFocusableElements(documentRoot, windowObj);
       if (!elements.length) {
         return;
       }
 
       const points = [];
-      elements.forEach((element, index) => {
-        const rect = element.getBoundingClientRect();
-        const centerX = rect.left + rect.width / 2;
-        const centerY = rect.top + rect.height / 2;
+      elements.forEach((entry, index) => {
+        const rect = entry.element.getBoundingClientRect();
+        const centerX = rect.left + rect.width / 2 + entry.offset.x;
+        const centerY = rect.top + rect.height / 2 + entry.offset.y;
         points.push({ x: centerX, y: centerY });
 
         const marker = documentRoot.createElement("div");
@@ -257,6 +400,7 @@
       enabled = false;
       windowObj.removeEventListener("scroll", onViewportChange, true);
       windowObj.removeEventListener("resize", onViewportChange);
+      disconnectObservers();
       clearMarkers();
       if (overlay) {
         overlay.remove();
