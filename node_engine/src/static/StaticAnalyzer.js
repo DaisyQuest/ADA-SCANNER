@@ -4,6 +4,7 @@ const { RuleLoader } = require("../rules/RuleLoader");
 const { createDefaultCheckRegistry } = require("../checks/CheckRegistry");
 const { extractStylesheetLinks } = require("../utils/StylesheetLinks");
 const { createDomDocument } = require("../utils/DomParser");
+const { extractEmbeddedContent, buildPaddedContent } = require("./EmbeddedContent");
 
 const DEFAULT_EXTENSIONS = new Map([
   [".java", { kind: "java", contentType: "text/x-java-source" }],
@@ -33,6 +34,44 @@ const DOM_KINDS = new Set(["html", "cshtml", "razor"]);
 
 const normalizePath = (rootDir, filePath) =>
   path.relative(rootDir, filePath).split(path.sep).join("/");
+
+const buildContexts = ({ content, normalizedPath, entry }) => {
+  const contexts = [
+    {
+      filePath: normalizedPath,
+      content,
+      kind: entry.kind,
+      document: DOM_KINDS.has(entry.kind)
+        ? createDomDocument({ content, url: normalizedPath })
+        : null
+    }
+  ];
+
+  if (entry.kind !== "js") {
+    return { contexts, embeddedHtml: [] };
+  }
+
+  const embeddedSnippets = extractEmbeddedContent(content);
+  const embeddedHtml = [];
+
+  for (const snippet of embeddedSnippets) {
+    const paddedContent = buildPaddedContent(content, snippet.startIndex, snippet.content);
+    const context = {
+      filePath: normalizedPath,
+      content: paddedContent,
+      kind: snippet.kind,
+      document: snippet.kind === "html"
+        ? createDomDocument({ content: paddedContent, url: normalizedPath })
+        : null
+    };
+    contexts.push(context);
+    if (snippet.kind === "html") {
+      embeddedHtml.push({ content: paddedContent, basePath: normalizedPath });
+    }
+  }
+
+  return { contexts, embeddedHtml };
+};
 
 const collectFiles = (rootDir, extensionMap, ignoredDirs) => {
   const results = [];
@@ -110,61 +149,58 @@ class StaticAnalyzer {
 
       const content = fs.readFileSync(filePath, "utf-8");
       const normalizedPath = normalizePath(rootDir, filePath);
-      const context = {
-        filePath: normalizedPath,
-        content,
-        kind: entry.kind,
-        document: DOM_KINDS.has(entry.kind)
-          ? createDomDocument({ content, url: normalizedPath })
-          : null
-      };
-
+      const { contexts, embeddedHtml } = buildContexts({ content, normalizedPath, entry });
+      const stylesheets = entry.kind === "js"
+        ? embeddedHtml.flatMap((snippet) => extractStylesheetLinks(snippet))
+        : extractStylesheetLinks({ content, basePath: normalizedPath });
       documents.push({
         url: normalizedPath,
         contentType: entry.contentType,
         kind: entry.sourceKind ?? entry.kind,
-        stylesheets: extractStylesheetLinks({ content, basePath: normalizedPath })
+        stylesheets
       });
 
-      for (const entryRule of rules) {
-        const rule = entryRule.rule;
-        const check = this.checkRegistry.find(rule.checkId);
-        if (!check) {
-          continue;
-        }
-
-        if (!check.applicableKinds.some((entryKind) => entryKind.toLowerCase() === context.kind.toLowerCase())) {
-          continue;
-        }
-
-        if (rule.appliesTo) {
-          const allowed = rule.appliesTo
-            .split(",")
-            .map((part) => part.trim())
-            .filter(Boolean)
-            .map((entryKind) => entryKind.toLowerCase());
-          const applicableKinds = [context.kind, entry.sourceKind]
-            .filter(Boolean)
-            .map((entryKind) => entryKind.toLowerCase());
-          if (!allowed.some((entryKind) => applicableKinds.includes(entryKind))) {
+      for (const context of contexts) {
+        for (const entryRule of rules) {
+          const rule = entryRule.rule;
+          const check = this.checkRegistry.find(rule.checkId);
+          if (!check) {
             continue;
           }
-        }
 
-        for (const issue of check.run(context, rule)) {
-          const enrichedIssue = {
-            ...issue,
-            teamName: entryRule.teamName,
-            ruleDescription: rule.description ?? "",
-            severity: rule.severity ?? "",
-            recommendation: rule.recommendation ?? null,
-            wcagCriteria: rule.wcagCriteria ?? null,
-            problemTags: rule.problemTags ?? null
-          };
-          const key = [issue.ruleId, issue.checkId, issue.filePath, issue.line, issue.message].join("::");
-          if (!seenIssues.has(key)) {
-            seenIssues.add(key);
-            issues.push(enrichedIssue);
+          if (!check.applicableKinds.some((entryKind) => entryKind.toLowerCase() === context.kind.toLowerCase())) {
+            continue;
+          }
+
+          if (rule.appliesTo) {
+            const allowed = rule.appliesTo
+              .split(",")
+              .map((part) => part.trim())
+              .filter(Boolean)
+              .map((entryKind) => entryKind.toLowerCase());
+            const applicableKinds = [context.kind, entry.sourceKind]
+              .filter(Boolean)
+              .map((entryKind) => entryKind.toLowerCase());
+            if (!allowed.some((entryKind) => applicableKinds.includes(entryKind))) {
+              continue;
+            }
+          }
+
+          for (const issue of check.run(context, rule)) {
+            const enrichedIssue = {
+              ...issue,
+              teamName: entryRule.teamName,
+              ruleDescription: rule.description ?? "",
+              severity: rule.severity ?? "",
+              recommendation: rule.recommendation ?? null,
+              wcagCriteria: rule.wcagCriteria ?? null,
+              problemTags: rule.problemTags ?? null
+            };
+            const key = [issue.ruleId, issue.checkId, issue.filePath, issue.line, issue.message].join("::");
+            if (!seenIssues.has(key)) {
+              seenIssues.add(key);
+              issues.push(enrichedIssue);
+            }
           }
         }
       }

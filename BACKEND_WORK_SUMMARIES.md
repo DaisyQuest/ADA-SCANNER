@@ -51,3 +51,5 @@
 2026-01-10 - Added DOM-based WCAG 2.1 label-in-name checks and improved node engine rule robustness with tests. (SPEC-008, SPEC-013)
 2026-01-10 - Added tab order overlay toggle for extension sidebar and popup. (SPEC-019)
 2026-01-10 - Expanded node engine WCAG coverage checks and tests (SPEC-008, SPEC-013)
+
+2026-01-10 - Added JS embedded HTML/CSS static scanning with dedicated tests. (SPEC-004)
