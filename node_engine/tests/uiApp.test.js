@@ -12,6 +12,7 @@ const setupDom = () => {
     <div id="checkCount"></div>
     <input id="ruleSearchInput" />
     <input id="fileSearchInput" />
+    <input id="domainSearchInput" />
     <select id="severityFilterSelect">
       <option value="all">All severities</option>
       <option value="high">High</option>
@@ -174,6 +175,20 @@ describe("Runtime listener UI app", () => {
     expect(app.elements.ruleCount.textContent).toBe("10");
     expect(app.elements.teamCount.textContent).toBe("2");
     expect(app.elements.checkCount.textContent).toBe("7");
+  });
+
+  test("renderSummary falls back when check summary data is missing", () => {
+    const app = require("../src/listener/ui/assets/app");
+    app.state.report = {
+      summary: { documents: 1, issues: 1, files: 1 },
+      byRule: [],
+      byTeam: [],
+      byCheck: undefined
+    };
+
+    app.renderSummary();
+
+    expect(app.elements.checkCount.textContent).toBe("0");
   });
 
   test("renders empty states when no issues are available", () => {
@@ -351,6 +366,7 @@ describe("Runtime listener UI app", () => {
 
   test("renders badge helpers with variants and empty states", () => {
     const app = require("../src/listener/ui/assets/app");
+    expect(app.normalizeText(null)).toBe("");
     expect(app.normalizeToken("High Priority")).toBe("high-priority");
     expect(app.normalizeToken(null)).toBe("unknown");
     expect(app.resolveSeverityVariant("High")).toBe("severity-high");
@@ -382,9 +398,15 @@ describe("Runtime listener UI app", () => {
     const badgeFallback = app.renderBadge({ label: null, variant: "rule" });
     expect(badgeFallback).toContain("Unknown");
 
+    const badgeDefault = app.renderBadge({ label: "Default" });
+    expect(badgeDefault).toContain("badge--rule");
+
     const group = app.renderBadgeGroup([{ ruleId: "rule-1", count: 1 }], "ruleId", { variant: "rule" });
     expect(group).toContain("badge-group");
     expect(group).toContain("badge--rule");
+
+    const groupDefault = app.renderBadgeGroup([{ ruleId: "rule-2", count: 1 }], "ruleId");
+    expect(groupDefault).toContain("badge--rule");
 
     const emptyGroup = app.renderBadgeGroup([], "ruleId", { variant: "rule" });
     expect(emptyGroup).toContain("—");
@@ -401,6 +423,18 @@ describe("Runtime listener UI app", () => {
 
     expect(app.formatCounts([], "ruleId")).toBe("—");
     expect(app.formatCounts([{ ruleId: "rule-1", count: 2 }], "ruleId")).toBe("rule-1 (2)");
+  });
+
+  test("extractDomain and wildcard matching handle edge cases", () => {
+    const app = require("../src/listener/ui/assets/app");
+    expect(app.extractDomain("file-a.html")).toBe("");
+    expect(app.extractDomain("http://%")).toBe("");
+    expect(app.extractDomain("https://sub.example.com/path")).toBe("sub.example.com");
+    expect(app.matchesWildcard("example.com", "")).toBe(true);
+    expect(app.matchesWildcard("example.com", "*")).toBe(true);
+    expect(app.matchesWildcard("", "*.example.com")).toBe(false);
+    expect(app.matchesDomainQuery("https://app.example.com", "*.example.com")).toBe(true);
+    expect(app.matchesDomainQuery("https://other.test", "*.example.com")).toBe(false);
   });
 
   test("filters by rule query, file query, and severity", () => {
@@ -467,23 +501,103 @@ describe("Runtime listener UI app", () => {
     expect(app.elements.ruleResultCount.textContent).toBe("1 of 2");
   });
 
+  test("filters by domain with wildcard support", () => {
+    const app = require("../src/listener/ui/assets/app");
+    app.state.report = {
+      summary: { documents: 1, issues: 2, files: 2 },
+      byRule: [
+        {
+          ruleId: "rule-1",
+          description: "desc",
+          severity: "high",
+          teamName: "team-a",
+          count: 1,
+          files: ["https://app.example.com/page-a"]
+        },
+        {
+          ruleId: "rule-2",
+          description: "desc",
+          severity: "low",
+          teamName: "team-b",
+          count: 1,
+          files: ["https://other.test/page-b"]
+        }
+      ],
+      byFile: [
+        {
+          filePath: "https://app.example.com/page-a",
+          issueCount: 1,
+          rules: [{ ruleId: "rule-1", count: 1 }],
+          teams: [{ teamName: "team-a", count: 1 }],
+          severities: [{ severity: "high", count: 1 }],
+          linkedStylesheetsWithIssues: []
+        },
+        {
+          filePath: "https://other.test/page-b",
+          issueCount: 1,
+          rules: [{ ruleId: "rule-2", count: 1 }],
+          teams: [{ teamName: "team-b", count: 1 }],
+          severities: [{ severity: "low", count: 1 }],
+          linkedStylesheetsWithIssues: []
+        }
+      ],
+      byTeam: [],
+      bySeverity: [],
+      byCheck: []
+    };
+    app.state.issues = [
+      { message: "Issue A", ruleId: "rule-1", filePath: "https://app.example.com/page-a", severity: "high" },
+      { message: "Issue B", ruleId: "rule-2", filePath: "https://other.test/page-b", severity: "low" }
+    ];
+
+    app.elements.domainSearchInput.value = "*.example.com";
+
+    app.renderAll();
+
+    expect(app.elements.ruleTable.innerHTML).toContain("rule-1");
+    expect(app.elements.ruleTable.innerHTML).not.toContain("rule-2");
+    expect(app.elements.fileTable.innerHTML).toContain("app.example.com");
+    expect(app.elements.fileTable.innerHTML).not.toContain("other.test");
+    expect(app.elements.issueFeed.innerHTML).toContain("Issue A");
+    expect(app.elements.issueFeed.innerHTML).not.toContain("Issue B");
+  });
+
   test("resetFilters clears inputs safely", () => {
     const app = require("../src/listener/ui/assets/app");
     app.elements.ruleSearchInput.value = "rule";
     app.elements.fileSearchInput.value = "file";
+    app.elements.domainSearchInput.value = "example.com";
     app.elements.severityFilterSelect.value = "high";
 
     app.resetFilters();
 
     expect(app.elements.ruleSearchInput.value).toBe("");
     expect(app.elements.fileSearchInput.value).toBe("");
+    expect(app.elements.domainSearchInput.value).toBe("");
     expect(app.elements.severityFilterSelect.value).toBe("all");
+  });
+
+  test("resetFilters skips missing inputs safely", () => {
+    const app = require("../src/listener/ui/assets/app");
+    app.elements.ruleSearchInput = null;
+    app.elements.fileSearchInput = null;
+    app.elements.domainSearchInput = null;
+    app.elements.severityFilterSelect = null;
+
+    expect(() => app.resetFilters()).not.toThrow();
+    expect(app.state.filters).toEqual({
+      ruleQuery: "",
+      fileQuery: "",
+      domainQuery: "",
+      severity: "all"
+    });
   });
 
   test("syncFiltersFromInputs handles missing inputs", () => {
     const app = require("../src/listener/ui/assets/app");
     app.elements.ruleSearchInput = null;
     app.elements.fileSearchInput = null;
+    app.elements.domainSearchInput = null;
     app.elements.severityFilterSelect = null;
 
     app.syncFiltersFromInputs();
@@ -491,6 +605,7 @@ describe("Runtime listener UI app", () => {
     expect(app.state.filters).toEqual({
       ruleQuery: "",
       fileQuery: "",
+      domainQuery: "",
       severity: "all"
     });
   });
@@ -649,5 +764,109 @@ describe("Runtime listener UI app", () => {
     app.renderFiles();
 
     expect(app.elements.fileTable.innerHTML).toContain("file-a");
+  });
+
+  test("renderRules applies domain filters directly", () => {
+    const app = require("../src/listener/ui/assets/app");
+    app.state.report = {
+      summary: { documents: 1, issues: 1, files: 1 },
+      byRule: [
+        {
+          ruleId: "rule-1",
+          description: "desc",
+          severity: "high",
+          teamName: "team-a",
+          count: 1,
+          files: ["https://app.example.com/page-a"]
+        }
+      ],
+      byFile: [],
+      byTeam: [],
+      bySeverity: [],
+      byCheck: []
+    };
+    app.state.filters.domainQuery = "*.example.com";
+
+    app.renderRules();
+
+    expect(app.elements.ruleTable.innerHTML).toContain("rule-1");
+  });
+
+  test("renderRules handles missing file lists with a domain filter", () => {
+    const app = require("../src/listener/ui/assets/app");
+    app.state.report = {
+      summary: { documents: 1, issues: 1, files: 1 },
+      byRule: [
+        {
+          ruleId: "rule-1",
+          description: "desc",
+          severity: "high",
+          teamName: "team-a",
+          count: 1,
+          files: undefined
+        }
+      ],
+      byFile: [],
+      byTeam: [],
+      bySeverity: [],
+      byCheck: []
+    };
+    app.state.filters.domainQuery = "*.example.com";
+
+    app.renderRules();
+
+    expect(app.elements.ruleTable.innerHTML).toContain("No rules match the current filters.");
+  });
+
+  test("renderFiles applies severity filtering when not all", () => {
+    const app = require("../src/listener/ui/assets/app");
+    app.state.report = {
+      summary: { documents: 1, issues: 1, files: 1 },
+      byRule: [],
+      byFile: [
+        {
+          filePath: "file-a",
+          issueCount: 1,
+          rules: [],
+          teams: [],
+          severities: [{ severity: "high", count: 1 }],
+          linkedStylesheetsWithIssues: []
+        }
+      ],
+      byTeam: [],
+      bySeverity: [],
+      byCheck: []
+    };
+    app.state.filters.severity = "high";
+
+    app.renderFiles();
+
+    expect(app.elements.fileTable.innerHTML).toContain("file-a");
+  });
+
+  test("renderFiles handles missing severities when filtering", () => {
+    const app = require("../src/listener/ui/assets/app");
+    app.state.report = {
+      summary: { documents: 1, issues: 1, files: 1 },
+      byRule: [],
+      byFile: [
+        {
+          filePath: "file-a",
+          issueCount: 1,
+          rules: [],
+          teams: [],
+          severities: undefined,
+          linkedStylesheetsWithIssues: []
+        }
+      ],
+      byTeam: [],
+      bySeverity: [],
+      byCheck: []
+    };
+    app.state.filters.severity = "high";
+
+    app.renderFiles();
+
+    expect(app.elements.fileTable.innerHTML).toContain("No files match the current filters.");
   });
 });

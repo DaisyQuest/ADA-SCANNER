@@ -1,8 +1,8 @@
 {
   "id": "contrast-text-normal",
-  "description": "Ensure normal body text meets a 4.5:1 contrast ratio against its background.",
+  "description": "Ensure normal body text (below large-text thresholds) meets a 4.5:1 contrast ratio against its background.",
   "severity": "high",
   "checkId": "insufficient-contrast",
   "appliesTo": "html",
-  "recommendation": "Adjust foreground/background colors to achieve at least 4.5:1 for standard text sizes."
+  "recommendation": "Adjust foreground/background colors, overlays, or opacity to achieve at least 4.5:1 for standard text sizes."
 }

@@ -11,6 +11,7 @@ const setupDom = () => {
     <div id="coveragePercent"></div>
     <div id="missingRuleCount"></div>
     <input id="fileSearchInput" />
+    <input id="domainSearchInput" />
     <input id="issueSearchInput" />
     <select id="ruleFilterSelect">
       <option value="all">All rules</option>
@@ -156,6 +157,18 @@ describe("Static analysis UI app", () => {
     expect(app.matchesQuery("File-A", "missing")).toBe(false);
   });
 
+  test("extracts domains and matches wildcard filters", () => {
+    const app = require("../src/static/ui/assets/app");
+    expect(app.extractDomain("local-file.html")).toBe("");
+    expect(app.extractDomain("http://%")).toBe("");
+    expect(app.extractDomain("https://alpha.example.com/path")).toBe("alpha.example.com");
+    expect(app.matchesWildcard("example.com", "")).toBe(true);
+    expect(app.matchesWildcard("example.com", "*")).toBe(true);
+    expect(app.matchesWildcard("", "*.example.com")).toBe(false);
+    expect(app.matchesDomainQuery("https://alpha.example.com", "*.example.com")).toBe(true);
+    expect(app.matchesDomainQuery("https://beta.test", "*.example.com")).toBe(false);
+  });
+
   test("resolves severity variants and badges", () => {
     const app = require("../src/static/ui/assets/app");
     expect(app.normalizeToken("High Severity")).toBe("high-severity");
@@ -283,6 +296,7 @@ describe("Static analysis UI app", () => {
   test("syncFiltersFromInputs falls back when inputs are missing", () => {
     const app = require("../src/static/ui/assets/app");
     app.elements.fileSearchInput = null;
+    app.elements.domainSearchInput = null;
     app.elements.issueSearchInput = null;
     app.elements.ruleFilterSelect = null;
     app.elements.severityFilterSelect = null;
@@ -292,6 +306,7 @@ describe("Static analysis UI app", () => {
     expect(app.state.filters).toEqual({
       fileQuery: "",
       issueQuery: "",
+      domainQuery: "",
       ruleId: "all",
       severity: "all"
     });
@@ -300,6 +315,7 @@ describe("Static analysis UI app", () => {
   test("resetFilters handles missing inputs", () => {
     const app = require("../src/static/ui/assets/app");
     app.elements.fileSearchInput = null;
+    app.elements.domainSearchInput = null;
     app.elements.issueSearchInput = null;
     app.elements.ruleFilterSelect = null;
     app.elements.severityFilterSelect = null;
@@ -313,6 +329,30 @@ describe("Static analysis UI app", () => {
     app.elements.documentCount = null;
 
     expect(() => app.renderSummary()).not.toThrow();
+  });
+
+  test("renderSummary defaults coverage when missing", () => {
+    const app = require("../src/static/ui/assets/app");
+    app.state.report = { summary: { files: 1, issues: 1 }, byRule: [], byFile: [] };
+
+    app.renderSummary();
+
+    expect(app.elements.coveragePercent.textContent).toBe("0%");
+  });
+
+  test("renderSummary falls back when coverage percent is undefined", () => {
+    const app = require("../src/static/ui/assets/app");
+    app.state.report = {
+      summary: { files: 1, issues: 1 },
+      byRule: [],
+      byFile: [],
+      coverage: { missingRuleCount: 2 }
+    };
+
+    app.renderSummary();
+
+    expect(app.elements.coveragePercent.textContent).toBe("0%");
+    expect(app.elements.missingRuleCount.textContent).toBe("2");
   });
 
   test("renderSummary skips coverage outputs when elements are missing", () => {
@@ -445,6 +485,43 @@ describe("Static analysis UI app", () => {
     expect(app.elements.issueResultCount.textContent).toBe("1 of 2");
   });
 
+  test("filters files and issues by domain wildcard", () => {
+    const app = require("../src/static/ui/assets/app");
+    app.state.report = {
+      summary: { files: 2, issues: 2 },
+      byRule: [
+        { ruleId: "rule-1", count: 1 },
+        { ruleId: "rule-2", count: 1 }
+      ],
+      byFile: [
+        {
+          filePath: "https://docs.example.com/file-a.html",
+          issueCount: 1,
+          rules: [{ ruleId: "rule-1", count: 1 }],
+          severities: [{ severity: "high", count: 1 }]
+        },
+        {
+          filePath: "https://other.test/file-b.html",
+          issueCount: 1,
+          rules: [{ ruleId: "rule-2", count: 1 }],
+          severities: [{ severity: "low", count: 1 }]
+        }
+      ]
+    };
+    app.state.issues = [
+      { message: "A issue", ruleId: "rule-1", filePath: "https://docs.example.com/file-a.html", severity: "high" },
+      { message: "B issue", ruleId: "rule-2", filePath: "https://other.test/file-b.html", severity: "low" }
+    ];
+
+    app.elements.domainSearchInput.value = "*.example.com";
+    app.renderAll();
+
+    expect(app.elements.fileTable.innerHTML).toContain("docs.example.com");
+    expect(app.elements.fileTable.innerHTML).not.toContain("other.test");
+    expect(app.elements.issueFeed.innerHTML).toContain("A issue");
+    expect(app.elements.issueFeed.innerHTML).not.toContain("B issue");
+  });
+
   test("renders empty state when filters remove all files", () => {
     const app = require("../src/static/ui/assets/app");
     app.state.report = {
@@ -507,6 +584,7 @@ describe("Static analysis UI app", () => {
       { message: "Problem", ruleId: "rule-1", filePath: "file-a.html" }
     ];
     app.elements.fileSearchInput.value = "file-a";
+    app.elements.domainSearchInput.value = "example.com";
     app.elements.issueSearchInput.value = "Problem";
     app.elements.ruleFilterSelect.value = "rule-1";
     app.elements.severityFilterSelect.value = "all";
@@ -515,6 +593,7 @@ describe("Static analysis UI app", () => {
     app.resetFilters();
 
     expect(app.elements.fileSearchInput.value).toBe("");
+    expect(app.elements.domainSearchInput.value).toBe("");
     expect(app.elements.issueSearchInput.value).toBe("");
     expect(app.elements.ruleFilterSelect.value).toBe("all");
     expect(app.elements.severityFilterSelect.value).toBe("all");

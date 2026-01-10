@@ -1,8 +1,8 @@
 {
   "id": "aria-invalid-role-html",
-  "description": "Flag invalid ARIA role values applied to HTML elements.",
+  "description": "Flag HTML elements assigned invalid or deprecated ARIA role values that break accessibility APIs.",
   "severity": "medium",
   "checkId": "invalid-aria-role",
   "appliesTo": "html, htm, cshtml, razor",
-  "recommendation": "Use only valid ARIA role values and ensure roles match element semantics."
+  "recommendation": "Use only valid ARIA role values and ensure the role matches native element semantics or is accompanied by required attributes."
 }

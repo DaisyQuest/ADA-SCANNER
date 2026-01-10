@@ -1,8 +1,8 @@
 {
   "id": "contrast-graph-data",
-  "description": "Ensure chart and graph data colors have sufficient contrast against their backgrounds.",
+  "description": "Ensure chart and graph data colors remain distinguishable against background grids and surfaces.",
   "severity": "medium",
   "checkId": "insufficient-contrast",
   "appliesTo": "html",
-  "recommendation": "Increase data series contrast to at least 4.5:1 or add supplemental cues."
+  "recommendation": "Increase data series contrast or add supplemental cues (patterns, labels, markers) when colors alone are insufficient."
 }

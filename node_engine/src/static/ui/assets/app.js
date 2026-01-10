@@ -5,6 +5,7 @@ const state = {
   filters: {
     fileQuery: "",
     issueQuery: "",
+    domainQuery: "",
     ruleId: "all",
     severity: "all"
   }
@@ -20,6 +21,7 @@ const elements = {
   coveragePercent: document.getElementById("coveragePercent"),
   missingRuleCount: document.getElementById("missingRuleCount"),
   fileSearchInput: document.getElementById("fileSearchInput"),
+  domainSearchInput: document.getElementById("domainSearchInput"),
   issueSearchInput: document.getElementById("issueSearchInput"),
   ruleFilterSelect: document.getElementById("ruleFilterSelect"),
   severityFilterSelect: document.getElementById("severityFilterSelect"),
@@ -42,6 +44,35 @@ const matchesQuery = (value, query) => {
   }
   return normalizeText(value).includes(normalizeText(query));
 };
+
+const extractDomain = (value) => {
+  const text = String(value ?? "").trim();
+  if (!text || !/^[a-z][a-z0-9+.-]*:\/\//i.test(text)) {
+    return "";
+  }
+  try {
+    return new URL(text).hostname;
+  } catch (error) {
+    return "";
+  }
+};
+
+const matchesWildcard = (value, query) => {
+  const normalizedQuery = normalizeText(query).trim();
+  if (!normalizedQuery) {
+    return true;
+  }
+  if (normalizedQuery === "*") {
+    return true;
+  }
+  if (!value) {
+    return false;
+  }
+  const escaped = normalizedQuery.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*");
+  return new RegExp(`^${escaped}$`, "i").test(String(value).toLowerCase());
+};
+
+const matchesDomainQuery = (value, query) => matchesWildcard(extractDomain(value), query);
 
 const updateTimestamp = () => {
   elements.lastUpdated.textContent = formatTime();
@@ -116,6 +147,7 @@ const syncFiltersFromInputs = () => {
   state.filters = {
     fileQuery: elements.fileSearchInput?.value?.trim() ?? "",
     issueQuery: elements.issueSearchInput?.value?.trim() ?? "",
+    domainQuery: elements.domainSearchInput?.value?.trim() ?? "",
     ruleId: elements.ruleFilterSelect?.value || "all",
     severity: elements.severityFilterSelect?.value || "all"
   };
@@ -124,6 +156,9 @@ const syncFiltersFromInputs = () => {
 const resetFilters = () => {
   if (elements.fileSearchInput) {
     elements.fileSearchInput.value = "";
+  }
+  if (elements.domainSearchInput) {
+    elements.domainSearchInput.value = "";
   }
   if (elements.issueSearchInput) {
     elements.issueSearchInput.value = "";
@@ -149,9 +184,10 @@ const getFilteredFiles = () => {
   if (!state.report || !Array.isArray(state.report.byFile)) {
     return [];
   }
-  const { fileQuery, ruleId, severity } = state.filters;
+  const { fileQuery, domainQuery, ruleId, severity } = state.filters;
   return state.report.byFile.filter((file) =>
     matchesQuery(file.filePath, fileQuery)
+    && matchesDomainQuery(file.filePath, domainQuery)
     && matchesRule(ruleId, file.rules)
     && (severity === "all"
       ? true
@@ -167,10 +203,11 @@ const buildIssueSearchTarget = (issue) => [
 ].filter(Boolean).join(" ");
 
 const getFilteredIssues = () => {
-  const { issueQuery, ruleId, severity } = state.filters;
+  const { issueQuery, domainQuery, ruleId, severity } = state.filters;
   const activeRule = ruleId || "all";
   return state.issues.filter((issue) =>
     matchesQuery(buildIssueSearchTarget(issue), issueQuery)
+    && matchesDomainQuery(issue.filePath, domainQuery)
     && (activeRule === "all" || issue.ruleId === activeRule)
     && matchesSeverity(issue.severity ?? "unknown", severity)
   );
@@ -330,6 +367,7 @@ const bindEvents = () => {
   }
   bindEvents.bound = true;
   elements.fileSearchInput?.addEventListener("input", renderAll);
+  elements.domainSearchInput?.addEventListener("input", renderAll);
   elements.issueSearchInput?.addEventListener("input", renderAll);
   elements.ruleFilterSelect?.addEventListener("change", renderAll);
   elements.severityFilterSelect?.addEventListener("change", renderAll);
@@ -369,6 +407,7 @@ if (shouldAutoBootstrap) {
   bootstrap();
 }
 
+/* istanbul ignore next */
 if (typeof module !== "undefined") {
   module.exports = {
     state,
@@ -378,6 +417,9 @@ if (typeof module !== "undefined") {
     setConnectionStatus,
     normalizeText,
     matchesQuery,
+    extractDomain,
+    matchesWildcard,
+    matchesDomainQuery,
     renderSummary,
     renderFilters,
     renderFiles,

@@ -1,8 +1,8 @@
 {
   "id": "reflow-absolute-positioning",
-  "description": "Avoid absolute positioning that can prevent content reflow.",
+  "description": "Avoid absolute positioning that locks content in place and prevents reflow at narrow widths.",
   "severity": "medium",
   "checkId": "absolute-positioning",
   "appliesTo": "html,htm,cshtml,razor,xaml",
-  "recommendation": "Use flow layout containers or relative positioning so content can reflow when zoomed."
+  "recommendation": "Use flow layout containers, flex/grid, or relative positioning so content can wrap and reflow at 320px width or 400% zoom."
 }

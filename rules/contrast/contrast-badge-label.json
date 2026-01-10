@@ -1,8 +1,8 @@
 {
   "id": "contrast-badge-label",
-  "description": "Ensure badge and pill labels meet minimum contrast against their backgrounds.",
+  "description": "Ensure badge, chip, and pill label text maintains clear contrast against its background across states.",
   "severity": "medium",
   "checkId": "insufficient-contrast",
   "appliesTo": "html",
-  "recommendation": "Adjust badge text and fill colors to meet 4.5:1 contrast ratios."
+  "recommendation": "Adjust badge text and fill colors to meet at least 4.5:1 for normal text (or 3:1 for large text), including hover and disabled variants."
 }

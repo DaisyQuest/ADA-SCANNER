@@ -1,8 +1,8 @@
 {
   "id": "contrast-link-text",
-  "description": "Ensure link text color contrast meets minimum ratios against the background.",
+  "description": "Ensure link text maintains minimum contrast ratios against background colors and adjacent text.",
   "severity": "high",
   "checkId": "insufficient-contrast",
   "appliesTo": "html",
-  "recommendation": "Use link colors that meet at least 4.5:1 contrast and remain distinguishable."
+  "recommendation": "Use link colors that meet at least 4.5:1 contrast and remain distinguishable via color, underline, or other non-color cues."
 }

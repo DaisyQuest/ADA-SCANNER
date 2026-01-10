@@ -57,7 +57,7 @@
         <header class="panel-header">
           <div>
             <h2>Filter runtime insights</h2>
-            <p>Focus on the rule IDs, files, and severities that need attention.</p>
+            <p>Focus on rule IDs, file paths, domains, and severity levels that need attention.</p>
           </div>
           <button class="ghost-button" id="clearFilters" type="button">Clear filters</button>
         </header>
@@ -69,6 +69,10 @@
           <label class="field">
             <span>File search</span>
             <input id="fileSearchInput" type="search" placeholder="Filter by file path" />
+          </label>
+          <label class="field">
+            <span>Domain filter</span>
+            <input id="domainSearchInput" type="search" placeholder="Filter by domain (e.g., *.example.com)" />
           </label>
           <label class="field">
             <span>Severity focus</span>

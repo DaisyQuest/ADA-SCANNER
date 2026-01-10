@@ -1,8 +1,8 @@
 {
   "id": "aria-unlabeled-button-razor",
-  "description": "Ensure Razor button components include accessible labels in templated content.",
+  "description": "Ensure Razor button components include accessible labels within templated content.",
   "severity": "medium",
   "checkId": "unlabeled-button",
   "appliesTo": "cshtml, razor",
-  "recommendation": "Include button text or bind aria-label/aria-labelledby values in Razor markup."
+  "recommendation": "Include button text or bind aria-label/aria-labelledby values in Razor markup so controls announce clear intent."
 }
