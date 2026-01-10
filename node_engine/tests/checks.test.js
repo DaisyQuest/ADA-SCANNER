@@ -626,8 +626,10 @@ describe("MissingSkipLinkCheck", () => {
     expect(isFocusable("input", "")).toBe(true);
     expect(isFocusable("button", 'disabled')).toBe(false);
     expect(isFocusableElement(new JSDOM('<input type="hidden" />').window.document.querySelector("input"))).toBe(false);
+    expect(isFocusableElement(new JSDOM('<a tabindex="-1"></a>').window.document.querySelector("a"))).toBe(false);
     expect(getMacroLabelSource('label="Skip"', "")).toBe("Skip");
     expect(getMacroLabelSource("", "Body")).toBe("Body");
+    expect(getMacroLabelSource("", undefined)).toBe("");
     expect(isFocusableElement(new JSDOM('<a href="#main"></a>').window.document.querySelector("a"))).toBe(true);
     expect(isFocusableElement(new JSDOM('<a tabindex="0"></a>').window.document.querySelector("a"))).toBe(true);
     expect(isFocusableElement(new JSDOM('<button disabled></button>').window.document.querySelector("button"))).toBe(
@@ -645,6 +647,43 @@ describe("MissingSkipLinkCheck", () => {
       "html"
     );
     expect(MissingSkipLinkCheck.run(titleLabel, rule)).toHaveLength(0);
+  });
+
+  test("covers additional skip link branches", () => {
+    const domEmptyLabel = {
+      filePath: "file",
+      content: '<a href="#main"></a><main id="main"></main>',
+      kind: "html",
+      document: new JSDOM('<a href="#main"></a><main id="main"></main>').window.document
+    };
+    expect(MissingSkipLinkCheck.run(domEmptyLabel, rule)).toHaveLength(1);
+
+    const hiddenFirst = createContext(
+      '<input type="hidden" /><a href="#main">Skip to main</a><main id="main"></main>',
+      "html"
+    );
+    expect(MissingSkipLinkCheck.run(hiddenFirst, rule)).toHaveLength(0);
+
+    const multipleSkips = createContext(
+      '<a href="#main">Skip to main</a><a href="#content">Skip to content</a><main id="main"></main>',
+      "html"
+    );
+    expect(MissingSkipLinkCheck.run(multipleSkips, rule)).toHaveLength(0);
+
+    const emptyLabelSkip = createContext('<a href="#main"></a><button>Menu</button>', "html");
+    expect(MissingSkipLinkCheck.run(emptyLabelSkip, rule)).toHaveLength(1);
+
+    const macroNonLink = createContext('<@button href="#main" label="Skip to main" />', "html");
+    expect(MissingSkipLinkCheck.run(macroNonLink, rule)).toHaveLength(1);
+
+    const macroWrongHref = createContext('<@link href="/home" label="Skip to main" />', "html");
+    expect(MissingSkipLinkCheck.run(macroWrongHref, rule)).toHaveLength(1);
+
+    const macroAfterAnchor = createContext(
+      '<a href="#main">Skip to main</a><@link href="#content" label="Skip to content" />',
+      "html"
+    );
+    expect(MissingSkipLinkCheck.run(macroAfterAnchor, rule)).toHaveLength(0);
   });
 });
 
@@ -944,6 +983,14 @@ describe("MissingTableHeaderCheck", () => {
       document: new JSDOM('<table role="presentation"><tr><td>Cell</td></tr></table>').window.document
     };
     expect(MissingTableHeaderCheck.run(domPresentation, rule)).toHaveLength(0);
+
+    const domMatchIndex = {
+      filePath: "file",
+      content: "<table><tbody><tr><td>Cell</td></tr></tbody></table>",
+      kind: "html",
+      document: new JSDOM("<table><tbody><tr><td>Cell</td></tr></tbody></table>").window.document
+    };
+    expect(MissingTableHeaderCheck.run(domMatchIndex, rule)).toHaveLength(1);
   });
 });
 
@@ -1905,5 +1952,39 @@ describe("DuplicateIdCheck", () => {
   test("returns no issues without a document", () => {
     const context = createContext('<div id="dup"></div><span id="dup"></span>');
     expect(DuplicateIdCheck.run(context, rule)).toHaveLength(0);
+  });
+});
+
+describe("sample file expectations", () => {
+  test("verifies mixed complex expectations across checks", () => {
+    const samplePath = path.join(__dirname, "..", "sample_files", "mixed", "complex-expectations.html");
+    const content = fs.readFileSync(samplePath, "utf-8");
+    const document = new JSDOM(content).window.document;
+    const context = { ...createContext(content, "html"), document };
+
+    expect(MissingDocumentLanguageCheck.run(context, rule)).toHaveLength(1);
+    expect(MissingPageTitleCheck.run(context, rule)).toHaveLength(1);
+    expect(MissingSkipLinkCheck.run(context, rule)).toHaveLength(1);
+    expect(EmptyHeadingCheck.run(context, rule)).toHaveLength(1);
+    expect(EmptyLinkCheck.run(context, rule)).toHaveLength(1);
+    expect(MissingLinkTextCheck.run(context, rule)).toHaveLength(1);
+    expect(MissingAltTextCheck.run(context, rule)).toHaveLength(2);
+    expect(MissingLabelCheck.run(context, rule)).toHaveLength(2);
+    expect(MissingAutocompleteCheck.run(context, rule)).toHaveLength(3);
+    expect(MissingFieldsetLegendCheck.run(context, rule)).toHaveLength(1);
+    expect(MissingTableHeaderCheck.run(context, rule)).toHaveLength(1);
+    expect(MissingIframeTitleCheck.run(context, rule)).toHaveLength(1);
+    expect(UnlabeledButtonCheck.run(context, rule)).toHaveLength(1);
+    expect(DuplicateIdCheck.run(context, rule)).toHaveLength(1);
+  });
+
+  test("verifies complex form samples for label and autocomplete coverage", () => {
+    const samplePath = path.join(__dirname, "..", "sample_files", "forms", "complex-form-expectations.html");
+    const content = fs.readFileSync(samplePath, "utf-8");
+    const context = createContext(content, "html");
+
+    expect(EmptyFormLabelCheck.run(context, rule)).toHaveLength(1);
+    expect(OrphanedFormLabelCheck.run(context, rule)).toHaveLength(1);
+    expect(MissingAutocompleteCheck.run(context, rule)).toHaveLength(2);
   });
 });
