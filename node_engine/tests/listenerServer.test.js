@@ -36,7 +36,9 @@ describe("ListenerServer", () => {
 
     const baseUrl = `http://localhost:${port}`;
 
-    const health = await fetch(`${baseUrl}/health`);
+    const health = await fetch(`${baseUrl}/health`, {
+      headers: { Origin: "https://localhost:7203" }
+    });
     expect(health.status).toBe(200);
     expect(health.headers.get("access-control-allow-origin")).toBe("https://localhost:7203");
 
@@ -334,6 +336,12 @@ describe("ListenerServer", () => {
     expect(allowAnyServer.isOriginAllowed({ headers: { origin: "https://anywhere.test" } })).toBe(true);
   });
 
+  test("resolves default origin when single explicit origin and no header", () => {
+    const rulesRoot = createTempRules();
+    const server = new ListenerServer({ rulesRoot, allowedOrigins: ["https://only.test"] });
+    expect(server.resolveAllowedOrigin({ headers: {} })).toBe("https://only.test");
+  });
+
   test("normalizes comma-delimited allowed origins", () => {
     const rulesRoot = createTempRules();
     const server = new ListenerServer({ rulesRoot, allowedOrigins: "http://one, http://two" });
@@ -341,6 +349,21 @@ describe("ListenerServer", () => {
     expect(server.allowedOrigins.exact.has("http://two")).toBe(true);
     expect(server.resolveAllowedOrigin({ headers: {} })).toBeNull();
     expect(server.resolveAllowedOrigin({ headers: { origin: "http://one" } })).toBe("http://one");
+  });
+
+  test("allows requests without origin for multiple allowed origins", () => {
+    const rulesRoot = createTempRules();
+    const server = new ListenerServer({ rulesRoot, allowedOrigins: ["http://one", "http://two"] });
+    expect(server.isOriginAllowed({ headers: {} })).toBe(true);
+  });
+
+  test("skips allow-origin header when no origin is resolved", () => {
+    const rulesRoot = createTempRules();
+    const server = new ListenerServer({ rulesRoot, allowedOrigins: ["http://one", "http://two"] });
+    const response = { setHeader: jest.fn() };
+    server.addCors(response, { headers: {} });
+    expect(response.setHeader).not.toHaveBeenCalledWith("Access-Control-Allow-Origin", expect.anything());
+    expect(response.setHeader).toHaveBeenCalledWith("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   });
 
   test("handles self-capture checks without host or invalid URLs", () => {

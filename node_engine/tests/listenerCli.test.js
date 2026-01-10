@@ -101,6 +101,17 @@ describe("Listener CLI", () => {
       allowedOrigins: "http://one,http://two",
       ignoreSelfCapture: false
     });
+
+    const emptyAllowedOrigins = resolveListenerOptions({
+      argv: ["--rules-root", "/tmp/rules", "--allowed-origins", "   "],
+      env: {}
+    });
+    expect(emptyAllowedOrigins).toEqual({
+      rulesRoot: "/tmp/rules",
+      port: null,
+      allowedOrigins: null,
+      ignoreSelfCapture: true
+    });
   });
 
   test("returns a non-started result when rules root missing", async () => {
@@ -130,7 +141,7 @@ describe("Listener CLI", () => {
     });
     expect(result.started).toBe(true);
     expect(result.port).toBe(1234);
-    expect(logger.log).toHaveBeenCalledWith("Listener server running on port 1234.");
+    expect(logger.log).toHaveBeenCalledWith("Listener server running at http://localhost:1234.");
   });
 
   test("defaults port to zero when not provided", async () => {
