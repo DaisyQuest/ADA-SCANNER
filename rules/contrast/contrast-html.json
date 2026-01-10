@@ -1,8 +1,8 @@
 {
   "id": "contrast-html-foreground-background",
-  "description": "Ensure sufficient contrast when explicit foreground and background colors are defined in HTML.",
+  "description": "Ensure HTML elements with explicit foreground/background colors meet WCAG contrast requirements.",
   "severity": "high",
   "checkId": "insufficient-contrast",
   "appliesTo": "html, htm",
-  "recommendation": "Adjust the foreground or background color to meet WCAG 2.0 AA contrast requirements."
+  "recommendation": "Adjust the foreground or background color to meet WCAG 2.0 AA contrast requirements for normal and large text."
 }

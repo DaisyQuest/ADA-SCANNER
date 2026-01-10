@@ -50,7 +50,7 @@
       <div class="panel-header">
         <div>
           <h2>Filter insights</h2>
-          <p class="muted">Refine the file list and recent issues without rerunning the scan.</p>
+          <p class="muted">Refine file lists and recent issues by path, domain, rule, and severity.</p>
         </div>
         <button class="ghost-button" id="clearFilters" type="button">Clear filters</button>
       </div>
@@ -58,6 +58,10 @@
         <label class="field">
           <span>File search</span>
           <input id="fileSearchInput" type="search" placeholder="Filter files by path" />
+        </label>
+        <label class="field">
+          <span>Domain filter</span>
+          <input id="domainSearchInput" type="search" placeholder="Filter by domain (e.g., *.example.com)" />
         </label>
         <label class="field">
           <span>Issue search</span>

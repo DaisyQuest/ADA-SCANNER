@@ -1,8 +1,8 @@
 {
   "id": "contrast-razor-foreground-background",
-  "description": "Ensure sufficient contrast when explicit foreground and background colors are defined in Razor views.",
+  "description": "Ensure Razor views with explicit foreground/background colors meet WCAG contrast ratios for text.",
   "severity": "high",
   "checkId": "insufficient-contrast",
   "appliesTo": "cshtml, razor",
-  "recommendation": "Adjust the foreground or background color to meet WCAG 2.0 AA contrast requirements."
+  "recommendation": "Adjust the foreground or background color to meet WCAG 2.0 AA contrast requirements across normal and large text sizes."
 }

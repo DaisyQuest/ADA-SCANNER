@@ -1,8 +1,8 @@
 {
   "id": "contrast-focus-indicator",
-  "description": "Ensure focus indicators have enough contrast to be visible on all backgrounds.",
+  "description": "Ensure focus indicators are clearly visible against adjacent colors and component surfaces.",
   "severity": "high",
   "checkId": "insufficient-contrast",
   "appliesTo": "html",
-  "recommendation": "Use focus ring colors that reach a 4.5:1 contrast ratio."
+  "recommendation": "Use focus ring colors that reach at least a 3:1 contrast ratio against adjacent colors."
 }

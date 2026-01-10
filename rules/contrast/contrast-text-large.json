@@ -1,8 +1,8 @@
 {
   "id": "contrast-text-large",
-  "description": "Ensure large text meets a 4.5:1 contrast ratio when paired with its background.",
+  "description": "Ensure large text (18pt+ or 14pt+ bold) meets a 3:1 contrast ratio against its background.",
   "severity": "medium",
   "checkId": "insufficient-contrast",
   "appliesTo": "html",
-  "recommendation": "Confirm headings and hero text reach at least a 4.5:1 contrast ratio for consistency."
+  "recommendation": "Confirm headings and hero text reach at least a 3:1 contrast ratio, or raise contrast to 4.5:1 if sizes drop below large-text thresholds."
 }

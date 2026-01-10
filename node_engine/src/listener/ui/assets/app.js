@@ -5,6 +5,7 @@ const state = {
   filters: {
     ruleQuery: "",
     fileQuery: "",
+    domainQuery: "",
     severity: "all"
   }
 };
@@ -20,6 +21,7 @@ const elements = {
   checkCount: document.getElementById("checkCount"),
   ruleSearchInput: document.getElementById("ruleSearchInput"),
   fileSearchInput: document.getElementById("fileSearchInput"),
+  domainSearchInput: document.getElementById("domainSearchInput"),
   severityFilterSelect: document.getElementById("severityFilterSelect"),
   clearFiltersButton: document.getElementById("clearFilters"),
   ruleResultCount: document.getElementById("ruleResultCount"),
@@ -42,6 +44,35 @@ const matchesQuery = (value, query) => {
   }
   return normalizeText(value).includes(normalizeText(query));
 };
+
+const extractDomain = (value) => {
+  const text = String(value ?? "").trim();
+  if (!text || !/^[a-z][a-z0-9+.-]*:\/\//i.test(text)) {
+    return "";
+  }
+  try {
+    return new URL(text).hostname;
+  } catch (error) {
+    return "";
+  }
+};
+
+const matchesWildcard = (value, query) => {
+  const normalizedQuery = normalizeText(query).trim();
+  if (!normalizedQuery) {
+    return true;
+  }
+  if (normalizedQuery === "*") {
+    return true;
+  }
+  if (!value) {
+    return false;
+  }
+  const escaped = normalizedQuery.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*");
+  return new RegExp(`^${escaped}$`, "i").test(String(value).toLowerCase());
+};
+
+const matchesDomainQuery = (value, query) => matchesWildcard(extractDomain(value), query);
 
 const updateTimestamp = () => {
   elements.lastUpdated.textContent = formatTime();
@@ -66,6 +97,7 @@ const syncFiltersFromInputs = () => {
   state.filters = {
     ruleQuery: elements.ruleSearchInput?.value?.trim() ?? "",
     fileQuery: elements.fileSearchInput?.value?.trim() ?? "",
+    domainQuery: elements.domainSearchInput?.value?.trim() ?? "",
     severity: elements.severityFilterSelect?.value || "all"
   };
 };
@@ -76,6 +108,9 @@ const resetFilters = () => {
   }
   if (elements.fileSearchInput) {
     elements.fileSearchInput.value = "";
+  }
+  if (elements.domainSearchInput) {
+    elements.domainSearchInput.value = "";
   }
   if (elements.severityFilterSelect) {
     elements.severityFilterSelect.value = "all";
@@ -174,10 +209,13 @@ const renderRules = () => {
     return;
   }
 
-  const { ruleQuery, severity } = state.filters;
+  const { ruleQuery, domainQuery, severity } = state.filters;
   const filteredRules = state.report.byRule.filter(
     (rule) =>
       matchesQuery(buildRuleSearchTarget(rule), ruleQuery)
+      && (!domainQuery
+        ? true
+        : (rule.files ?? []).some((filePath) => matchesDomainQuery(filePath, domainQuery)))
       && matchesSeverity(rule.severity || "unknown", severity)
   );
 
@@ -223,13 +261,14 @@ const renderFiles = () => {
     return;
   }
 
-  const { fileQuery, severity } = state.filters;
+  const { fileQuery, domainQuery, severity } = state.filters;
   const filteredFiles = state.report.byFile.filter((file) => {
     const matchesFile = matchesQuery(file.filePath, fileQuery);
+    const matchesDomain = matchesDomainQuery(file.filePath, domainQuery);
     const matchesFileSeverity = !severity || severity === "all"
       ? true
       : (file.severities ?? []).some((entry) => matchesSeverity(entry.severity, severity));
-    return matchesFile && matchesFileSeverity;
+    return matchesFile && matchesDomain && matchesFileSeverity;
   });
 
   if (elements.fileResultCount) {
@@ -278,15 +317,16 @@ const renderFiles = () => {
 };
 
 const renderIssues = () => {
-  const { ruleQuery, fileQuery, severity } = state.filters;
+  const { ruleQuery, fileQuery, domainQuery, severity } = state.filters;
   const filteredIssues = state.issues.filter((issue) => {
     const matchesRuleQuery = matchesQuery(
       [issue.ruleId, issue.message].filter(Boolean).join(" "),
       ruleQuery
     );
     const matchesFileQuery = matchesQuery(issue.filePath, fileQuery);
+    const matchesDomain = matchesDomainQuery(issue.filePath, domainQuery);
     const matchesIssueSeverity = matchesSeverity(issue.severity || "unknown", severity);
-    return matchesRuleQuery && matchesFileQuery && matchesIssueSeverity;
+    return matchesRuleQuery && matchesFileQuery && matchesDomain && matchesIssueSeverity;
   });
 
   if (elements.issueResultCount) {
@@ -362,6 +402,7 @@ const bindEvents = () => {
   bindEvents.bound = true;
   elements.ruleSearchInput?.addEventListener("input", renderAll);
   elements.fileSearchInput?.addEventListener("input", renderAll);
+  elements.domainSearchInput?.addEventListener("input", renderAll);
   elements.severityFilterSelect?.addEventListener("change", renderAll);
   elements.clearFiltersButton?.addEventListener("click", resetFilters);
 };
@@ -442,6 +483,9 @@ if (typeof module !== "undefined") {
     formatCounts,
     normalizeText,
     matchesQuery,
+    extractDomain,
+    matchesWildcard,
+    matchesDomainQuery,
     normalizeToken,
     resolveSeverityVariant,
     matchesSeverity,
