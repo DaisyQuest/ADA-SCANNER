@@ -65,6 +65,15 @@
         width: 16px;
         height: 16px;
       }
+      #${SIDEBAR_ID} .ada-report-toggle--tab-order input {
+        accent-color: #32cd32;
+      }
+      #${SIDEBAR_ID} .ada-report-toggles {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
       #${SIDEBAR_ID} .ada-report-body {
         overflow-y: auto;
         padding: 8px 8px 12px 8px;
@@ -134,7 +143,10 @@
 
   const normalizeList = (items) => (Array.isArray(items) ? items : []);
 
-  const buildElements = (documentRoot, { initialSidebarEnabled = true, onToggleSidebar } = {}) => {
+  const buildElements = (
+    documentRoot,
+    { initialSidebarEnabled = true, initialTabOrderEnabled = false, onToggleSidebar, onToggleTabOrder } = {}
+  ) => {
     const container = documentRoot.createElement("aside");
     container.id = SIDEBAR_ID;
     container.setAttribute(REPORT_SIDEBAR_ATTR, "true");
@@ -151,6 +163,9 @@
     const count = documentRoot.createElement("div");
     count.className = "ada-report-count";
     count.textContent = "0";
+
+    const toggles = documentRoot.createElement("div");
+    toggles.className = "ada-report-toggles";
 
     const toggleLabel = documentRoot.createElement("label");
     toggleLabel.className = "ada-report-toggle";
@@ -171,8 +186,30 @@
     toggleLabel.appendChild(toggleInput);
     toggleLabel.appendChild(toggleText);
 
+    const tabOrderLabel = documentRoot.createElement("label");
+    tabOrderLabel.className = "ada-report-toggle ada-report-toggle--tab-order";
+
+    const tabOrderInput = documentRoot.createElement("input");
+    tabOrderInput.type = "checkbox";
+    tabOrderInput.checked = !!initialTabOrderEnabled;
+    tabOrderInput.setAttribute("aria-label", "Show tab order overlay");
+    tabOrderInput.addEventListener("change", () => {
+      if (typeof onToggleTabOrder === "function") {
+        onToggleTabOrder(tabOrderInput.checked);
+      }
+    });
+
+    const tabOrderText = documentRoot.createElement("span");
+    tabOrderText.textContent = "Tab order";
+
+    tabOrderLabel.appendChild(tabOrderInput);
+    tabOrderLabel.appendChild(tabOrderText);
+
+    toggles.appendChild(toggleLabel);
+    toggles.appendChild(tabOrderLabel);
+
     header.appendChild(title);
-    header.appendChild(toggleLabel);
+    header.appendChild(toggles);
     header.appendChild(count);
 
     const body = documentRoot.createElement("div");
@@ -201,7 +238,9 @@
     resolveTargets,
     onIssueSelect,
     onToggleSidebar,
-    initialSidebarEnabled = true
+    onToggleTabOrder,
+    initialSidebarEnabled = true,
+    initialTabOrderEnabled = false
   }) => {
     let elements = null;
     let lastIssues = [];
@@ -211,7 +250,12 @@
         return;
       }
       ensureStyles(documentRoot);
-      elements = buildElements(documentRoot, { initialSidebarEnabled, onToggleSidebar });
+      elements = buildElements(documentRoot, {
+        initialSidebarEnabled,
+        initialTabOrderEnabled,
+        onToggleSidebar,
+        onToggleTabOrder
+      });
     };
 
     const getIssueLabel = (issue) => {

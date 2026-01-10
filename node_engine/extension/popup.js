@@ -38,6 +38,7 @@
   const createPopup = ({ documentRoot, chromeApi }) => {
     const enabledToggle = documentRoot.getElementById("enabled-toggle");
     const sidebarToggle = documentRoot.getElementById("sidebar-toggle");
+    const tabOrderToggle = documentRoot.getElementById("tab-order-toggle");
     const spiderToggle = documentRoot.getElementById("spider-toggle");
     const spiderDelayInput = documentRoot.getElementById("spider-delay");
     const serverUrlInput = documentRoot.getElementById("server-url");
@@ -61,6 +62,7 @@
     const applyState = (state) => {
       enabledToggle.checked = !!state.enabled;
       sidebarToggle.checked = !!state.sidebarEnabled;
+      tabOrderToggle.checked = !!state.tabOrderEnabled;
       spiderToggle.checked = !!state.spiderEnabled;
       spiderDelayInput.value = state.spiderRequestDelayMs ?? DEFAULT_SPIDER_REQUEST_DELAY_MS;
       serverUrlInput.value = state.serverUrl ?? DEFAULT_SERVER_URL;
@@ -81,6 +83,10 @@
 
     const updateSidebar = async (enabled) => {
       await chromeApi.storage.local.set({ sidebarEnabled: enabled });
+    };
+
+    const updateTabOrder = async (enabled) => {
+      await chromeApi.storage.local.set({ tabOrderEnabled: enabled });
     };
 
     const updateSpiderDelay = async (value) => {
@@ -108,6 +114,10 @@
       updateSidebar(event.target.checked);
     });
 
+    tabOrderToggle.addEventListener("change", (event) => {
+      updateTabOrder(event.target.checked);
+    });
+
     spiderToggle.addEventListener("change", (event) => {
       updateSpider(event.target.checked);
     });
@@ -124,6 +134,7 @@
       if (
         changes.enabled ||
         changes.sidebarEnabled ||
+        changes.tabOrderEnabled ||
         changes.spiderEnabled ||
         changes.serverUrl ||
         changes.spiderRequestDelayMs
@@ -131,6 +142,7 @@
         readStorage(chromeApi.storage.local, {
           enabled: false,
           sidebarEnabled: true,
+          tabOrderEnabled: false,
           spiderEnabled: false,
           serverUrl: DEFAULT_SERVER_URL,
           spiderRequestDelayMs: DEFAULT_SPIDER_REQUEST_DELAY_MS
@@ -141,6 +153,7 @@
     readStorage(chromeApi.storage.local, {
       enabled: false,
       sidebarEnabled: true,
+      tabOrderEnabled: false,
       spiderEnabled: false,
       serverUrl: DEFAULT_SERVER_URL,
       spiderRequestDelayMs: DEFAULT_SPIDER_REQUEST_DELAY_MS
@@ -149,6 +162,7 @@
     return {
       updateEnabled,
       updateSidebar,
+      updateTabOrder,
       updateSpider,
       updateSpiderDelay,
       updateServerUrl,

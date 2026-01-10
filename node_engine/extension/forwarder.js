@@ -10,6 +10,7 @@
     "data-ada-original-title"
   ];
   const REPORT_SIDEBAR_ATTR = "data-ada-report-sidebar";
+  const TAB_ORDER_OVERLAY_ATTR = "data-ada-tab-order";
 
   const stripHighlights = (rootElement) => {
     if (!rootElement) {
@@ -43,6 +44,15 @@
     sidebarNodes.forEach((node) => node.remove());
   };
 
+  const stripTabOrderOverlay = (rootElement) => {
+    if (!rootElement) {
+      return;
+    }
+
+    const overlayNodes = rootElement.querySelectorAll(`[${TAB_ORDER_OVERLAY_ATTR}]`);
+    overlayNodes.forEach((node) => node.remove());
+  };
+
   const normalizeHtml = (documentRoot) => {
     const root = documentRoot?.documentElement;
     if (!root) {
@@ -52,6 +62,7 @@
     const clone = root.cloneNode(true);
     stripHighlights(clone);
     stripReportSidebar(clone);
+    stripTabOrderOverlay(clone);
     return clone.outerHTML ?? "";
   };
 

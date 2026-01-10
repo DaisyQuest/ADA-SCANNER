@@ -12,6 +12,7 @@
   const { createForwarder, getDefaultConfig } = globalThis.AdaForwarder;
   const { createHighlighter, filterIssuesForPage } = globalThis.AdaHighlighter;
   const { createReportSidebar } = globalThis.AdaReportSidebar ?? {};
+  const { createTabOrderOverlay } = globalThis.AdaTabOrderOverlay ?? {};
 
   const createContentScript = ({ chromeApi, documentRoot, windowObj, fetchFn }) => {
     let observer = null;
@@ -22,6 +23,8 @@
     let ajaxMonitor = null;
     let extensionEnabled = false;
     let sidebarEnabled = true;
+    let tabOrderEnabled = false;
+    let tabOrderOverlay = null;
 
     const getConfig = async () => {
       const config = await getDefaultConfig(chromeApi.storage.local);
@@ -37,15 +40,20 @@
     };
 
     const scheduleRefresh = () => {
-      if (!lastIssues.length) {
+      if (!lastIssues.length && !tabOrderOverlay) {
         return;
       }
       clearRefreshTimeout();
       refreshTimeout = windowObj.setTimeout(() => {
         refreshTimeout = null;
-        highlighter.applyHighlights(lastIssues);
-        if (sidebar) {
-          sidebar.refresh();
+        if (lastIssues.length) {
+          highlighter.applyHighlights(lastIssues);
+          if (sidebar) {
+            sidebar.refresh();
+          }
+        }
+        if (tabOrderOverlay) {
+          tabOrderOverlay.refresh();
         }
       }, 100);
     };
@@ -119,8 +127,18 @@
         resolveTargets: highlighter.resolveTargets,
         onIssueSelect: highlighter.focusIssue,
         onToggleSidebar: (enabled) => chromeApi.storage.local.set({ sidebarEnabled: enabled }),
-        initialSidebarEnabled: sidebarEnabled
+        onToggleTabOrder: (enabled) => chromeApi.storage.local.set({ tabOrderEnabled: enabled }),
+        initialSidebarEnabled: sidebarEnabled,
+        initialTabOrderEnabled: tabOrderEnabled
       });
+    };
+
+    const ensureTabOrderOverlay = () => {
+      if (!createTabOrderOverlay || tabOrderOverlay || !tabOrderEnabled) {
+        return;
+      }
+      tabOrderOverlay = createTabOrderOverlay({ documentRoot, windowObj });
+      tabOrderOverlay.enable();
     };
 
     const createAjaxMonitor = () => {
@@ -266,6 +284,7 @@
 
       console.log("[ADA] starting observer on", windowObj.location.href);
       ensureSidebar();
+      ensureTabOrderOverlay();
 
       observer = new windowObj.MutationObserver(() => {
         // schedule can be very chatty; keep log minimal
@@ -307,6 +326,10 @@
       lastIssues = [];
       clearRefreshTimeout();
       highlighter.clearHighlights();
+      if (tabOrderOverlay) {
+        tabOrderOverlay.destroy();
+        tabOrderOverlay = null;
+      }
       if (sidebar) {
         sidebar.destroy();
         sidebar = null;
@@ -325,6 +348,21 @@
         ensureSidebar();
         if (sidebar) {
           sidebar.render(lastIssues);
+        }
+      }
+    };
+
+    const setTabOrderEnabled = (enabled) => {
+      tabOrderEnabled = enabled;
+      if (!tabOrderEnabled && tabOrderOverlay) {
+        tabOrderOverlay.destroy();
+        tabOrderOverlay = null;
+        return;
+      }
+      if (tabOrderEnabled && extensionEnabled) {
+        ensureTabOrderOverlay();
+        if (tabOrderOverlay) {
+          tabOrderOverlay.refresh();
         }
       }
     };
@@ -357,15 +395,19 @@
       }
     });
 
-    chromeApi.storage.local.get({ enabled: false, sidebarEnabled: true }, (state) => {
+    chromeApi.storage.local.get({ enabled: false, sidebarEnabled: true, tabOrderEnabled: false }, (state) => {
       console.log("[ADA] initial enabled state:", state.enabled);
       sidebarEnabled = state.sidebarEnabled !== false;
+      tabOrderEnabled = !!state.tabOrderEnabled;
       handleToggle(!!state.enabled);
     });
 
     chromeApi.storage.onChanged?.addListener((changes) => {
       if (changes.sidebarEnabled) {
         setSidebarEnabled(!!changes.sidebarEnabled.newValue);
+      }
+      if (changes.tabOrderEnabled) {
+        setTabOrderEnabled(!!changes.tabOrderEnabled.newValue);
       }
     });
 
