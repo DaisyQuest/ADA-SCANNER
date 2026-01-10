@@ -1409,6 +1409,7 @@ describe("InsufficientContrastCheck", () => {
     expect(parseCssColor("background: url(x) #abc", ["background", "background-color"])).toBe("#abc");
     expect(extractCssColorToken("url(x) rgba(1, 2, 3, 0.5)")).toBe("rgba(1, 2, 3, 0.5)");
     expect(extractColorTokens("linear-gradient(#fff, rgb(0,0,0))")).toEqual(["#fff", "rgb(0,0,0)"]);
+    expect(extractColorTokens("background: currentColor")).toEqual(["currentColor"]);
     expect(parseCssValue("background: #fff;", "background")).toBe("#fff");
     expect(parseCssValue("color: #fff;", ["background", "color"])).toBe("#fff");
     expect(parseCssBackgroundColors("background: #fff linear-gradient(#000, #333);"))
@@ -1504,6 +1505,21 @@ describe("InsufficientContrastCheck", () => {
 
     const hslContext = createContext('<div style="color: hsl(0, 0%, 10%); background-color: hsl(0, 0%, 30%)"></div>', "html");
     expect(InsufficientContrastCheck.run(hslContext, rule)).toHaveLength(1);
+
+    const currentColorContext = createContext(
+      '<div style="color: #777; background-color: currentColor"></div>',
+      "html"
+    );
+    const currentColorIssues = InsufficientContrastCheck.run(currentColorContext, rule);
+    expect(currentColorIssues).toHaveLength(1);
+    expect(currentColorIssues[0].evidence).toContain('Foreground: rgb(119, 119, 119)');
+    expect(currentColorIssues[0].evidence).toContain('Background: rgb(119, 119, 119)');
+
+    const shorthandCurrentColor = createContext(
+      '<div style="color: #777; background: currentColor"></div>',
+      "html"
+    );
+    expect(InsufficientContrastCheck.run(shorthandCurrentColor, rule)).toHaveLength(1);
 
     const xamlAlpha = createContext('<TextBlock Foreground="#80FFFFFF" Background="#80FFFFFF" />', "xaml");
     expect(InsufficientContrastCheck.run(xamlAlpha, rule)).toHaveLength(1);

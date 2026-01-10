@@ -51,6 +51,8 @@ const extractColorTokens = (value) => {
   for (const word of wordMatches) {
     if (parseColor(word)) {
       tokens.push(word);
+    } else if (word.toLowerCase() === "currentcolor") {
+      tokens.push(word);
     }
   }
 
@@ -249,6 +251,8 @@ const extractCssVarName = (value) => {
   const match = value.trim().match(/^var\(\s*(--[^,\s)]+)\s*(?:,.*)?\)$/i);
   return match ? match[1] : null;
 };
+
+const isCurrentColorToken = (value) => value?.trim().toLowerCase() === "currentcolor";
 
 const resolveCssVarFromStyle = (value, style) => {
   if (!style) {
@@ -543,6 +547,7 @@ const InsufficientContrastCheck = {
 
       const backgroundColors = candidate.backgroundColors
         .map((color) => resolveColorWithContext(color, candidate.style, cssVariables))
+        .map((color) => (isCurrentColorToken(color) ? foreground : color))
         .filter(Boolean);
 
       const parsedBackgrounds = backgroundColors
