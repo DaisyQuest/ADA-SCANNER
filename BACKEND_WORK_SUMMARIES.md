@@ -67,3 +67,4 @@
 2026-01-10 - Add Firefox extension bundle reusing Chrome assets with manifest parity tests. (SPEC-013, SPEC-019)
 2026-01-10 - Expand goldmaster option and CLI test coverage for node_engine reporting flows. (SPEC-013, SPEC-014, SPEC-015)
 2026-01-10 - Add GoldMaster report comparison/save output and expand reporting tests. (SPEC-013, SPEC-014, SPEC-015)
+2026-01-10 - Add deep nesting/iframe GoldMaster fixtures and inventory coverage tests. (SPEC-013, SPEC-014)
