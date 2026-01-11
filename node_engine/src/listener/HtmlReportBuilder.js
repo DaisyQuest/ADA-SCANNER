@@ -101,25 +101,27 @@ const renderIssuesTable = (issues) => {
     .join("");
 
   return `
-    <table class="data-table">
-      <thead>
-        <tr>
-          <th>Rule</th>
-          <th>Message</th>
-          <th>Team</th>
-          <th>Severity</th>
-          <th>Line</th>
-          <th>Details</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${rows || `
+    <div class="table-wrapper">
+      <table class="data-table">
+        <thead>
           <tr>
-            <td colspan="6" class="muted">No issues found for this file.</td>
+            <th>Rule</th>
+            <th>Message</th>
+            <th>Team</th>
+            <th>Severity</th>
+            <th>Line</th>
+            <th>Details</th>
           </tr>
-        `}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          ${rows || `
+            <tr>
+              <td colspan="6" class="muted">No issues found for this file.</td>
+            </tr>
+          `}
+        </tbody>
+      </table>
+    </div>
   `;
 };
 
@@ -140,10 +142,12 @@ const buildHtmlPage = ({ title, summaryHtml, sectionsHtml }) => `
           --primary: #1f4fd6;
           --primary-soft: #e0e9ff;
           --border: #e2e7f0;
-          --shadow: 0 12px 24px rgba(23, 32, 49, 0.08);
+          --shadow: 0 16px 28px rgba(23, 32, 49, 0.08);
           --success: #16a34a;
           --warning: #f59e0b;
           --danger: #ef4444;
+          --panel-accent: #f2f6ff;
+          --highlight: #f8fafc;
         }
 
         * { box-sizing: border-box; }
@@ -154,9 +158,30 @@ const buildHtmlPage = ({ title, summaryHtml, sectionsHtml }) => `
           color: var(--text);
         }
         header {
-          padding: 28px 40px 20px;
+          padding: 32px 40px 24px;
           background: linear-gradient(120deg, #ffffff 0%, #eef3ff 100%);
           border-bottom: 1px solid var(--border);
+        }
+        .header-content {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 24px;
+          flex-wrap: wrap;
+        }
+        .header-meta {
+          display: flex;
+          gap: 12px;
+          flex-wrap: wrap;
+        }
+        .meta-pill {
+          background: var(--panel);
+          border: 1px solid var(--border);
+          border-radius: 999px;
+          padding: 6px 12px;
+          font-size: 12px;
+          color: var(--muted);
+          font-weight: 600;
         }
         header h1 {
           margin: 0 0 6px;
@@ -171,6 +196,8 @@ const buildHtmlPage = ({ title, summaryHtml, sectionsHtml }) => `
           display: flex;
           flex-direction: column;
           gap: 24px;
+          max-width: 1200px;
+          margin: 0 auto;
         }
         .summary-grid {
           display: grid;
@@ -191,7 +218,7 @@ const buildHtmlPage = ({ title, summaryHtml, sectionsHtml }) => `
           position: absolute;
           inset: 0;
           border-top: 4px solid var(--primary);
-          opacity: 0.2;
+          opacity: 0.25;
           pointer-events: none;
         }
         .summary-label {
@@ -202,6 +229,11 @@ const buildHtmlPage = ({ title, summaryHtml, sectionsHtml }) => `
           font-size: 26px;
           font-weight: 700;
           margin-top: 6px;
+          word-break: break-word;
+        }
+        .summary-value--mono {
+          font-family: "SFMono-Regular", "Consolas", "Liberation Mono", monospace;
+          font-size: 16px;
         }
         section {
           background: var(--panel);
@@ -210,9 +242,28 @@ const buildHtmlPage = ({ title, summaryHtml, sectionsHtml }) => `
           box-shadow: var(--shadow);
           padding: 18px 20px 22px;
         }
+        .section-header {
+          display: flex;
+          align-items: flex-start;
+          justify-content: space-between;
+          gap: 12px;
+          flex-wrap: wrap;
+          margin-bottom: 12px;
+        }
         section h2 {
           margin: 0 0 12px;
           font-size: 18px;
+        }
+        .section-description {
+          margin: 4px 0 0;
+          color: var(--muted);
+          font-size: 13px;
+        }
+        .table-wrapper {
+          border: 1px solid var(--border);
+          border-radius: 12px;
+          overflow: hidden;
+          background: var(--panel);
         }
         .data-table {
           width: 100%;
@@ -225,12 +276,19 @@ const buildHtmlPage = ({ title, summaryHtml, sectionsHtml }) => `
           text-transform: uppercase;
           letter-spacing: 0.05em;
           color: var(--muted);
-          padding: 10px 0;
+          padding: 12px 16px;
+          background: var(--panel-accent);
         }
         .data-table td {
-          padding: 10px 0;
+          padding: 12px 16px;
           border-top: 1px solid var(--border);
           vertical-align: top;
+        }
+        .data-table tbody tr:nth-child(even) {
+          background: var(--highlight);
+        }
+        .data-table tbody tr:hover {
+          background: #eef3ff;
         }
         .badge {
           display: inline-flex;
@@ -292,6 +350,11 @@ const buildHtmlPage = ({ title, summaryHtml, sectionsHtml }) => `
           border-radius: 999px;
           font-size: 11px;
         }
+        .badge-list {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 4px;
+        }
         .pill {
           display: inline-flex;
           align-items: center;
@@ -313,6 +376,12 @@ const buildHtmlPage = ({ title, summaryHtml, sectionsHtml }) => `
           margin: 8px 0;
           color: #2f3b55;
           font-size: 12px;
+        }
+        details {
+          background: var(--panel-accent);
+          border-radius: 10px;
+          padding: 8px 12px;
+          border: 1px solid var(--border);
         }
         details summary {
           cursor: pointer;
@@ -339,8 +408,16 @@ const buildHtmlPage = ({ title, summaryHtml, sectionsHtml }) => `
     </head>
     <body>
       <header>
-        <h1>${escapeHtml(title)}</h1>
-        <p>ADA Scanner runtime report</p>
+        <div class="header-content">
+          <div>
+            <h1>${escapeHtml(title)}</h1>
+            <p>ADA Scanner runtime report</p>
+          </div>
+          <div class="header-meta">
+            <span class="meta-pill">ADA Scanner</span>
+            <span class="meta-pill">Accessibility Report</span>
+          </div>
+        </div>
       </header>
       <main>
         ${summaryHtml}
@@ -425,76 +502,111 @@ class HtmlReportBuilder {
       </tr>
     `).join("");
 
-    const sectionsHtml = `
+  const sectionsHtml = `
       <section>
-        <h2>Rule violations</h2>
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Rule</th>
-              <th>Team</th>
-              <th>Severity</th>
-              <th>Issues</th>
-              <th>Files</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${ruleRows || `
+        <div class="section-header">
+          <div>
+            <h2>Rule violations</h2>
+            <p class="section-description">Each rule aggregated with ownership and severity context.</p>
+          </div>
+        </div>
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead>
               <tr>
-                <td colspan="5" class="muted">No rule violations recorded.</td>
+                <th>Rule</th>
+                <th>Team</th>
+                <th>Severity</th>
+                <th>Issues</th>
+                <th>Files</th>
               </tr>
-            `}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              ${ruleRows || `
+                <tr>
+                  <td colspan="5" class="muted">No rule violations recorded.</td>
+                </tr>
+              `}
+            </tbody>
+          </table>
+        </div>
       </section>
       <section>
-        <h2>Files with violations</h2>
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>File</th>
-              <th>Issues</th>
-              <th>Top rules</th>
-              <th>Severities</th>
-              <th>Teams</th>
-              <th>Stylesheets with issues</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${fileRows || `
+        <div class="section-header">
+          <div>
+            <h2>Files with violations</h2>
+            <p class="section-description">Quickly locate the files that need the most attention.</p>
+          </div>
+        </div>
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead>
               <tr>
-                <td colspan="6" class="muted">No file-level issues recorded.</td>
+                <th>File</th>
+                <th>Issues</th>
+                <th>Top rules</th>
+                <th>Severities</th>
+                <th>Teams</th>
+                <th>Stylesheets with issues</th>
               </tr>
-            `}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              ${fileRows || `
+                <tr>
+                  <td colspan="6" class="muted">No file-level issues recorded.</td>
+                </tr>
+              `}
+            </tbody>
+          </table>
+        </div>
       </section>
       <section>
-        <h2>Team impact</h2>
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Team</th>
-              <th>Issues</th>
-              <th>Rules</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${teamRows || `
+        <div class="section-header">
+          <div>
+            <h2>Team impact</h2>
+            <p class="section-description">Align ownership with the highest-impact findings.</p>
+          </div>
+        </div>
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead>
               <tr>
-                <td colspan="3" class="muted">No team impacts recorded.</td>
+                <th>Team</th>
+                <th>Issues</th>
+                <th>Rules</th>
               </tr>
-            `}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              ${teamRows || `
+                <tr>
+                  <td colspan="3" class="muted">No team impacts recorded.</td>
+                </tr>
+              `}
+            </tbody>
+          </table>
+        </div>
       </section>
       <section>
-        <h2>Severity breakdown</h2>
-        ${renderBadgeList(report?.bySeverity, "severity", { variantResolver: resolveSeverityVariant })}
+        <div class="section-header">
+          <div>
+            <h2>Severity breakdown</h2>
+            <p class="section-description">Issues grouped by severity classification.</p>
+          </div>
+        </div>
+        <div class="badge-list">
+          ${renderBadgeList(report?.bySeverity, "severity", { variantResolver: resolveSeverityVariant })}
+        </div>
       </section>
       <section>
-        <h2>Checks triggered</h2>
-        ${renderBadgeList(report?.byCheck, "checkId", { variant: "rule" })}
+        <div class="section-header">
+          <div>
+            <h2>Checks triggered</h2>
+            <p class="section-description">Checklist coverage for this scan run.</p>
+          </div>
+        </div>
+        <div class="badge-list">
+          ${renderBadgeList(report?.byCheck, "checkId", { variant: "rule" })}
+        </div>
       </section>
     `;
 
@@ -511,7 +623,7 @@ class HtmlReportBuilder {
         <div class="summary-grid">
           <div class="summary-card">
             <div class="summary-label">File</div>
-            <div class="summary-value">${escapeHtml(report?.filePath ?? "unknown")}</div>
+            <div class="summary-value summary-value--mono">${escapeHtml(report?.filePath ?? "unknown")}</div>
           </div>
           <div class="summary-card">
             <div class="summary-label">Issues</div>
@@ -531,35 +643,54 @@ class HtmlReportBuilder {
 
     const sectionsHtml = `
       <section>
-        <h2>Issues</h2>
+        <div class="section-header">
+          <div>
+            <h2>Issues</h2>
+            <p class="section-description">Detailed findings scoped to this file.</p>
+          </div>
+        </div>
         ${renderIssuesTable(report?.issues)}
       </section>
       <section>
-        <h2>Linked stylesheet issues</h2>
-        ${renderBadgeList(report?.linkedStylesheetsWithIssues, "filePath", { variant: "file" })}
+        <div class="section-header">
+          <div>
+            <h2>Linked stylesheet issues</h2>
+            <p class="section-description">Stylesheets referenced by this file that contain accessibility issues.</p>
+          </div>
+        </div>
+        <div class="badge-list">
+          ${renderBadgeList(report?.linkedStylesheetsWithIssues, "filePath", { variant: "file" })}
+        </div>
       </section>
       <section>
-        <h2>Rule breakdown</h2>
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Rule</th>
-              <th>Count</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${normalizeList(report?.byRule).map((entry) => `
+        <div class="section-header">
+          <div>
+            <h2>Rule breakdown</h2>
+            <p class="section-description">Issue counts per accessibility rule for this file.</p>
+          </div>
+        </div>
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead>
               <tr>
-                <td>${escapeHtml(entry.ruleId)}</td>
-                <td>${escapeHtml(entry.count)}</td>
+                <th>Rule</th>
+                <th>Count</th>
               </tr>
-            `).join("") || `
-              <tr>
-                <td colspan="2" class="muted">No rule data available.</td>
-              </tr>
-            `}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              ${normalizeList(report?.byRule).map((entry) => `
+                <tr>
+                  <td>${escapeHtml(entry.ruleId)}</td>
+                  <td>${escapeHtml(entry.count)}</td>
+                </tr>
+              `).join("") || `
+                <tr>
+                  <td colspan="2" class="muted">No rule data available.</td>
+                </tr>
+              `}
+            </tbody>
+          </table>
+        </div>
       </section>
     `;
 

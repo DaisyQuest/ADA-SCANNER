@@ -184,6 +184,7 @@ describe("goldmaster reporting helpers", () => {
     const html = renderGoldMasterExpectationsHtml({ totals: {}, extensions: [] });
     expect(html).toContain("GoldMaster Expectations Summary");
     expect(html).toContain("No expectation results available");
+    expect(html).toContain("Total docs:");
   });
 
   test("renders expectations html tables with results", () => {
@@ -212,6 +213,7 @@ describe("goldmaster reporting helpers", () => {
     expect(html).toContain("doc.html");
     expect(html).toContain("/tmp/doc.expectations.json");
     expect(html).toContain("status-match");
+    expect(html).toContain("status-pill");
   });
 
   test("renders expectations html tables with empty extension results", () => {

@@ -66,6 +66,7 @@ describe("HtmlReportBuilder", () => {
     expect(html).toContain("Add a label");
     expect(html).toContain("badge--severity-high");
     expect(html).toContain("badge--team");
+    expect(html).toContain("table-wrapper");
 
     const emptyHtml = renderIssuesTable([]);
     expect(emptyHtml).toContain("No issues found");
@@ -115,6 +116,7 @@ describe("HtmlReportBuilder", () => {
     expect(html).toContain("badge--severity-high");
     expect(html).toContain("Severity breakdown");
     expect(html).toContain("Checks triggered");
+    expect(html).toContain("meta-pill");
   });
 
   test("builds a report with empty sections", () => {
@@ -181,6 +183,7 @@ describe("HtmlReportBuilder", () => {
 
     expect(html).toContain("File Accessibility Report");
     expect(html).toContain("file-a.html");
+    expect(html).toContain("summary-value--mono");
   });
 
   test("builds a file HTML report with linked stylesheet issues", () => {
