@@ -70,3 +70,6 @@ All requirements are listed as uniquely identified, verbose statements. Each `SP
 
 - SPEC-019: Support runtime scanning of HTML captured from an arbitrary browser window via a localhost listener and manual capture snippet, without browser automation.
   - Rationale: Enables scanning of dynamic or authenticated pages that are already open in a browser.
+
+- SPEC-020: Provide cross-platform CLI launchers (bash, PowerShell, Python, Java) that route to listener/static analysis helpers with `--port`, `--headless`, and `--tool` options, emitting meaningful console output.
+  - Rationale: Ensures consistent tool entrypoints across environments.

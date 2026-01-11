@@ -89,3 +89,4 @@
 2026-01-11 - Refactored html snippet and freemarker utilities for readability with added tests. (SPEC-013)
 2026-01-11 - Refined stylesheet link parsing helpers and coverage tests. (SPEC-013)
 2026-01-11 - Clarified text utility line counting and attribute matching with expanded tests. (SPEC-013)
+2026-01-11 - Added cross-platform CLI launchers and helper scripts with tests (SPEC-020)
