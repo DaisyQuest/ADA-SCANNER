@@ -34,3 +34,4 @@
 2026-01-11 - Add algorithm metadata to contrast rules. (SPEC-008)
 
 2026-01-11 - Add algorithm_advanced metadata to contrast rules. (SPEC-008)
+2026-01-11 - Expand font-size parsing for WCAG contrast thresholds and add coverage for keyword/percent sizing. (SPEC-008)

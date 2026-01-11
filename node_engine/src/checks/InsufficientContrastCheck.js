@@ -185,12 +185,35 @@ const resolveStaticColor = (value) => {
   return trimmed ? trimmed : null;
 };
 
+const BASE_FONT_SIZE_PX = 16;
+const KEYWORD_FONT_SIZES = new Map([
+  ["xx-small", 9],
+  ["x-small", 10],
+  ["small", 13],
+  ["medium", BASE_FONT_SIZE_PX],
+  ["large", 18],
+  ["x-large", 24],
+  ["xx-large", 32],
+  ["xxx-large", 48],
+  ["larger", BASE_FONT_SIZE_PX * 1.2],
+  ["smaller", BASE_FONT_SIZE_PX / 1.2],
+]);
+
 const parseFontSize = (value) => {
   if (!value || !value.trim()) {
     return null;
   }
 
-  const match = value.trim().match(/^(?<size>[0-9.]+)\s*(?<unit>[a-z%]*)$/i);
+  const normalized = value.trim().replace(/!important$/i, "").trim().toLowerCase();
+  if (!normalized) {
+    return null;
+  }
+
+  if (KEYWORD_FONT_SIZES.has(normalized)) {
+    return KEYWORD_FONT_SIZES.get(normalized);
+  }
+
+  const match = normalized.match(/^(?<size>[0-9.]+)\s*(?<unit>[a-z%]*)$/i);
   if (!match || !match.groups) {
     return null;
   }
@@ -209,7 +232,9 @@ const parseFontSize = (value) => {
       return (size * 96) / 72;
     case "em":
     case "rem":
-      return size * 16;
+      return size * BASE_FONT_SIZE_PX;
+    case "%":
+      return (size / 100) * BASE_FONT_SIZE_PX;
     default:
       return null;
   }

@@ -1707,6 +1707,12 @@ describe("InsufficientContrastCheck", () => {
   test("uses large text thresholds when font size is present", () => {
     expect(parseFontSize("24px")).toBe(24);
     expect(parseCssFontSize("font-size: 18pt")).toBeCloseTo(24, 4);
+    expect(parseFontSize("150%")).toBeCloseTo(24, 4);
+    expect(parseFontSize("large")).toBe(18);
+    expect(parseFontSize("x-large")).toBe(24);
+    expect(parseFontSize("LARGER")).toBeCloseTo(19.2, 4);
+    expect(parseFontSize("smaller")).toBeCloseTo(13.3333, 3);
+    expect(parseFontSize("16px !important")).toBe(16);
     expect(parseFontWeight("700")).toBe(true);
     expect(parseFontWeight("normal")).toBe(false);
     expect(getRequiredContrastRatio({ fontSizePx: 24, isBold: false })).toBe(3);
@@ -1724,6 +1730,12 @@ describe("InsufficientContrastCheck", () => {
       "html"
     );
     expect(InsufficientContrastCheck.run(largeText, rule)).toHaveLength(0);
+
+    const keywordLargeText = createContext(
+      '<div style="color:#888;background-color:#fff;font-size:x-large"></div>',
+      "html"
+    );
+    expect(InsufficientContrastCheck.run(keywordLargeText, rule)).toHaveLength(0);
   });
 
   test("covers parsing fallbacks and invalid values", () => {
@@ -1744,6 +1756,7 @@ describe("InsufficientContrastCheck", () => {
     expect(parseFontSize(".px")).toBeNull();
     expect(parseFontSize("12vh")).toBeNull();
     expect(parseFontSize("2em")).toBe(32);
+    expect(parseFontSize("calc(1em + 2px)")).toBeNull();
     expect(blendColors({ r: 0, g: 0, b: 0 }, { r: 1, g: 1, b: 1, a: 1 }))
       .toEqual({ r: 0, g: 0, b: 0, a: 1 });
 
