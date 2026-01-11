@@ -23,6 +23,18 @@ describe("FreemarkerRenderer", () => {
     expect(rendered).toContain("Line 3");
   });
 
+  test("strips freemarker comments while preserving line count", () => {
+    const content = "Line 1\n<#--comment-->\nLine 2\n[#--note--]\nLine 3";
+    const rendered = renderFreemarkerTemplate(content);
+
+    expect(rendered.split("\n").length).toBe(content.split("\n").length);
+    expect(rendered).not.toContain("#--comment--");
+    expect(rendered).not.toContain("#--note--");
+    expect(rendered).toContain("Line 1");
+    expect(rendered).toContain("Line 2");
+    expect(rendered).toContain("Line 3");
+  });
+
   test("returns empty string when content is missing", () => {
     expect(renderFreemarkerTemplate()).toBe("");
     expect(renderFreemarkerTemplate(null)).toBe("");
