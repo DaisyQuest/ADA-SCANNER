@@ -11,6 +11,16 @@ const stripQueryAndHash = (value) => {
   return value.split("#")[0].split("?")[0];
 };
 
+const normalizeHref = (href) => {
+  if (!href) {
+    return null;
+  }
+  const trimmed = stripQueryAndHash(href.trim());
+  return trimmed ? trimmed : null;
+};
+
+const isRemoteHref = (href) => schemeRegex.test(href) || href.startsWith("//");
+
 const isStylesheetRel = (rel) => {
   if (!rel) {
     return false;
@@ -23,16 +33,16 @@ const isStylesheetRel = (rel) => {
 };
 
 const resolveStylesheetPath = ({ href, basePath }) => {
-  if (!href || !basePath) {
+  if (!basePath) {
     return null;
   }
 
-  const trimmed = stripQueryAndHash(href.trim());
+  const trimmed = normalizeHref(href);
   if (!trimmed) {
     return null;
   }
 
-  if (schemeRegex.test(trimmed) || trimmed.startsWith("//")) {
+  if (isRemoteHref(trimmed)) {
     return null;
   }
 
@@ -45,11 +55,11 @@ const resolveStylesheetPath = ({ href, basePath }) => {
 };
 
 const resolveStylesheetUrl = ({ href, baseUrl }) => {
-  if (!href || !baseUrl) {
+  if (!baseUrl) {
     return null;
   }
 
-  const trimmed = stripQueryAndHash(href.trim());
+  const trimmed = normalizeHref(href);
   if (!trimmed) {
     return null;
   }

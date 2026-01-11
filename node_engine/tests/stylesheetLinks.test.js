@@ -31,6 +31,7 @@ describe("StylesheetLinks", () => {
     expect(resolveStylesheetPath({ href: " ", basePath: "pages/index.html" })).toBeNull();
     expect(resolveStylesheetPath({ href: "//cdn.com/main.css", basePath: "pages/index.html" })).toBeNull();
     expect(resolveStylesheetPath({ href: "styles.css", basePath: "" })).toBeNull();
+    expect(resolveStylesheetPath({ href: null, basePath: "pages/index.html" })).toBeNull();
   });
 
   test("resolves stylesheet URLs from runtime pages", () => {
@@ -41,6 +42,7 @@ describe("StylesheetLinks", () => {
     expect(resolveStylesheetUrl({ href: " ", baseUrl: "http://example/page" })).toBeNull();
     expect(resolveStylesheetUrl({ href: "http://[invalid", baseUrl: "http://example/page" })).toBeNull();
     expect(resolveStylesheetUrl({ href: "styles.css", baseUrl: "" })).toBeNull();
+    expect(resolveStylesheetUrl({ href: "styles.css", baseUrl: "ftp://example/page" })).toBeNull();
   });
 
   test("extracts linked stylesheets from HTML", () => {
