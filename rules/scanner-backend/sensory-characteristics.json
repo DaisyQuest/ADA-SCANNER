@@ -5,6 +5,8 @@
   "checkId": "sensory-characteristics",
   "appliesTo": "html, htm, cshtml, razor",
   "recommendation": "Use text instructions that do not depend on color or position alone. (WCAG 2.1 SC 1.3.3,1.4.1)",
+  "algorithm": "Searches text for sensory words (color/position/shape) used with instruction verbs and flags potential sensory-only instructions.",
+  "algorithm_advanced": "Extracts document text (excluding script/style) and flags sensory-word matches when paired with instruction verbs.",
   "wcagCriteria": "1.3.3,1.4.1",
   "problemTags": "sensory-instructions"
 }

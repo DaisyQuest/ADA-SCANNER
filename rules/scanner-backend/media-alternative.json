@@ -5,6 +5,8 @@
   "checkId": "media-alternative",
   "appliesTo": "html, htm, cshtml, razor",
   "recommendation": "Add captions, transcripts, and audio descriptions for prerecorded and live media. (WCAG 2.1 SC 1.2.1,1.2.2,1.2.3,1.2.4,1.2.5)",
+  "algorithm": "Flags audio/video lacking caption tracks or nearby transcript links, and videos missing description tracks/links.",
+  "algorithm_advanced": "Requires caption tracks or nearby transcript links for audio/video; requires description tracks/links for video.",
   "wcagCriteria": "1.2.1,1.2.2,1.2.3,1.2.4,1.2.5",
   "problemTags": "media-alternative"
 }

@@ -11,6 +11,8 @@ namespace Scanner.Core.Rules;
 /// <param name="Recommendation">Optional guidance for remediation.</param>
 /// <param name="WcagCriteria">Optional WCAG success criteria references (comma-separated).</param>
 /// <param name="ProblemTags">Optional problem tags for filtering (comma-separated).</param>
+/// <param name="Algorithm">Optional summary of the detection algorithm.</param>
+/// <param name="AlgorithmAdvanced">Optional technical summary of the detection algorithm.</param>
 public sealed record RuleDefinition(
     string Id,
     string Description,
@@ -19,7 +21,9 @@ public sealed record RuleDefinition(
     string? AppliesTo = null,
     string? Recommendation = null,
     string? WcagCriteria = null,
-    string? ProblemTags = null);
+    string? ProblemTags = null,
+    string? Algorithm = null,
+    string? AlgorithmAdvanced = null);
 
 /// <summary>
 /// Groups rule definitions by owning team.

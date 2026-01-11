@@ -4,5 +4,8 @@
   "severity": "low",
   "checkId": "non-wrapping-container",
   "appliesTo": "html,htm,cshtml,razor,xaml",
-  "recommendation": "Allow text to wrap or break long strings so content can reflow at narrow widths and high zoom."
+  "recommendation": "Allow text to wrap or break long strings so content can reflow at narrow widths and high zoom. (WCAG 2.1 SC 1.4.10)",
+  "algorithm": "Detects white-space: nowrap/pre in inline styles or XAML TextWrapping=\"NoWrap\".",
+  "algorithm_advanced": "Flags white-space:nowrap/pre in inline styles or XAML TextWrapping=NoWrap.",
+  "wcagCriteria": "1.4.10"
 }

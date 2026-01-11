@@ -5,6 +5,8 @@
   "checkId": "images-of-text",
   "appliesTo": "html, htm, cshtml, razor",
   "recommendation": "Use actual text instead of images of text unless essential. (WCAG 2.1 SC 1.4.5)",
+  "algorithm": "Flags <img> elements whose id/class/data attributes contain tokens suggesting text content.",
+  "algorithm_advanced": "Flags <img> elements when class/id/data-* attributes include text-related tokens.",
   "wcagCriteria": "1.4.5",
   "problemTags": "images-of-text"
 }

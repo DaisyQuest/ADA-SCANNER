@@ -4,3 +4,9 @@
 
 2026-01-08 - Added skip link check with validation and tests in node_engine (SPEC-008, SPEC-013)
 2026-01-10 - Fix empty/missing link line mapping for DOM-serialized anchors and add coverage tests (SPEC-008, SPEC-013)
+
+2026-01-10 - Update ARIA label rule WCAG citations and criteria metadata. (SPEC-008)
+
+2026-01-11 - Add algorithm metadata to aria-label rules. (SPEC-008)
+
+2026-01-11 - Add algorithm_advanced metadata to aria-label rules. (SPEC-008)

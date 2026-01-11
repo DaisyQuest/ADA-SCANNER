@@ -5,6 +5,8 @@
   "checkId": "text-resize-restriction",
   "appliesTo": "html, htm, cshtml, razor, css",
   "recommendation": "Allow text to resize up to 200% without loss of content. (WCAG 2.1 SC 1.4.4)",
+  "algorithm": "Flags CSS that disables text resizing via text-size-adjust: none.",
+  "algorithm_advanced": "Regex-scans for text-size-adjust declarations set to none.",
   "wcagCriteria": "1.4.4",
   "problemTags": "text-resize"
 }

@@ -4,5 +4,8 @@
   "severity": "high",
   "checkId": "insufficient-contrast",
   "appliesTo": "html",
-  "recommendation": "Use link colors that meet at least 4.5:1 contrast and remain distinguishable via color, underline, or other non-color cues."
+  "recommendation": "Use link colors that meet at least 4.5:1 contrast and remain distinguishable via underline or other non-color cues. (WCAG 2.1 SC 1.4.3,1.4.1)",
+  "algorithm": "Extracts explicit foreground/background colors from inline styles, CSS blocks, or XAML Foreground/Background; skips gradients/images/filters; computes contrast ratio and compares against size-based thresholds.",
+  "algorithm_advanced": "Extracts static foreground/background colors from inline styles, CSS blocks, or XAML Foreground/Background; ignores gradients/images/filters; computes contrast ratio and compares against size/bold thresholds.",
+  "wcagCriteria": "1.4.3,1.4.1"
 }

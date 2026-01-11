@@ -4,5 +4,8 @@
   "severity": "high",
   "checkId": "insufficient-contrast",
   "appliesTo": "css",
-  "recommendation": "Adjust the foreground or background color to meet WCAG 2.0 AA contrast requirements across text sizes."
+  "recommendation": "Adjust the foreground or background color to meet WCAG 2.1 AA contrast requirements across text sizes. (WCAG 2.1 SC 1.4.3)",
+  "algorithm": "Extracts explicit foreground/background colors from inline styles, CSS blocks, or XAML Foreground/Background; skips gradients/images/filters; computes contrast ratio and compares against size-based thresholds.",
+  "algorithm_advanced": "Extracts static foreground/background colors from inline styles, CSS blocks, or XAML Foreground/Background; ignores gradients/images/filters; computes contrast ratio and compares against size/bold thresholds.",
+  "wcagCriteria": "1.4.3"
 }

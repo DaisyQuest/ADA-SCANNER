@@ -5,6 +5,8 @@
   "checkId": "duplicate-id",
   "appliesTo": "html, htm, cshtml, razor",
   "recommendation": "Use unique IDs within the document to avoid parsing conflicts. (WCAG 2.1 SC 4.1.1)",
+  "algorithm": "Checks the DOM for repeated id values and reports duplicates.",
+  "algorithm_advanced": "Walks DOM elements with id attributes and reports duplicates on second occurrence.",
   "wcagCriteria": "4.1.1",
   "problemTags": "duplicate-id"
 }

@@ -19,20 +19,28 @@ describe("RuleLoader", () => {
         id: "rule-a",
         description: "desc",
         severity: "low",
-        checkId: "missing-label"
+        checkId: "missing-label",
+        algorithm: "Check form controls for accessible labels.",
+        algorithm_advanced: "Traverse inputs and label associations in markup."
       })
     );
     writeFile(
       path.join(tempDir, "team-b", "rule.yaml"),
-      "id: rule-b\ndescription: desc\nseverity: high\ncheckId: missing-label"
+      "id: rule-b\ndescription: desc\nseverity: high\ncheckId: missing-label\nalgorithm: Ensure label associations exist.\nalgorithm_advanced: Validate label text sources."
     );
 
     const loader = new RuleLoader();
     const teams = loader.loadRules(tempDir);
 
     expect(teams).toHaveLength(2);
-    expect(teams.find((team) => team.teamName === "team-a").rules[0].id).toBe("rule-a");
-    expect(teams.find((team) => team.teamName === "team-b").rules[0].id).toBe("rule-b");
+    const teamA = teams.find((team) => team.teamName === "team-a");
+    const teamB = teams.find((team) => team.teamName === "team-b");
+    expect(teamA.rules[0].id).toBe("rule-a");
+    expect(teamA.rules[0].algorithm).toBe("Check form controls for accessible labels.");
+    expect(teamA.rules[0].algorithmAdvanced).toBe("Traverse inputs and label associations in markup.");
+    expect(teamB.rules[0].id).toBe("rule-b");
+    expect(teamB.rules[0].algorithm).toBe("Ensure label associations exist.");
+    expect(teamB.rules[0].algorithmAdvanced).toBe("Validate label text sources.");
   });
 
   test("validates rules and captures schema errors", () => {
@@ -147,11 +155,15 @@ describe("RuleLoader", () => {
         description: "desc",
         severity: "low",
         checkId: "missing-label",
-        appliesTo: " "
+        appliesTo: " ",
+        algorithm: " ",
+        algorithm_advanced: " "
       }),
       "rule.json"
     );
     expect(result.rule.appliesTo).toBeNull();
+    expect(result.rule.algorithm).toBeNull();
+    expect(result.rule.algorithmAdvanced).toBeNull();
   });
 
   test("parseSimpleYamlRule skips comments and invalid lines", () => {

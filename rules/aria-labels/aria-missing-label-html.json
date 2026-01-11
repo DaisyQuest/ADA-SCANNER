@@ -4,5 +4,8 @@
   "severity": "high",
   "checkId": "missing-label",
   "appliesTo": "html, htm",
-  "recommendation": "Add an explicit <label> association or aria-label/aria-labelledby so assistive tech can announce the control."
+  "recommendation": "Add an explicit <label> association or aria-label/aria-labelledby so assistive tech can announce the control. (WCAG 2.1 SC 1.3.1,3.3.2,4.1.2)",
+  "algorithm": "Scans form controls for accessible names via aria-label, aria-labelledby, associated label[for], or wrapping <label> (excluding hidden inputs).",
+  "algorithm_advanced": "Scans input/select/textarea elements (excluding type=hidden) and verifies aria-label/labelledby, associated label[for], or wrapping <label>.",
+  "wcagCriteria": "1.3.1,3.3.2,4.1.2"
 }

@@ -135,6 +135,41 @@ public sealed class ReportGeneratorTests
     }
 
     [Fact]
+    public void ReportGenerator_IncludesRuleFilters()
+    {
+        var root = TestUtilities.CreateTempDirectory();
+        var scan = new ScanResult
+        {
+            ScannedPath = root,
+            Files = Array.Empty<DiscoveredFile>(),
+            Issues = new[]
+            {
+                new Issue("rule-a", "check-a", "file-a", 1, "message-a", null),
+                new Issue("rule-b", "check-b", "file-b", 2, "message-b", null)
+            }
+        };
+        var runtime = new RuntimeScanResult
+        {
+            SeedUrls = new[] { "http://example.test" },
+            Documents = Array.Empty<RuntimeHtmlDocument>(),
+            Issues = new[] { new Issue("rule-b", "check-b", "http://example.test", 1, "message", null) },
+            Forms = Array.Empty<RuntimeFormConfiguration>()
+        };
+
+        var generator = new ReportGenerator();
+        var artifacts = generator.WriteReport(scan, root, "report", runtime);
+
+        var html = File.ReadAllText(artifacts.HtmlPath);
+        Assert.Contains("Rule Filters", html, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("rule-filter-item", html, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("id=\"rule-filter-all\" checked", html, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("value=\"rule-a\" checked", html, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("value=\"rule-b\" checked", html, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("data-rule=\"rule-a\"", html, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("data-rule=\"rule-b\"", html, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void ReportGenerator_SanitizesInvalidBaseName()
     {
         var root = TestUtilities.CreateTempDirectory();

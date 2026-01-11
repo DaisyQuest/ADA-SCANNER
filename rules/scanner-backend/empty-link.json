@@ -5,6 +5,8 @@
   "checkId": "empty-link",
   "appliesTo": "html, htm, cshtml, razor",
   "recommendation": "Provide visible link text or an accessible name via aria-label or aria-labelledby. (WCAG 2.1 SC 2.4.4)",
+  "algorithm": "Flags links or role=link elements that have no accessible name after checking text, aria-label/labelledby, title, or nested image alt.",
+  "algorithm_advanced": "Evaluates <a> and role=link nodes; requires text, aria-label/labelledby, title, or child <img alt> to avoid issue.",
   "wcagCriteria": "2.4.4",
   "problemTags": "links"
 }

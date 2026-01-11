@@ -10,7 +10,9 @@ const AllowedProperties = new Set([
   "appliesTo",
   "recommendation",
   "wcagCriteria",
-  "problemTags"
+  "problemTags",
+  "algorithm",
+  "algorithm_advanced"
 ]);
 
 const RequiredProperties = ["id", "description", "severity", "checkId"];
@@ -179,7 +181,9 @@ const emptyRule = () => ({
   appliesTo: null,
   recommendation: null,
   wcagCriteria: null,
-  problemTags: null
+  problemTags: null,
+  algorithm: null,
+  algorithmAdvanced: null
 });
 
 const parseJsonRule = (json, pathToRule) => {
@@ -225,7 +229,9 @@ const parseJsonRule = (json, pathToRule) => {
     appliesTo: normalizeOptional(values.appliesTo),
     recommendation: normalizeOptional(values.recommendation),
     wcagCriteria: normalizeOptional(values.wcagCriteria),
-    problemTags: normalizeOptional(values.problemTags)
+    problemTags: normalizeOptional(values.problemTags),
+    algorithm: normalizeOptional(values.algorithm),
+    algorithmAdvanced: normalizeOptional(values.algorithm_advanced ?? values.algorithmAdvanced)
   };
 
   const ruleId = rule.id || path.basename(pathToRule, path.extname(pathToRule));
@@ -276,7 +282,9 @@ const parseSimpleYamlRule = (lines, pathToRule) => {
     appliesTo: normalizeOptional(values.appliesTo),
     recommendation: normalizeOptional(values.recommendation),
     wcagCriteria: normalizeOptional(values.wcagCriteria),
-    problemTags: normalizeOptional(values.problemTags)
+    problemTags: normalizeOptional(values.problemTags),
+    algorithm: normalizeOptional(values.algorithm),
+    algorithmAdvanced: normalizeOptional(values.algorithm_advanced ?? values.algorithmAdvanced)
   };
 
   const ruleId = rule.id || path.basename(pathToRule, path.extname(pathToRule));

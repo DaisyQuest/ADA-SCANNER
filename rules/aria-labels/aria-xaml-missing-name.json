@@ -4,5 +4,8 @@
   "severity": "high",
   "checkId": "xaml-missing-name",
   "appliesTo": "xaml",
-  "recommendation": "Set AutomationProperties.Name or bind a descriptive accessible name on interactive controls and custom components."
+  "recommendation": "Set AutomationProperties.Name or bind a descriptive accessible name on interactive controls and custom components. (WCAG 2.1 SC 4.1.2)",
+  "algorithm": "Flags XAML Image/Button/TextBox elements missing AutomationProperties.Name or AutomationProperties.HelpText.",
+  "algorithm_advanced": "Matches XAML Image/Button/TextBox elements and reports missing AutomationProperties.Name/HelpText attributes.",
+  "wcagCriteria": "4.1.2"
 }

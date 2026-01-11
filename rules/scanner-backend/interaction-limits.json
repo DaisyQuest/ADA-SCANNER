@@ -5,6 +5,8 @@
   "checkId": "interaction-limits",
   "appliesTo": "html, htm, cshtml, razor, css",
   "recommendation": "Provide keyboard alternatives, timing controls, and motion/pointer fallbacks. (WCAG 2.1 SC 2.1.2,2.1.4,2.2.1,2.2.2,2.3.1,2.5.1,2.5.2,2.5.4,3.2.1,3.2.2)",
+  "algorithm": "Scans for accesskey, meta refresh, timeouts, marquee/infinite animations, pointer gestures, motion APIs, keyboard traps, or focus/input-triggered navigation patterns.",
+  "algorithm_advanced": "Regex-scans for accesskey, meta refresh, setTimeout/Interval, marquee/infinite/flashing animations, pointer-gesture handlers, motion APIs, keyboard-trap patterns, and onfocus/oninput navigation.",
   "wcagCriteria": "2.1.2,2.1.4,2.2.1,2.2.2,2.3.1,2.5.1,2.5.2,2.5.4,3.2.1,3.2.2",
   "problemTags": "interaction-limits"
 }

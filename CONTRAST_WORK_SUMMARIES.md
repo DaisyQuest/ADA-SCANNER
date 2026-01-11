@@ -28,3 +28,9 @@
 2026-01-10 - Validate contrast selector usage in evidence and expand tests (SPEC-008)
 2026-01-10 - Resolve currentColor backgrounds for contrast checks and expand coverage (SPEC-008)
 2026-01-10 - Added tabbed static/runtime UI views and expanded UI tests (SPEC-010, SPEC-013, SPEC-019)
+
+2026-01-10 - Update contrast rule WCAG citations and criteria metadata. (SPEC-008)
+
+2026-01-11 - Add algorithm metadata to contrast rules. (SPEC-008)
+
+2026-01-11 - Add algorithm_advanced metadata to contrast rules. (SPEC-008)

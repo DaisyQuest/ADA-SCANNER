@@ -5,6 +5,8 @@
   "checkId": "missing-table-headers",
   "appliesTo": "html, htm, cshtml, razor",
   "recommendation": "Use <th> elements with scope attributes for data table headers. (WCAG 2.1 SC 1.3.1)",
+  "algorithm": "Flags data tables without <th> headers when role is not presentation/none.",
+  "algorithm_advanced": "Flags table elements without any <th> when role is not presentation/none.",
   "wcagCriteria": "1.3.1",
   "problemTags": "table-headers, data-tables"
 }

@@ -5,6 +5,8 @@
   "checkId": "missing-autocomplete",
   "appliesTo": "html, htm, cshtml, razor",
   "recommendation": "Provide appropriate autocomplete tokens for user data fields. (WCAG 2.1 SC 1.3.5)",
+  "algorithm": "Flags form fields with personal-data hints in name/id/label text that lack autocomplete or use autocomplete=off (excluding ignored input types).",
+  "algorithm_advanced": "Flags inputs/selects/textarea with name/id/aria-label/placeholder containing personal-data tokens when autocomplete is missing or set to off (excluding ignored input types).",
   "wcagCriteria": "1.3.5",
   "problemTags": "input-purpose"
 }

@@ -12,8 +12,14 @@ public sealed class RulesTests
     public void LoadRules_ReadsJsonAndYaml()
     {
         var root = TestUtilities.CreateTempDirectory();
-        TestUtilities.WriteFile(root, "rules/contrast/rule.json", "{\"id\":\"contrast-1\",\"description\":\"Check contrast\",\"severity\":\"high\",\"checkId\":\"insufficient-contrast\"}");
-        TestUtilities.WriteFile(root, "rules/contrast/rule.yaml", "id: label-1\ndescription: Missing label\nseverity: medium\ncheckId: missing-label");
+        TestUtilities.WriteFile(
+            root,
+            "rules/contrast/rule.json",
+            "{\"id\":\"contrast-1\",\"description\":\"Check contrast\",\"severity\":\"high\",\"checkId\":\"insufficient-contrast\",\"algorithm\":\"Compute contrast from inline colors\",\"algorithm_advanced\":\"Parses inline style color/background-color pairs and computes ratios\"}");
+        TestUtilities.WriteFile(
+            root,
+            "rules/contrast/rule.yaml",
+            "id: label-1\ndescription: Missing label\nseverity: medium\ncheckId: missing-label\nalgorithm: Verify label associations\nalgorithm_advanced: Inspects label[for] and aria attributes");
 
         var loader = new RuleLoader();
         var teams = loader.LoadRules(Path.Combine(root, "rules"));
@@ -21,6 +27,12 @@ public sealed class RulesTests
         Assert.Single(teams);
         Assert.Equal("contrast", teams[0].TeamName);
         Assert.Equal(2, teams[0].Rules.Count);
+        var contrastRule = Assert.Single(teams[0].Rules, rule => rule.Id == "contrast-1");
+        var labelRule = Assert.Single(teams[0].Rules, rule => rule.Id == "label-1");
+        Assert.Equal("Compute contrast from inline colors", contrastRule.Algorithm);
+        Assert.Equal("Parses inline style color/background-color pairs and computes ratios", contrastRule.AlgorithmAdvanced);
+        Assert.Equal("Verify label associations", labelRule.Algorithm);
+        Assert.Equal("Inspects label[for] and aria attributes", labelRule.AlgorithmAdvanced);
     }
 
     [Fact]
@@ -245,7 +257,7 @@ public sealed class RulesTests
     public void LoadRule_YamlTreatsEmptyOptionalFieldsAsNull()
     {
         var root = TestUtilities.CreateTempDirectory();
-        var path = TestUtilities.WriteFile(root, "rules/contrast/rule.yaml", "id: contrast-1\ndescription: Check contrast\nseverity: high\ncheckId: insufficient-contrast\nappliesTo:\nrecommendation: \"\"\nwcagCriteria:\nproblemTags: \"  \"");
+        var path = TestUtilities.WriteFile(root, "rules/contrast/rule.yaml", "id: contrast-1\ndescription: Check contrast\nseverity: high\ncheckId: insufficient-contrast\nappliesTo:\nrecommendation: \"\"\nwcagCriteria:\nproblemTags: \"  \"\nalgorithm: \" \"\nalgorithm_advanced: \" \"");
 
         var loader = new RuleLoader();
         var rule = loader.LoadRule(path);
@@ -254,6 +266,8 @@ public sealed class RulesTests
         Assert.Null(rule.Recommendation);
         Assert.Null(rule.WcagCriteria);
         Assert.Null(rule.ProblemTags);
+        Assert.Null(rule.Algorithm);
+        Assert.Null(rule.AlgorithmAdvanced);
     }
 
     [Fact]
@@ -275,7 +289,7 @@ public sealed class RulesTests
     public void LoadRule_AllowsOptionalFieldsInYaml()
     {
         var root = TestUtilities.CreateTempDirectory();
-        var file = TestUtilities.WriteFile(root, "rules/contrast/rule.yaml", "id: contrast-2\ndescription: Optional fields\nseverity: medium\ncheckId: insufficient-contrast\nappliesTo: html\nrecommendation: Use compliant colors\nwcagCriteria: 1.4.3\nproblemTags: text-contrast\n");
+        var file = TestUtilities.WriteFile(root, "rules/contrast/rule.yaml", "id: contrast-2\ndescription: Optional fields\nseverity: medium\ncheckId: insufficient-contrast\nappliesTo: html\nrecommendation: Use compliant colors\nwcagCriteria: 1.4.3\nproblemTags: text-contrast\nalgorithm: Evaluate inline colors\nalgorithm_advanced: Parse color/background-color styles\n");
 
         var loader = new RuleLoader();
         var rule = loader.LoadRule(file);
@@ -284,13 +298,15 @@ public sealed class RulesTests
         Assert.Equal("Use compliant colors", rule.Recommendation);
         Assert.Equal("1.4.3", rule.WcagCriteria);
         Assert.Equal("text-contrast", rule.ProblemTags);
+        Assert.Equal("Evaluate inline colors", rule.Algorithm);
+        Assert.Equal("Parse color/background-color styles", rule.AlgorithmAdvanced);
     }
 
     [Fact]
     public void LoadRule_TrimsEmptyOptionalFieldsInYaml()
     {
         var root = TestUtilities.CreateTempDirectory();
-        var file = TestUtilities.WriteFile(root, "rules/contrast/rule.yaml", "id: contrast-3\ndescription: Optional fields\nseverity: medium\ncheckId: insufficient-contrast\nappliesTo: \"  \"\nrecommendation:\nwcagCriteria: \" \"\nproblemTags:\n");
+        var file = TestUtilities.WriteFile(root, "rules/contrast/rule.yaml", "id: contrast-3\ndescription: Optional fields\nseverity: medium\ncheckId: insufficient-contrast\nappliesTo: \"  \"\nrecommendation:\nwcagCriteria: \" \"\nproblemTags:\nalgorithm:\nalgorithm_advanced:\n");
 
         var loader = new RuleLoader();
         var rule = loader.LoadRule(file);
@@ -299,6 +315,8 @@ public sealed class RulesTests
         Assert.Null(rule.Recommendation);
         Assert.Null(rule.WcagCriteria);
         Assert.Null(rule.ProblemTags);
+        Assert.Null(rule.Algorithm);
+        Assert.Null(rule.AlgorithmAdvanced);
     }
 
     [Fact]
@@ -308,13 +326,15 @@ public sealed class RulesTests
         var file = TestUtilities.WriteFile(
             root,
             "rules/contrast/rule.json",
-            "{\"id\":\"contrast-4\",\"description\":\"Optional fields\",\"severity\":\"medium\",\"checkId\":\"insufficient-contrast\",\"wcagCriteria\":\"1.4.3\",\"problemTags\":\"text-contrast\"}");
+            "{\"id\":\"contrast-4\",\"description\":\"Optional fields\",\"severity\":\"medium\",\"checkId\":\"insufficient-contrast\",\"wcagCriteria\":\"1.4.3\",\"problemTags\":\"text-contrast\",\"algorithm\":\"Scan inline styles\",\"algorithm_advanced\":\"Tokenizes style declarations for colors\"}");
 
         var loader = new RuleLoader();
         var rule = loader.LoadRule(file);
 
         Assert.Equal("1.4.3", rule.WcagCriteria);
         Assert.Equal("text-contrast", rule.ProblemTags);
+        Assert.Equal("Scan inline styles", rule.Algorithm);
+        Assert.Equal("Tokenizes style declarations for colors", rule.AlgorithmAdvanced);
     }
 
     [Fact]

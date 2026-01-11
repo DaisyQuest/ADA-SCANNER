@@ -5,6 +5,8 @@
   "checkId": "hidden-focusable",
   "appliesTo": "html, htm, cshtml, razor",
   "recommendation": "Avoid hiding focusable elements with display:none or visibility:hidden unless they are removed from tab order. (WCAG 2.1 SC 2.4.7)",
+  "algorithm": "Tracks hidden elements (aria-hidden/hidden/display:none/visibility:hidden or XAML Visibility) and flags those that remain focusable or referenced.",
+  "algorithm_advanced": "Parses element stream to track hidden state (aria-hidden/hidden/style display:none/visibility:hidden or XAML Visibility) and flags focusable or referenced elements inside hidden regions.",
   "wcagCriteria": "2.4.7",
   "problemTags": "focus-visible, hidden-elements"
 }

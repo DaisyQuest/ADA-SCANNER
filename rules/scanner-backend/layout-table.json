@@ -5,6 +5,8 @@
   "checkId": "layout-table",
   "appliesTo": "html, htm, cshtml, razor",
   "recommendation": "Replace layout tables with semantic layout containers (div, flex, grid). (WCAG 2.1 SC 1.3.1,1.3.2)",
+  "algorithm": "Flags tables without headers/captions and without role=presentation/none as likely layout tables.",
+  "algorithm_advanced": "Flags tables lacking role=presentation/none and missing <th> or <caption> markers.",
   "wcagCriteria": "1.3.1,1.3.2",
   "problemTags": "tables"
 }

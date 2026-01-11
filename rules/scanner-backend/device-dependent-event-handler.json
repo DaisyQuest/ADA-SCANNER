@@ -5,6 +5,8 @@
   "checkId": "device-dependent-event-handler",
   "appliesTo": "html, htm, cshtml, razor",
   "recommendation": "Add keyboard and focus event handlers alongside mouse-specific handlers. (WCAG 2.1 SC 2.1.1,2.5.1)",
+  "algorithm": "Finds elements with mouse/pointer/touch/hover handlers that lack equivalent keyboard or focus handlers.",
+  "algorithm_advanced": "Detects mouse/pointer/touch/hover event attributes lacking keyboard (onkey*) or focus equivalents.",
   "wcagCriteria": "2.1.1,2.5.1",
   "problemTags": "input"
 }

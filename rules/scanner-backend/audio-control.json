@@ -5,6 +5,8 @@
   "checkId": "audio-control",
   "appliesTo": "html, htm, cshtml, razor",
   "recommendation": "Provide controls for autoplay audio that exceeds three seconds. (WCAG 2.1 SC 1.4.2)",
+  "algorithm": "Flags audio/video elements with autoplay that lack controls and are not muted.",
+  "algorithm_advanced": "Selects audio/video elements with autoplay but without controls or muted attributes.",
   "wcagCriteria": "1.4.2",
   "problemTags": "audio-control"
 }

@@ -5,6 +5,8 @@
   "checkId": "invalid-aria-role",
   "appliesTo": "html, htm, cshtml, razor",
   "recommendation": "Use valid ARIA roles that map to the intended semantics. (WCAG 2.1 SC 4.1.2)",
+  "algorithm": "Flags role attributes whose values are not in the allowed ARIA role list.",
+  "algorithm_advanced": "Regex-scans role attributes and validates against the allowed role whitelist.",
   "wcagCriteria": "4.1.2",
   "problemTags": "aria-role, semantics"
 }

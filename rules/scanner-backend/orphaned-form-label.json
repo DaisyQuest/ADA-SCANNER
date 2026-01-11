@@ -5,6 +5,8 @@
   "checkId": "orphaned-form-label",
   "appliesTo": "html, htm, cshtml, razor",
   "recommendation": "Update the label's for attribute to match an existing control id. (WCAG 2.1 SC 1.3.1,3.3.2)",
+  "algorithm": "Flags <label for=...> values that do not match any element id.",
+  "algorithm_advanced": "Matches label[for] values and reports when no element id matches.",
   "wcagCriteria": "1.3.1,3.3.2",
   "problemTags": "form-labels"
 }

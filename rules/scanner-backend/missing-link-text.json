@@ -5,6 +5,8 @@
   "checkId": "missing-link-text",
   "appliesTo": "html, htm, cshtml, razor",
   "recommendation": "Provide visible link text or aria-labels that describe the destination. (WCAG 2.1 SC 2.4.4)",
+  "algorithm": "Flags <a> elements (and link macros) whose accessible name is empty after checking text, aria-label/labelledby, title, or nested image alt.",
+  "algorithm_advanced": "Checks <a> and freemarker link macros for accessible name via text, aria-label/labelledby, title, or nested image alt.",
   "wcagCriteria": "2.4.4",
   "problemTags": "link-text, navigation"
 }
