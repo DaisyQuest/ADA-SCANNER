@@ -145,6 +145,118 @@ const formatGoldMasterSummary = (summary = {}) => {
   return lines;
 };
 
+const normalizeExpectationsTotals = (totals = {}) => ({
+  totalDocuments: Number.isFinite(totals.totalDocuments) ? totals.totalDocuments : 0,
+  matched: Number.isFinite(totals.matched) ? totals.matched : 0,
+  mismatched: Number.isFinite(totals.mismatched) ? totals.mismatched : 0,
+  missing: Number.isFinite(totals.missing) ? totals.missing : 0,
+  invalid: Number.isFinite(totals.invalid) ? totals.invalid : 0,
+  skipped: Number.isFinite(totals.skipped) ? totals.skipped : 0
+});
+
+const formatGoldMasterExpectations = (expectations = {}) => {
+  const totals = normalizeExpectationsTotals(expectations.totals);
+  const lines = [
+    `GoldMaster expectations: ${totals.matched} matched, ${totals.mismatched} mismatched, ${totals.missing} missing, ${totals.invalid} invalid, ${totals.skipped} skipped`
+  ];
+  const extensions = Array.isArray(expectations.extensions) ? expectations.extensions : [];
+  for (const extension of extensions) {
+    const extensionTotals = normalizeExpectationsTotals(extension);
+    lines.push(
+      `- ${extension.extension}: ${extensionTotals.matched} matched, ${extensionTotals.mismatched} mismatched, ${extensionTotals.missing} missing, ${extensionTotals.invalid} invalid, ${extensionTotals.skipped} skipped`
+    );
+    const failures = Array.isArray(extension.results)
+      ? extension.results.filter((entry) => entry.status !== "match" && entry.status !== "skipped")
+      : [];
+    for (const failure of failures) {
+      if (failure.status === "mismatch") {
+        lines.push(
+          `  ! ${failure.documentPath}: missing=${JSON.stringify(failure.missing)}, unexpected=${JSON.stringify(failure.unexpected)}`
+        );
+        continue;
+      }
+      lines.push(`  ! ${failure.documentPath}: ${failure.message ?? "Expectation mismatch."}`);
+    }
+  }
+  return lines;
+};
+
+const escapeHtml = (value) =>
+  String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+
+const renderGoldMasterExpectationsHtml = (expectations = {}) => {
+  const totals = normalizeExpectationsTotals(expectations.totals);
+  const extensions = Array.isArray(expectations.extensions) ? expectations.extensions : [];
+  const extensionBlocks = extensions
+    .map((extension) => {
+      const extensionTotals = normalizeExpectationsTotals(extension);
+      const rows = Array.isArray(extension.results)
+        ? extension.results.map((entry) => {
+          const missing = entry.missing ? JSON.stringify(entry.missing) : "";
+          const unexpected = entry.unexpected ? JSON.stringify(entry.unexpected) : "";
+          return `<tr class="status-${escapeHtml(entry.status)}">
+            <td>${escapeHtml(entry.documentPath ?? "unknown")}</td>
+            <td>${escapeHtml(entry.status)}</td>
+            <td>${escapeHtml(entry.expectationPath ?? "")}</td>
+            <td>${escapeHtml(missing)}</td>
+            <td>${escapeHtml(unexpected)}</td>
+            <td>${escapeHtml(entry.message ?? "")}</td>
+          </tr>`;
+        }).join("")
+        : "";
+      return `<section>
+        <h2>${escapeHtml(extension.extension)} (${extensionTotals.matched} matched, ${extensionTotals.mismatched} mismatched, ${extensionTotals.missing} missing, ${extensionTotals.invalid} invalid, ${extensionTotals.skipped} skipped)</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Document</th>
+              <th>Status</th>
+              <th>Expectation File</th>
+              <th>Missing Rules</th>
+              <th>Unexpected Rules</th>
+              <th>Message</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows || `<tr><td colspan="6">No expectation results.</td></tr>`}
+          </tbody>
+        </table>
+      </section>`;
+    })
+    .join("");
+  const summaryBlock = `<section>
+    <h1>GoldMaster Expectations Summary</h1>
+    <p>${totals.matched} matched, ${totals.mismatched} mismatched, ${totals.missing} missing, ${totals.invalid} invalid, ${totals.skipped} skipped</p>
+  </section>`;
+  const content = extensionBlocks || `<p>No expectation results available.</p>`;
+  return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>GoldMaster Expectations Summary</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 24px; color: #1a1a1a; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+    th { background: #f5f5f5; }
+    .status-match { background: #e9f7ef; }
+    .status-mismatch { background: #fff4e5; }
+    .status-missing, .status-invalid { background: #fdecea; }
+    .status-skipped { background: #f4f6f8; }
+  </style>
+</head>
+<body>
+  ${summaryBlock}
+  ${content}
+</body>
+</html>`;
+};
+
 const formatGoldMasterComparison = (comparison) => {
   const lines = [
     `GoldMaster comparison: ${comparison.totals.added} added, ${comparison.totals.removed} removed, ${comparison.totals.changed} changed, ${comparison.totals.unchanged} unchanged`
@@ -179,5 +291,7 @@ module.exports = {
   loadGoldMasterReport,
   compareGoldMasterReports,
   formatGoldMasterSummary,
+  formatGoldMasterExpectations,
+  renderGoldMasterExpectationsHtml,
   formatGoldMasterComparison
 };

@@ -268,6 +268,8 @@ describe("goldmaster runner", () => {
     expect(result.summary.results[0].documentCount).toBe(1);
     expect(result.summary.totalDocuments).toBe(1);
     expect(result.summary.totalIssues).toBe(1);
+    expect(result.expectationFailures).toEqual([]);
+    expect(fs.existsSync(result.expectationsHtmlPath)).toBe(true);
 
     const reportPath = result.summary.results[0].reportPath;
     const payload = JSON.parse(fs.readFileSync(reportPath, "utf-8"));
@@ -300,6 +302,9 @@ describe("goldmaster runner", () => {
     expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining(".razor"));
     expect(result.summary.totalDocuments).toBeGreaterThanOrEqual(0);
     expect(result.summary.totalIssues).toBeGreaterThanOrEqual(0);
+    expect(result.summary.expectations.totals.totalDocuments).toBeGreaterThanOrEqual(0);
+    expect(result.summary.expectations.extensions).toHaveLength(2);
+    expect(fs.existsSync(result.expectationsHtmlPath)).toBe(true);
   });
 
   test("marks unsupported extensions as unsupported and skips analysis", async () => {
@@ -322,6 +327,8 @@ describe("goldmaster runner", () => {
     expect(result.summary.results[0].status).toBe("unsupported");
     expect(logger.warn).toHaveBeenCalledWith("GoldMaster extension unsupported: .bogus");
     expect(analyzerFactory).not.toHaveBeenCalled();
+    expect(result.expectationFailures).toEqual([]);
+    expect(result.summary.expectations.extensions).toHaveLength(1);
   });
 
   test("writes an empty summary when no extensions are provided", async () => {
@@ -339,6 +346,7 @@ describe("goldmaster runner", () => {
     expect(result.summary.totalExtensions).toBe(0);
     expect(result.summary.results).toEqual([]);
     expect(fs.existsSync(result.summaryPath)).toBe(true);
+    expect(fs.existsSync(result.expectationsHtmlPath)).toBe(true);
   });
 
   test("defaults document and issue counts when report summary is missing values", async () => {
@@ -362,6 +370,7 @@ describe("goldmaster runner", () => {
     expect(result.summary.results[0].issueCount).toBe(0);
     expect(result.summary.totalDocuments).toBe(0);
     expect(result.summary.totalIssues).toBe(0);
+    expect(result.summary.expectations.totals.totalDocuments).toBe(0);
   });
 
   test("scans each existing extension directory and writes reports", async () => {
@@ -397,6 +406,36 @@ describe("goldmaster runner", () => {
     expect(analyzers[1].scanRoot).toHaveBeenCalledWith({ rootDir: path.join(rootDir, "htm"), rulesRoot });
     expect(result.summary.results).toHaveLength(2);
     expect(fs.existsSync(result.summary.results[0].reportPath)).toBe(true);
+    expect(result.summary.expectations.extensions).toHaveLength(2);
+  });
+
+  test("collects expectation failures from evaluator results", async () => {
+    const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "ada-gm-failures-"));
+    fs.mkdirSync(path.join(rootDir, "html"), { recursive: true });
+    const outputDir = fs.mkdtempSync(path.join(os.tmpdir(), "ada-gm-out-"));
+    const analyzerFactory = jest.fn(() => ({
+      scanRoot: jest.fn(() => ({ documents: [{ url: "doc.html" }], issues: [], rules: [] }))
+    }));
+    const reportBuilder = { build: jest.fn(() => ({ summary: { documents: 1, issues: 0 } })) };
+    const expectationsEvaluator = jest.fn(() => ({
+      totals: { totalDocuments: 1, matched: 0, mismatched: 1, missing: 0, invalid: 0, skipped: 0 },
+      results: [
+        { documentPath: "doc.html", status: "mismatch", missing: ["rule-1"], unexpected: [] }
+      ]
+    }));
+
+    const result = await runGoldMaster({
+      rootDir,
+      rulesRoot: "/tmp/rules",
+      outputDir,
+      extensions: [".html"],
+      analyzerFactory,
+      reportBuilder,
+      expectationsEvaluator
+    });
+
+    expect(result.expectationFailures).toHaveLength(1);
+    expect(result.expectationFailures[0].extension).toBe(".html");
   });
 
   test("startGoldMaster reports option errors", async () => {
@@ -411,7 +450,9 @@ describe("goldmaster runner", () => {
     const summaryPath = "/tmp/goldmaster-summary.json";
     const mockRunGoldMaster = jest.fn().mockResolvedValue({
       summaryPath,
-      summary: { results: [] },
+      expectationsHtmlPath: "/tmp/summary.html",
+      expectationFailures: [],
+      summary: { results: [], expectations: { totals: {}, extensions: [] } },
       reports: []
     });
 
@@ -427,6 +468,7 @@ describe("goldmaster runner", () => {
           .then((result) => {
             expect(result.started).toBe(true);
             expect(logger.log).toHaveBeenCalledWith(`GoldMaster reports written to ${summaryPath}`);
+            expect(logger.log).toHaveBeenCalledWith(expect.stringContaining("GoldMaster expectations"));
             resolve();
           })
           .catch(reject);
@@ -439,7 +481,9 @@ describe("goldmaster runner", () => {
     const summaryPath = "/tmp/goldmaster-summary.json";
     const mockRunGoldMaster = jest.fn().mockResolvedValue({
       summaryPath,
-      summary: { results: [] },
+      expectationsHtmlPath: "/tmp/summary.html",
+      expectationFailures: [],
+      summary: { results: [], expectations: { totals: {}, extensions: [] } },
       reports: []
     });
     const originalArgv = process.argv;
@@ -474,7 +518,9 @@ describe("goldmaster runner", () => {
     const savePath = path.join(os.tmpdir(), `goldmaster-save-${Date.now()}.json`);
     const mockRunGoldMaster = jest.fn().mockResolvedValue({
       summaryPath,
-      summary: { results: [] },
+      expectationsHtmlPath: "/tmp/summary.html",
+      expectationFailures: [],
+      summary: { results: [], expectations: { totals: {}, extensions: [] } },
       reports: [{ extension: ".html", report: { summary: { documents: 1, issues: 0 } } }]
     });
 
@@ -490,7 +536,7 @@ describe("goldmaster runner", () => {
           .then((result) => {
             const savedPayload = JSON.parse(fs.readFileSync(savePath, "utf-8"));
             expect(result.savedReportPath).toBe(savePath);
-            expect(savedPayload.summary).toEqual({ results: [] });
+            expect(savedPayload.summary).toEqual({ results: [], expectations: { totals: {}, extensions: [] } });
             expect(savedPayload.reports).toHaveLength(1);
             resolve();
           })
@@ -511,7 +557,12 @@ describe("goldmaster runner", () => {
 
     const mockRunGoldMaster = jest.fn().mockResolvedValue({
       summaryPath,
-      summary: { results: [{ extension: ".html", status: "complete", documentCount: 2, issueCount: 1 }] },
+      expectationsHtmlPath: "/tmp/summary.html",
+      expectationFailures: [],
+      summary: {
+        results: [{ extension: ".html", status: "complete", documentCount: 2, issueCount: 1 }],
+        expectations: { totals: {}, extensions: [] }
+      },
       reports: []
     });
 
@@ -560,6 +611,36 @@ describe("goldmaster runner", () => {
             errorSpy.mockRestore();
             process.exitCode = originalExitCode;
             reject(error);
+          });
+      });
+    });
+  });
+
+  test("startGoldMaster throws when expectations fail", async () => {
+    jest.resetModules();
+    const summaryPath = "/tmp/goldmaster-summary.json";
+    const expectationsHtmlPath = "/tmp/summary.html";
+    const mockRunGoldMaster = jest.fn().mockResolvedValue({
+      summaryPath,
+      expectationsHtmlPath,
+      summary: { results: [], expectations: { totals: {}, extensions: [] } },
+      reports: [],
+      expectationFailures: [{ documentPath: "doc.html", status: "missing" }]
+    });
+
+    await new Promise((resolve, reject) => {
+      jest.isolateModules(() => {
+        jest.doMock("../src/goldmaster/GoldMasterRunner", () => ({
+          runGoldMaster: mockRunGoldMaster
+        }));
+        const { startGoldMaster: mockedStartGoldMaster } = require("../src/goldmaster/cli");
+        const logger = { warn: jest.fn(), log: jest.fn(), error: jest.fn() };
+
+        mockedStartGoldMaster({ argv: ["--all"], env: {}, logger })
+          .then(() => reject(new Error("Expected startGoldMaster to throw.")))
+          .catch((error) => {
+            expect(error.message).toContain(expectationsHtmlPath);
+            resolve();
           });
       });
     });

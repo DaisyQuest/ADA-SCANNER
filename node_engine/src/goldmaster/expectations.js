@@ -77,28 +77,95 @@ const compareRuleSets = ({ documentPath, expectedRules, actualRules }) => {
   };
 };
 
-const validateGoldMasterExpectations = ({ rootDir, documents = [], issues = [] } = {}) => {
+const evaluateGoldMasterExpectations = ({ rootDir, documents = [], issues = [] } = {}) => {
   const rulesByFile = buildRulesByFile(issues);
+  const results = [];
+  const totals = {
+    totalDocuments: 0,
+    matched: 0,
+    mismatched: 0,
+    missing: 0,
+    invalid: 0,
+    skipped: 0
+  };
   for (const document of documents) {
     const documentPath = document?.url;
     if (!documentPath) {
+      totals.skipped += 1;
+      results.push({
+        documentPath: null,
+        status: "skipped",
+        message: "Document URL missing from scan results."
+      });
       continue;
     }
-    const { rules: expectedRules } = loadGoldMasterExpectations({ rootDir, documentPath });
+    totals.totalDocuments += 1;
+    let expectedRules = [];
+    let expectationPath = null;
+    try {
+      ({ rules: expectedRules, expectationPath } = loadGoldMasterExpectations({ rootDir, documentPath }));
+    } catch (error) {
+      const message = String(error);
+      const isMissing = message.includes("Missing GoldMaster expectations");
+      const status = isMissing ? "missing" : "invalid";
+      totals[status] += 1;
+      results.push({
+        documentPath,
+        status,
+        message
+      });
+      continue;
+    }
     const actualRules = Array.from(rulesByFile.get(documentPath) ?? []).sort();
     const mismatch = compareRuleSets({ documentPath, expectedRules, actualRules });
     if (mismatch) {
-      const details = JSON.stringify({
+      totals.mismatched += 1;
+      results.push({
+        documentPath,
+        expectationPath,
+        status: "mismatch",
+        expectedRules,
+        actualRules,
         missing: mismatch.missing,
         unexpected: mismatch.unexpected
       });
-      throw new Error(`GoldMaster expectations mismatch for ${documentPath}: ${details}`);
+      continue;
     }
+    totals.matched += 1;
+    results.push({
+      documentPath,
+      expectationPath,
+      status: "match",
+      expectedRules,
+      actualRules
+    });
   }
+
+  return { totals, results };
+};
+
+const formatExpectationFailure = (entry) => {
+  if (entry.status === "mismatch") {
+    return `- ${entry.documentPath}: missing=${JSON.stringify(entry.missing)}, unexpected=${JSON.stringify(entry.unexpected)}`;
+  }
+  return `- ${entry.documentPath}: ${entry.message}`;
+};
+
+const validateGoldMasterExpectations = ({ rootDir, documents = [], issues = [] } = {}) => {
+  const evaluation = evaluateGoldMasterExpectations({ rootDir, documents, issues });
+  const failures = evaluation.results.filter(
+    (entry) => entry.status !== "match" && entry.status !== "skipped"
+  );
+  if (failures.length) {
+    const details = failures.map(formatExpectationFailure).join("\n");
+    throw new Error(`GoldMaster expectations mismatch:\n${details}`);
+  }
+  return evaluation;
 };
 
 module.exports = {
   buildExpectationsFileName,
   loadGoldMasterExpectations,
+  evaluateGoldMasterExpectations,
   validateGoldMasterExpectations
 };
