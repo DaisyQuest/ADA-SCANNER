@@ -1,0 +1,8 @@
+{
+  "rules": [
+    "form-label-empty-001",
+    "navigation-structure-001",
+    "skip-link-001",
+    "text-spacing-001"
+  ]
+}

@@ -3,6 +3,7 @@ const path = require("path");
 const { StaticAnalyzer, DEFAULT_EXTENSIONS, DEFAULT_IGNORED_DIRS } = require("../static/StaticAnalyzer");
 const { StaticReportBuilder } = require("../static/StaticReportBuilder");
 const { SUPPORTED_EXTENSIONS } = require("./options");
+const { validateGoldMasterExpectations } = require("./expectations");
 
 const buildExtensionMap = (extensions) => {
   const entries = Array.isArray(extensions) ? extensions : [];
@@ -44,7 +45,8 @@ const runGoldMaster = async ({
   logger = console,
   analyzerFactory = (extensionMap) =>
     new StaticAnalyzer({ extensionMap, ignoredDirs: DEFAULT_IGNORED_DIRS }),
-  reportBuilder = new StaticReportBuilder()
+  reportBuilder = new StaticReportBuilder(),
+  expectationsValidator = validateGoldMasterExpectations
 } = {}) => {
   if (!rootDir || !rulesRoot || !outputDir) {
     throw new Error("GoldMaster rootDir, rulesRoot, and outputDir are required.");
@@ -94,6 +96,11 @@ const runGoldMaster = async ({
 
     const analyzer = analyzerFactory(extensionMap);
     const scanResult = analyzer.scanRoot({ rootDir: subDir, rulesRoot });
+    expectationsValidator({
+      rootDir: subDir,
+      documents: scanResult.documents,
+      issues: scanResult.issues
+    });
     const report = reportBuilder.build({
       documents: scanResult.documents,
       issues: scanResult.issues,

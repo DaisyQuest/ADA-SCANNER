@@ -1,0 +1,8 @@
+{
+  "rules": [
+    "navigation-structure-001",
+    "reflow-absolute-positioning",
+    "skip-link-001",
+    "text-spacing-001"
+  ]
+}

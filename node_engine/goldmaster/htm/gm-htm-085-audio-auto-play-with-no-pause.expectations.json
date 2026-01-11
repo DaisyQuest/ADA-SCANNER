@@ -1,0 +1,9 @@
+{
+  "rules": [
+    "audio-control-001",
+    "media-alt-001",
+    "navigation-structure-001",
+    "skip-link-001",
+    "text-spacing-001"
+  ]
+}

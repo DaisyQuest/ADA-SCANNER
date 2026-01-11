@@ -81,3 +81,4 @@
 2026-01-11 - Add algorithm_advanced field support in rule loaders and tests. (SPEC-008, SPEC-013)
 
 2026-01-11 - Add algorithm_advanced metadata to scanner-backend rules. (SPEC-008)
+2026-01-11 - Add GoldMaster expectations validation and generated expectation fixtures (SPEC-013)

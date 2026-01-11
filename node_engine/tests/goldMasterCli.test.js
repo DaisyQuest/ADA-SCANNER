@@ -25,7 +25,7 @@ const createTempRules = () => {
       id: "rule-1",
       description: "desc",
       severity: "low",
-      checkId: "insufficient-contrast",
+      checkId: "missing-label",
       appliesTo: "html"
     })
   );
@@ -36,9 +36,10 @@ const createGoldMasterRoot = () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "ada-gm-root-"));
   const htmlDir = path.join(root, "html");
   fs.mkdirSync(htmlDir, { recursive: true });
+  fs.writeFileSync(path.join(htmlDir, "gm-html-001-sample.html"), "<input type=\"text\">");
   fs.writeFileSync(
-    path.join(htmlDir, "gm-html-001-sample.html"),
-    "<div style=\"color:#777;background:#888\">Low contrast</div>"
+    path.join(htmlDir, "gm-html-001-sample.expectations.json"),
+    JSON.stringify({ rules: ["rule-1"] }, null, 2)
   );
   return root;
 };
@@ -237,10 +238,14 @@ describe("goldmaster runner", () => {
   test("writes custom analyzer output into report files", async () => {
     const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "ada-gm-custom-"));
     fs.mkdirSync(path.join(rootDir, "html"), { recursive: true });
+    fs.writeFileSync(
+      path.join(rootDir, "html", "doc.expectations.json"),
+      JSON.stringify({ rules: ["rule-1"] }, null, 2)
+    );
     const outputDir = fs.mkdtempSync(path.join(os.tmpdir(), "ada-gm-out-"));
     const analyzer = { scanRoot: jest.fn(() => ({
       documents: [{ url: "doc.html" }],
-      issues: [{ ruleId: "rule-1" }],
+      issues: [{ ruleId: "rule-1", filePath: "doc.html" }],
       rules: [{ id: "rule-1" }]
     })) };
     const analyzerFactory = jest.fn(() => analyzer);

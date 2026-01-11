@@ -1,0 +1,20 @@
+{
+  "rules": [
+    "contrast-badge-label",
+    "contrast-disabled-text",
+    "contrast-error-state",
+    "contrast-focus-indicator",
+    "contrast-graph-data",
+    "contrast-html-foreground-background",
+    "contrast-iconography",
+    "contrast-inverse-theme",
+    "contrast-link-text",
+    "contrast-placeholder",
+    "contrast-text-large",
+    "contrast-text-normal",
+    "contrast-ui-controls",
+    "navigation-structure-001",
+    "skip-link-001",
+    "text-spacing-001"
+  ]
+}
