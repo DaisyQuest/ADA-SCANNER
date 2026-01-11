@@ -3,7 +3,8 @@ const path = require("path");
 const { StaticAnalyzer, DEFAULT_EXTENSIONS, DEFAULT_IGNORED_DIRS } = require("../static/StaticAnalyzer");
 const { StaticReportBuilder } = require("../static/StaticReportBuilder");
 const { SUPPORTED_EXTENSIONS } = require("./options");
-const { validateGoldMasterExpectations } = require("./expectations");
+const { evaluateGoldMasterExpectations } = require("./expectations");
+const { renderGoldMasterExpectationsHtml } = require("./reporting");
 
 const buildExtensionMap = (extensions) => {
   const entries = Array.isArray(extensions) ? extensions : [];
@@ -46,7 +47,7 @@ const runGoldMaster = async ({
   analyzerFactory = (extensionMap) =>
     new StaticAnalyzer({ extensionMap, ignoredDirs: DEFAULT_IGNORED_DIRS }),
   reportBuilder = new StaticReportBuilder(),
-  expectationsValidator = validateGoldMasterExpectations
+  expectationsEvaluator = evaluateGoldMasterExpectations
 } = {}) => {
   if (!rootDir || !rulesRoot || !outputDir) {
     throw new Error("GoldMaster rootDir, rulesRoot, and outputDir are required.");
@@ -62,14 +63,37 @@ const runGoldMaster = async ({
     totalExtensions: extensions.length,
     totalDocuments: 0,
     totalIssues: 0,
-    results: []
+    results: [],
+    expectations: {
+      totals: {
+        totalDocuments: 0,
+        matched: 0,
+        mismatched: 0,
+        missing: 0,
+        invalid: 0,
+        skipped: 0
+      },
+      extensions: []
+    }
   };
   const reports = [];
+  const expectationFailures = [];
 
   for (const extension of extensions) {
     const subDir = path.join(rootDir, formatExtensionLabel(extension));
     const extensionMap = buildExtensionMap([extension]);
     if (extensionMap.size === 0) {
+      summary.expectations.extensions.push({
+        extension,
+        rootDir: subDir,
+        totalDocuments: 0,
+        matched: 0,
+        mismatched: 0,
+        missing: 0,
+        invalid: 0,
+        skipped: 0,
+        results: []
+      });
       summary.results.push({
         extension,
         rootDir: subDir,
@@ -82,6 +106,17 @@ const runGoldMaster = async ({
       continue;
     }
     if (!fs.existsSync(subDir)) {
+      summary.expectations.extensions.push({
+        extension,
+        rootDir: subDir,
+        totalDocuments: 0,
+        matched: 0,
+        mismatched: 0,
+        missing: 0,
+        invalid: 0,
+        skipped: 0,
+        results: []
+      });
       summary.results.push({
         extension,
         rootDir: subDir,
@@ -96,7 +131,7 @@ const runGoldMaster = async ({
 
     const analyzer = analyzerFactory(extensionMap);
     const scanResult = analyzer.scanRoot({ rootDir: subDir, rulesRoot });
-    expectationsValidator({
+    const expectations = expectationsEvaluator({
       rootDir: subDir,
       documents: scanResult.documents,
       issues: scanResult.issues
@@ -132,12 +167,37 @@ const runGoldMaster = async ({
     summary.totalDocuments += documentCount;
     summary.totalIssues += issueCount;
     reports.push(reportPayload);
+
+    const extensionExpectations = {
+      extension,
+      rootDir: subDir,
+      ...expectations.totals,
+      results: expectations.results
+    };
+    summary.expectations.extensions.push(extensionExpectations);
+    summary.expectations.totals.totalDocuments += expectations.totals.totalDocuments;
+    summary.expectations.totals.matched += expectations.totals.matched;
+    summary.expectations.totals.mismatched += expectations.totals.mismatched;
+    summary.expectations.totals.missing += expectations.totals.missing;
+    summary.expectations.totals.invalid += expectations.totals.invalid;
+    summary.expectations.totals.skipped += expectations.totals.skipped;
+
+    const extensionFailures = expectations.results.filter(
+      (entry) => entry.status !== "match" && entry.status !== "skipped"
+    );
+    if (extensionFailures.length) {
+      expectationFailures.push(
+        ...extensionFailures.map((entry) => ({ extension, ...entry }))
+      );
+    }
   }
 
   const summaryPath = path.join(outputDir, "goldmaster-summary.json");
   fs.writeFileSync(summaryPath, JSON.stringify(summary, null, 2));
+  const expectationsHtmlPath = path.join(outputDir, "summary.html");
+  fs.writeFileSync(expectationsHtmlPath, renderGoldMasterExpectationsHtml(summary.expectations));
 
-  return { summaryPath, summary, reports };
+  return { summaryPath, summary, reports, expectationsHtmlPath, expectationFailures };
 };
 
 module.exports = {

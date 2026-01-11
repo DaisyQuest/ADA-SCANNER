@@ -84,3 +84,5 @@
 2026-01-11 - Add GoldMaster expectations validation and generated expectation fixtures (SPEC-013)
 2026-01-11 - Added runtime report exports with view/download actions and Excel/CSV formats (SPEC-010)
 2026-01-11 - Added static analysis exports and inline file views (SPEC-010)
+
+2026-01-11 - Enhanced GoldMaster expectations reporting with console/html summaries and coverage-focused tests. (SPEC-013)

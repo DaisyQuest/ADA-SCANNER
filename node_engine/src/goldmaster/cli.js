@@ -7,6 +7,7 @@ const {
   loadGoldMasterReport,
   compareGoldMasterReports,
   formatGoldMasterSummary,
+  formatGoldMasterExpectations,
   formatGoldMasterComparison
 } = require("./reporting");
 
@@ -27,6 +28,8 @@ const startGoldMaster = async ({ argv = process.argv.slice(2), env = process.env
 
   logger.log(`GoldMaster reports written to ${result.summaryPath}`);
   formatGoldMasterSummary(result.summary).forEach((line) => logger.log(line));
+  logger.log(`GoldMaster expectations summary written to ${result.expectationsHtmlPath}`);
+  formatGoldMasterExpectations(result.summary.expectations).forEach((line) => logger.log(line));
 
   let savedReportPath = null;
   if (options.savePath) {
@@ -46,6 +49,12 @@ const startGoldMaster = async ({ argv = process.argv.slice(2), env = process.env
       current: { summary: result.summary, reports: result.reports }
     });
     formatGoldMasterComparison(comparison).forEach((line) => logger.log(line));
+  }
+
+  const expectationFailures = Array.isArray(result.expectationFailures) ? result.expectationFailures : [];
+  if (expectationFailures.length) {
+    const failureCount = expectationFailures.length;
+    throw new Error(`GoldMaster expectations failed for ${failureCount} document(s). See ${result.expectationsHtmlPath}.`);
   }
 
   return {
