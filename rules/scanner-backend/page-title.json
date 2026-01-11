@@ -5,6 +5,8 @@
   "checkId": "missing-page-title",
   "appliesTo": "html, htm",
   "recommendation": "Provide a non-empty <title> element in the document head. (WCAG 2.1 SC 2.4.2)",
+  "algorithm": "Flags documents with no <title> element or only empty title text.",
+  "algorithm_advanced": "Checks DOM or regex for <title> presence and non-empty text; reports missing or empty titles.",
   "wcagCriteria": "2.4.2",
   "problemTags": "document-title, head-metadata"
 }

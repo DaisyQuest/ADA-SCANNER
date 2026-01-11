@@ -71,3 +71,13 @@
 2026-01-10 - Add ftl/js goldmaster coverage with mirrored fixtures and updated options/tests. (SPEC-013, SPEC-004)
 2026-01-10 - Added evaluator endpoints with freemarker/html snippet parsing and coverage-focused tests (SPEC-019, SPEC-013)
 2026-01-10 - Improved ARIA role validation and link/label handling with added GoldMaster coverage. (SPEC-008, SPEC-013)
+
+2026-01-10 - Add rule filter controls to HTML reports and expand report generator tests. (SPEC-010, SPEC-013)
+
+2026-01-11 - Add algorithm metadata handling in rule loaders and tests. (SPEC-008, SPEC-013)
+
+2026-01-11 - Add algorithm metadata to scanner-backend rule definitions. (SPEC-008)
+
+2026-01-11 - Add algorithm_advanced field support in rule loaders and tests. (SPEC-008, SPEC-013)
+
+2026-01-11 - Add algorithm_advanced metadata to scanner-backend rules. (SPEC-008)

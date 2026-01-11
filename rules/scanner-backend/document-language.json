@@ -5,6 +5,8 @@
   "checkId": "missing-document-language",
   "appliesTo": "html, htm",
   "recommendation": "Add a valid lang (or xml:lang) attribute to the <html> element. (WCAG 2.1 SC 3.1.1)",
+  "algorithm": "Checks the <html> element for lang or xml:lang attributes and flags missing/empty values.",
+  "algorithm_advanced": "Checks <html> for lang/xml:lang via DOM or regex and reports missing/empty attributes.",
   "wcagCriteria": "3.1.1",
   "problemTags": "document-language, html-root"
 }

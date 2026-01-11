@@ -17,7 +17,9 @@ public sealed class RuleLoader
         "appliesTo",
         "recommendation",
         "wcagCriteria",
-        "problemTags"
+        "problemTags",
+        "algorithm",
+        "algorithm_advanced"
     };
 
     private static readonly string[] RequiredProperties =
@@ -250,6 +252,14 @@ public sealed class RuleLoader
             values.TryGetValue("recommendation", out var recommendation);
             values.TryGetValue("wcagCriteria", out var wcagCriteria);
             values.TryGetValue("problemTags", out var problemTags);
+            values.TryGetValue("algorithm", out var algorithm);
+            values.TryGetValue("algorithm_advanced", out var algorithmAdvanced);
+            values.TryGetValue("algorithmAdvanced", out var algorithmAdvancedCamel);
+            var algorithmAdvancedValue = !string.IsNullOrWhiteSpace(algorithmAdvanced)
+                ? algorithmAdvanced
+                : string.IsNullOrWhiteSpace(algorithmAdvancedCamel)
+                    ? null
+                    : algorithmAdvancedCamel;
 
             var rule = new RuleDefinition(
                 id ?? string.Empty,
@@ -259,7 +269,9 @@ public sealed class RuleLoader
                 string.IsNullOrWhiteSpace(appliesTo) ? null : appliesTo,
                 string.IsNullOrWhiteSpace(recommendation) ? null : recommendation,
                 string.IsNullOrWhiteSpace(wcagCriteria) ? null : wcagCriteria,
-                string.IsNullOrWhiteSpace(problemTags) ? null : problemTags);
+                string.IsNullOrWhiteSpace(problemTags) ? null : problemTags,
+                string.IsNullOrWhiteSpace(algorithm) ? null : algorithm,
+                algorithmAdvancedValue);
 
             var ruleId = string.IsNullOrWhiteSpace(id) ? Path.GetFileNameWithoutExtension(path) : id;
 
@@ -312,6 +324,14 @@ public sealed class RuleLoader
         values.TryGetValue("recommendation", out var recommendation);
         values.TryGetValue("wcagCriteria", out var wcagCriteria);
         values.TryGetValue("problemTags", out var problemTags);
+        values.TryGetValue("algorithm", out var algorithm);
+        values.TryGetValue("algorithm_advanced", out var algorithmAdvanced);
+        values.TryGetValue("algorithmAdvanced", out var algorithmAdvancedCamel);
+        var algorithmAdvancedValue = !string.IsNullOrWhiteSpace(algorithmAdvanced)
+            ? algorithmAdvanced
+            : string.IsNullOrWhiteSpace(algorithmAdvancedCamel)
+                ? null
+                : algorithmAdvancedCamel;
 
         var rule = new RuleDefinition(
             id ?? string.Empty,
@@ -321,7 +341,9 @@ public sealed class RuleLoader
             string.IsNullOrWhiteSpace(appliesTo) ? null : appliesTo,
             string.IsNullOrWhiteSpace(recommendation) ? null : recommendation,
             string.IsNullOrWhiteSpace(wcagCriteria) ? null : wcagCriteria,
-            string.IsNullOrWhiteSpace(problemTags) ? null : problemTags);
+            string.IsNullOrWhiteSpace(problemTags) ? null : problemTags,
+            string.IsNullOrWhiteSpace(algorithm) ? null : algorithm,
+            algorithmAdvancedValue);
 
         var ruleId = string.IsNullOrWhiteSpace(id) ? Path.GetFileNameWithoutExtension(path) : id;
         return new RuleFileLoadResult(rule, errors, ruleId, HasParseError: false);

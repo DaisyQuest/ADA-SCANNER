@@ -4,5 +4,8 @@
   "severity": "medium",
   "checkId": "absolute-positioning",
   "appliesTo": "html,htm,cshtml,razor,xaml",
-  "recommendation": "Use flow layout containers, flex/grid, or relative positioning so content can wrap and reflow at 320px width or 400% zoom."
+  "recommendation": "Use flow layout containers, flex/grid, or relative positioning so content can wrap and reflow at 320px width or 400% zoom. (WCAG 2.1 SC 1.4.10)",
+  "algorithm": "Scans inline styles for position:absolute/fixed and XAML Canvas/AbsoluteLayout positioning attributes.",
+  "algorithm_advanced": "Flags inline style position values of absolute/fixed and XAML Canvas.* or AbsoluteLayout.LayoutBounds attributes.",
+  "wcagCriteria": "1.4.10"
 }

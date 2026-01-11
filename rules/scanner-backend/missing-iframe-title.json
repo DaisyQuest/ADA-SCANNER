@@ -5,6 +5,8 @@
   "checkId": "missing-iframe-title",
   "appliesTo": "html, htm, cshtml, razor, ftl",
   "recommendation": "Provide a unique title attribute for each <iframe> to describe its content. (WCAG 2.1 SC 4.1.2)",
+  "algorithm": "Flags <iframe> elements (and iframe macros) missing a non-empty title attribute.",
+  "algorithm_advanced": "Checks <iframe> elements (and freemarker iframe macros) for non-empty title attributes.",
   "wcagCriteria": "4.1.2",
   "problemTags": "iframe-title, embedded-content"
 }

@@ -4,5 +4,8 @@
   "severity": "medium",
   "checkId": "unlabeled-button",
   "appliesTo": "cshtml, razor",
-  "recommendation": "Include button text or bind aria-label/aria-labelledby values in Razor markup so controls announce clear intent."
+  "recommendation": "Include button text or bind aria-label/aria-labelledby values in Razor markup so controls announce clear intent. (WCAG 2.1 SC 4.1.2)",
+  "algorithm": "Checks <button> text content and button-like <input> elements for accessible names via text/value/alt, aria-label/labelledby, title, or labels.",
+  "algorithm_advanced": "Checks <button> and button-like <input> elements for accessible names via text/value/alt, aria-label/labelledby, title, or label associations.",
+  "wcagCriteria": "4.1.2"
 }

@@ -106,18 +106,40 @@ public sealed class ReportGenerator
     {
         var scanIssues = report.Scan.Issues ?? Array.Empty<Issue>();
         var scanFiles = report.Scan.Files ?? Array.Empty<DiscoveredFile>();
+        var runtimeIssues = report.RuntimeScan?.Issues ?? Array.Empty<Issue>();
+        var allRuleIds = scanIssues.Select(issue => issue.RuleId)
+            .Concat(runtimeIssues.Select(issue => issue.RuleId))
+            .Where(ruleId => !string.IsNullOrWhiteSpace(ruleId))
+            .Distinct(StringComparer.Ordinal)
+            .OrderBy(ruleId => ruleId, StringComparer.Ordinal)
+            .ToArray();
+        var filterOptions = allRuleIds.Length == 0
+            ? "<p>No rules available for filtering.</p>"
+            : string.Join("", allRuleIds.Select(ruleId =>
+                $"<label><input type=\"checkbox\" class=\"rule-filter-item\" value=\"{HtmlEncode(ruleId)}\" checked /> {HtmlEncode(ruleId)}</label>"));
+        var filterSection = $"""
+  <h2>Rule Filters</h2>
+  {(allRuleIds.Length == 0 ? "<p>No rules available for filtering.</p>" : $"""
+  <fieldset class="rule-filter">
+    <legend>Filter issues by rule</legend>
+    <label><input type="checkbox" id="rule-filter-all" checked /> All rules</label>
+    <div class="rule-filter-options">
+      {filterOptions}
+    </div>
+  </fieldset>
+  """)}
+""";
         var rows = scanIssues.Count == 0
             ? "<tr><td colspan=\"5\">No issues found.</td></tr>"
             : string.Join("", scanIssues.Select(issue =>
-                $"<tr><td>{HtmlEncode(issue.RuleId)}</td><td>{HtmlEncode(issue.CheckId)}</td><td>{HtmlEncode(issue.FilePath)}</td><td>{issue.Line}</td><td>{HtmlEncode(issue.Message)}</td></tr>"));
+                $"<tr data-rule=\"{HtmlEncode(issue.RuleId)}\"><td>{HtmlEncode(issue.RuleId)}</td><td>{HtmlEncode(issue.CheckId)}</td><td>{HtmlEncode(issue.FilePath)}</td><td>{issue.Line}</td><td>{HtmlEncode(issue.Message)}</td></tr>"));
 
-        var runtimeIssues = report.RuntimeScan?.Issues ?? Array.Empty<Issue>();
         var runtimeRows = report.RuntimeScan == null
             ? string.Empty
             : runtimeIssues.Count == 0
                 ? "<tr><td colspan=\"5\">No issues found.</td></tr>"
                 : string.Join("", runtimeIssues.Select(issue =>
-                    $"<tr><td>{HtmlEncode(issue.RuleId)}</td><td>{HtmlEncode(issue.CheckId)}</td><td>{HtmlEncode(issue.FilePath)}</td><td>{issue.Line}</td><td>{HtmlEncode(issue.Message)}</td></tr>"));
+                    $"<tr data-rule=\"{HtmlEncode(issue.RuleId)}\"><td>{HtmlEncode(issue.RuleId)}</td><td>{HtmlEncode(issue.CheckId)}</td><td>{HtmlEncode(issue.FilePath)}</td><td>{issue.Line}</td><td>{HtmlEncode(issue.Message)}</td></tr>"));
 
         var runtimeForms = report.RuntimeScan?.Forms ?? Array.Empty<RuntimeFormConfiguration>();
         var formRows = report.RuntimeScan == null
@@ -131,7 +153,7 @@ public sealed class ReportGenerator
                 .GroupBy(issue => issue.RuleId)
                 .OrderByDescending(group => group.Count())
                 .ThenBy(group => group.Key, StringComparer.Ordinal)
-                .Select(group => $"<tr><td>{HtmlEncode(group.Key)}</td><td>{group.Count()}</td></tr>"));
+                .Select(group => $"<tr data-rule=\"{HtmlEncode(group.Key)}\"><td>{HtmlEncode(group.Key)}</td><td>{group.Count()}</td></tr>"));
 
         var runtimeSummaryRows = runtimeIssues.Count == 0
             ? "<tr><td colspan=\"2\">No issues found.</td></tr>"
@@ -139,7 +161,7 @@ public sealed class ReportGenerator
                 .GroupBy(issue => issue.RuleId)
                 .OrderByDescending(group => group.Count())
                 .ThenBy(group => group.Key, StringComparer.Ordinal)
-                .Select(group => $"<tr><td>{HtmlEncode(group.Key)}</td><td>{group.Count()}</td></tr>"));
+                .Select(group => $"<tr data-rule=\"{HtmlEncode(group.Key)}\"><td>{HtmlEncode(group.Key)}</td><td>{group.Count()}</td></tr>"));
 
         var runtimeSection = report.RuntimeScan == null
             ? string.Empty
@@ -205,6 +227,7 @@ public sealed class ReportGenerator
   <p>Generated: {report.GeneratedAt:u}</p>
   <p>Files scanned: {scanFiles.Count}</p>
   <p>Total issues: {scanIssues.Count}</p>
+  {filterSection}
   <h2>Issues by Rule</h2>
   <table border="1" cellspacing="0" cellpadding="6">
     <thead>
@@ -232,6 +255,38 @@ public sealed class ReportGenerator
     </tbody>
   </table>
   {runtimeSection}
+  <script>
+    (() => {{
+      const filterAll = document.getElementById('rule-filter-all');
+      const ruleFilters = Array.from(document.querySelectorAll('.rule-filter-item'));
+      if (ruleFilters.length === 0) {{
+        return;
+      }}
+      const updateVisibility = () => {{
+        const activeRules = new Set(ruleFilters.filter(cb => cb.checked).map(cb => cb.value));
+        document.querySelectorAll('[data-rule]').forEach(row => {{
+          row.style.display = activeRules.has(row.dataset.rule) ? '' : 'none';
+        }});
+        if (filterAll) {{
+          filterAll.checked = activeRules.size === ruleFilters.length;
+          filterAll.indeterminate = activeRules.size > 0 && activeRules.size < ruleFilters.length;
+        }}
+      }};
+      if (filterAll) {{
+        filterAll.addEventListener('change', () => {{
+          const isChecked = filterAll.checked;
+          ruleFilters.forEach(cb => {{
+            cb.checked = isChecked;
+          }});
+          updateVisibility();
+        }});
+      }}
+      ruleFilters.forEach(cb => {{
+        cb.addEventListener('change', updateVisibility);
+      }});
+      updateVisibility();
+    }})();
+  </script>
 </body>
 </html>
 """;

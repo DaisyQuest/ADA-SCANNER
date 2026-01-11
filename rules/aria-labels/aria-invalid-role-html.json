@@ -4,5 +4,8 @@
   "severity": "medium",
   "checkId": "invalid-aria-role",
   "appliesTo": "html, htm, cshtml, razor",
-  "recommendation": "Use only valid ARIA role values and ensure the role matches native element semantics or is accompanied by required attributes."
+  "recommendation": "Use only valid ARIA role values and ensure the role matches native element semantics or is accompanied by required attributes. (WCAG 2.1 SC 4.1.2)",
+  "algorithm": "Flags role attributes whose values are not in the allowed ARIA role list.",
+  "algorithm_advanced": "Regex-scans role attributes and validates against the allowed role whitelist.",
+  "wcagCriteria": "4.1.2"
 }

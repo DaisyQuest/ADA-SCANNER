@@ -4,5 +4,8 @@
   "severity": "medium",
   "checkId": "unlabeled-button",
   "appliesTo": "html, htm",
-  "recommendation": "Provide visible text, aria-label, or aria-labelledby for <button> elements and input buttons."
+  "recommendation": "Provide visible text, aria-label, or aria-labelledby for <button> elements and input buttons. (WCAG 2.1 SC 4.1.2)",
+  "algorithm": "Checks <button> text content and button-like <input> elements for accessible names via text/value/alt, aria-label/labelledby, title, or labels.",
+  "algorithm_advanced": "Checks <button> and button-like <input> elements for accessible names via text/value/alt, aria-label/labelledby, title, or label associations.",
+  "wcagCriteria": "4.1.2"
 }

@@ -5,6 +5,8 @@
   "checkId": "missing-fieldset-legend",
   "appliesTo": "html, htm, cshtml, razor",
   "recommendation": "Add a <legend> element as the first child of each <fieldset>. (WCAG 2.1 SC 1.3.1,3.3.2)",
+  "algorithm": "Flags <fieldset> elements whose legend is missing or empty.",
+  "algorithm_advanced": "Regex-matches <fieldset> blocks and reports when <legend> is missing or empty.",
   "wcagCriteria": "1.3.1,3.3.2",
   "problemTags": "fieldset-legend, form-structure"
 }

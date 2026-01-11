@@ -5,6 +5,8 @@
   "checkId": "missing-heading-structure",
   "appliesTo": "html, htm, cshtml, razor",
   "recommendation": "Add meaningful heading elements (h1-h6) to structure the content. (WCAG 2.1 SC 1.3.1,1.3.2,2.4.6)",
+  "algorithm": "Flags documents with no heading tags (h1-h6) present.",
+  "algorithm_advanced": "Checks DOM or regex for any h1-h6 tags; reports when none exist.",
   "wcagCriteria": "1.3.1,1.3.2,2.4.6",
   "problemTags": "headings"
 }

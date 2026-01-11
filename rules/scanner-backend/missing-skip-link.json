@@ -5,6 +5,8 @@
   "checkId": "missing-skip-link",
   "appliesTo": "html, htm, cshtml, razor",
   "recommendation": "Add a visually-hidden skip link that targets the main content region. (WCAG 2.1 SC 2.4.1)",
+  "algorithm": "Checks for a skip link (href=\"#...\" with \"skip\" label) as the first focusable element and flags missing or later placement.",
+  "algorithm_advanced": "Locates skip link anchors (href starting '#', label containing 'skip') and ensures it is the first focusable element; otherwise reports missing or out-of-order.",
   "wcagCriteria": "2.4.1",
   "problemTags": "skip-link, bypass-blocks"
 }

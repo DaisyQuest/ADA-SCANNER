@@ -5,6 +5,8 @@
   "checkId": "hover-focus-content",
   "appliesTo": "html, htm, cshtml, razor, css",
   "recommendation": "Ensure hover or focus content can be dismissed and remains visible for users. (WCAG 2.1 SC 1.4.13)",
+  "algorithm": "Detects CSS :hover/:focus rules that toggle display/visibility/opacity, indicating hover-revealed content.",
+  "algorithm_advanced": "Regex-scans CSS for :hover/:focus rules that change display/visibility/opacity properties.",
   "wcagCriteria": "1.4.13",
   "problemTags": "hover-focus"
 }

@@ -5,6 +5,8 @@
   "checkId": "navigation-structure",
   "appliesTo": "html, htm, cshtml, razor",
   "recommendation": "Keep focus order logical, offer multiple navigation paths, and label destinations consistently. (WCAG 2.1 SC 2.4.3,2.4.5,3.2.3,3.2.4)",
+  "algorithm": "Checks for positive tabindex, inconsistent repeated nav link order, inconsistent labels for the same href, or missing navigation/search/sitemap cues.",
+  "algorithm_advanced": "Flags positive tabindex values, mismatched nav link sequences across nav regions, inconsistent labels for same href, or absence of nav/search/sitemap cues.",
   "wcagCriteria": "2.4.3,2.4.5,3.2.3,3.2.4",
   "problemTags": "navigation"
 }

@@ -5,6 +5,8 @@
   "checkId": "focus-visible",
   "appliesTo": "html, htm, cshtml, razor, css",
   "recommendation": "Do not remove focus outlines without providing an alternative indicator. (WCAG 2.1 SC 2.4.7)",
+  "algorithm": "Flags CSS :focus rules that remove outline or box-shadow indicators.",
+  "algorithm_advanced": "Regex-scans :focus CSS blocks for outline/box-shadow set to none or 0.",
   "wcagCriteria": "2.4.7",
   "problemTags": "focus-visible"
 }

@@ -5,6 +5,8 @@
   "checkId": "redundant-title-text",
   "appliesTo": "html, htm, cshtml, razor",
   "recommendation": "Remove redundant title attributes or keep them distinct from visible text. (WCAG 2.1 SC 2.4.4)",
+  "algorithm": "Flags elements whose title text duplicates aria-label or visible text content.",
+  "algorithm_advanced": "Compares title attribute text against aria-label or visible text content and flags exact matches.",
   "wcagCriteria": "2.4.4",
   "problemTags": "titles"
 }

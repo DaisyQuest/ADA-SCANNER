@@ -5,6 +5,8 @@
   "checkId": "label-in-name",
   "appliesTo": "html, htm, cshtml, razor",
   "recommendation": "Keep aria-label or aria-labelledby text in sync with the visible label. (WCAG 2.1 SC 2.5.3)",
+  "algorithm": "Compares visible labels on buttons/links/input buttons against aria-label/labelledby/title and flags mismatches.",
+  "algorithm_advanced": "Compares normalized visible label text for buttons/links/input buttons against aria-label/labelledby/title strings and flags non-matching accessible names.",
   "wcagCriteria": "2.5.3",
   "problemTags": "label-in-name, accessible-name"
 }

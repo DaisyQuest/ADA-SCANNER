@@ -4,5 +4,8 @@
   "severity": "medium",
   "checkId": "fixed-width-layout",
   "appliesTo": "html,htm,cshtml,razor,xaml",
-  "recommendation": "Prefer percentage, auto, or flexible sizing instead of fixed pixel widths so layouts adapt at 320px width or 400% zoom."
+  "recommendation": "Prefer percentage, auto, or flexible sizing instead of fixed pixel widths so layouts adapt at 320px width or 400% zoom. (WCAG 2.1 SC 1.4.10)",
+  "algorithm": "Flags fixed width/min-width usage in inline styles or width attributes, plus XAML Width/MinWidth numeric values that prevent reflow.",
+  "algorithm_advanced": "Flags inline style width/min-width with fixed units, width attributes with fixed units, and XAML Width/MinWidth numeric values.",
+  "wcagCriteria": "1.4.10"
 }
