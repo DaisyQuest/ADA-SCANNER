@@ -8,6 +8,7 @@ const styleHeightProperties = ["height", "min-height"];
 const MIN_VIEWPORT_WIDTH_PX = 320;
 const MIN_VIEWPORT_HEIGHT_PX = 256;
 const BASE_FONT_SIZE_PX = 16;
+const tableTags = new Set(["table", "thead", "tbody", "tfoot", "tr", "th", "td", "col", "colgroup", "caption"]);
 
 const lengthRegex = /^(?<value>-?\d+(?:\.\d+)?)(?<unit>px|pt|pc|cm|mm|in|em|rem)?$/i;
 
@@ -136,9 +137,15 @@ const describeProperty = (propertyName) => {
   return normalized.includes("height") ? "height" : "width";
 };
 
+const isTableTag = (tagName) => (tagName ? tableTags.has(tagName.toLowerCase()) : false);
+
 const runMarkup = (context, rule) => {
   const issues = [];
   for (const match of context.content.matchAll(tagRegex)) {
+    if (isTableTag(match.groups.tag)) {
+      continue;
+    }
+
     const attrs = match.groups.attrs;
     const style = getAttributeValue(attrs, "style");
     const fixedStyleWidth = tryGetFixedStyleWidth(style);
