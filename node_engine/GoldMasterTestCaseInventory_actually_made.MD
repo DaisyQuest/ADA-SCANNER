@@ -114,6 +114,7 @@ This file tracks GoldMaster documents that have been implemented in `node_engine
 | HTML-GM-101 | gm-html-101-iframe-labyrinth-with-deep-nesting.html | ✅ | Iframe labyrinth with deep nesting and form errors (MissingIframeTitleCheck + MissingLabelCheck + DuplicateIdCheck) | Added complex nesting + iframe coverage. |
 | HTML-GM-102 | gm-html-102-pointer-gesture-motion-shortcuts.html | ✅ | Pointer gestures + motion actuation + character key shortcuts (InteractionLimitsCheck) | Added WCAG 2.1 AA interaction limits coverage. |
 | HTML-GM-103 | gm-html-103-aria-role-token-mix.html | ✅ | Multi-role attribute with invalid token (InvalidAriaRoleCheck) | Added coverage for multi-role validation. |
+| HTML-GM-104 | gm-html-104-reflow-horizontal-scroll-except-tables.html | ✅ | Fixed width layout reflow except tables (FixedWidthLayoutCheck) | Added table exception coverage for reflow rule. |
 
 ## HTM (.htm)
 

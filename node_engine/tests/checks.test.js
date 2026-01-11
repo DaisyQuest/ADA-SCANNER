@@ -199,6 +199,19 @@ describe("FixedWidthLayoutCheck", () => {
     expect(describeProperty("min-height")).toBe("minimum height");
   });
 
+  test("ignores fixed widths on table elements", () => {
+    const htmlContext = createContext(
+      "<table style=\"width:400px\"><tr><td style=\"min-width:400px\">Cell</td></tr></table>" +
+        "<div style=\"width:400px\">Panel</div>" +
+        "<table width=\"500\"></table>",
+      "html"
+    );
+
+    const issues = FixedWidthLayoutCheck.run(htmlContext, rule);
+    expect(issues).toHaveLength(1);
+    expect(issues[0].evidence).toContain("<div");
+  });
+
   test("parses fixed lengths and thresholds", () => {
     expect(parseFixedLengthToPx("20px")).toBe(20);
     expect(parseFixedLengthToPx("1in")).toBeCloseTo(96, 4);

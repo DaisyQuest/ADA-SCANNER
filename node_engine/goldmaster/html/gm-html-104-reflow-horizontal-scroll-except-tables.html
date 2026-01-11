@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Reflow horizontal scrollbars except tables</title>
+    <style>
+      .wide-card {
+        width: 420px;
+      }
+
+      table.fixed-layout {
+        width: 600px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wide-card">Wide card should trigger fixed width detection.</div>
+    <table class="fixed-layout">
+      <caption>Wide layout table is allowed.</caption>
+      <tr>
+        <td style="min-width: 400px;">Table cell content</td>
+      </tr>
+    </table>
+  </body>
+</html>
