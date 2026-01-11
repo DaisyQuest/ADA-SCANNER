@@ -334,6 +334,36 @@ describe("Extension report sidebar", () => {
     sidebar.destroy();
   });
 
+  test("summarizes rule counts with fallbacks", () => {
+    document.body.innerHTML = '<div id="existing"></div>';
+    const highlighter = createHighlighter({ documentRoot: document });
+    const sidebar = createReportSidebar({
+      documentRoot: document,
+      windowObj: window,
+      resolveTargets: highlighter.resolveTargets
+    });
+
+    sidebar.render([
+      { selector: "#existing", ruleId: "rule-a" },
+      { selector: "#existing", ruleId: "rule-a" },
+      { selector: "#existing", ruleId: "" },
+      { selector: "#missing", ruleId: "rule-b" }
+    ]);
+
+    const summaryItems = Array.from(document.querySelectorAll(".ada-report-summary-item"));
+    expect(summaryItems).toHaveLength(3);
+    const summaryMap = new Map(
+      summaryItems.map((item) => [
+        item.querySelector(".ada-report-summary-rule")?.textContent,
+        item.querySelector(".ada-report-summary-count")?.textContent
+      ])
+    );
+    expect(summaryMap.get("rule-a")).toBe("2");
+    expect(summaryMap.get("rule-b")).toBe("1");
+    expect(summaryMap.get("Unspecified rule")).toBe("1");
+    sidebar.destroy();
+  });
+
   test("handles missing target resolver and metadata", () => {
     document.body.innerHTML = "";
     const onIssueSelect = jest.fn();
@@ -497,6 +527,8 @@ describe("Extension report sidebar", () => {
     sidebar.render([]);
     const empty = document.querySelector(".ada-report-empty");
     expect(empty).not.toBeNull();
+    const summaryEmpty = document.querySelector(".ada-report-summary-empty");
+    expect(summaryEmpty).not.toBeNull();
     sidebar.destroy();
   });
 

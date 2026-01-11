@@ -78,6 +78,53 @@
         overflow-y: auto;
         padding: 8px 8px 12px 8px;
       }
+      #${SIDEBAR_ID} .ada-report-summary {
+        padding: 0 8px 8px 8px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        margin-bottom: 8px;
+      }
+      #${SIDEBAR_ID} .ada-report-summary-title {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: #9ca3af;
+        margin: 4px 4px 8px 4px;
+      }
+      #${SIDEBAR_ID} .ada-report-summary-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      #${SIDEBAR_ID} .ada-report-summary-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        padding: 6px 8px;
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+      }
+      #${SIDEBAR_ID} .ada-report-summary-rule {
+        font-size: 12px;
+        color: #fef3c7;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+      }
+      #${SIDEBAR_ID} .ada-report-summary-count {
+        font-size: 12px;
+        font-weight: 700;
+        color: #38bdf8;
+      }
+      #${SIDEBAR_ID} .ada-report-summary-empty {
+        font-size: 12px;
+        color: #9ca3af;
+        text-align: center;
+        padding: 10px 8px;
+      }
       #${SIDEBAR_ID} .ada-report-list {
         list-style: none;
         padding: 0;
@@ -215,10 +262,24 @@
     const body = documentRoot.createElement("div");
     body.className = "ada-report-body";
 
+    const summary = documentRoot.createElement("div");
+    summary.className = "ada-report-summary";
+
+    const summaryTitle = documentRoot.createElement("div");
+    summaryTitle.className = "ada-report-summary-title";
+    summaryTitle.textContent = "Rule summary";
+
+    const summaryList = documentRoot.createElement("ul");
+    summaryList.className = "ada-report-summary-list";
+
+    summary.appendChild(summaryTitle);
+    summary.appendChild(summaryList);
+
     const list = documentRoot.createElement("ul");
     list.className = "ada-report-list";
     list.setAttribute("aria-live", "polite");
 
+    body.appendChild(summary);
     body.appendChild(list);
     container.appendChild(header);
     container.appendChild(body);
@@ -228,6 +289,7 @@
     return {
       container,
       count,
+      summaryList,
       list
     };
   };
@@ -295,15 +357,51 @@
       ensureSidebar();
       lastIssues = normalizeList(issues);
       elements.count.textContent = String(lastIssues.length);
+      elements.summaryList.innerHTML = "";
       elements.list.innerHTML = "";
 
       if (!lastIssues.length) {
+        const summaryEmpty = documentRoot.createElement("li");
+        summaryEmpty.className = "ada-report-summary-empty";
+        summaryEmpty.textContent = "No rule violations yet.";
+        elements.summaryList.appendChild(summaryEmpty);
+
         const empty = documentRoot.createElement("li");
         empty.className = "ada-report-empty";
         empty.textContent = "No issues captured yet.";
         elements.list.appendChild(empty);
         return;
       }
+
+      const summaryCounts = new Map();
+      lastIssues.forEach((issue) => {
+        const rule = getRuleLabel(issue);
+        summaryCounts.set(rule, (summaryCounts.get(rule) || 0) + 1);
+      });
+      Array.from(summaryCounts.entries())
+        .sort((a, b) => {
+          const countDiff = b[1] - a[1];
+          if (countDiff) {
+            return countDiff;
+          }
+          return a[0].localeCompare(b[0]);
+        })
+        .forEach(([rule, count]) => {
+          const item = documentRoot.createElement("li");
+          item.className = "ada-report-summary-item";
+
+          const ruleLabel = documentRoot.createElement("span");
+          ruleLabel.className = "ada-report-summary-rule";
+          ruleLabel.textContent = rule;
+
+          const countLabel = documentRoot.createElement("span");
+          countLabel.className = "ada-report-summary-count";
+          countLabel.textContent = String(count);
+
+          item.appendChild(ruleLabel);
+          item.appendChild(countLabel);
+          elements.summaryList.appendChild(item);
+        });
 
       lastIssues.forEach((issue) => {
         const item = documentRoot.createElement("li");
