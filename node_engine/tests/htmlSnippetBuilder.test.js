@@ -7,6 +7,7 @@ describe("HtmlSnippetBuilder", () => {
     expect(snippet.html).toContain("<html");
     expect(snippet.kind).toBe("html");
     expect(snippet.sourceKind).toBe("html");
+    expect(snippet.contentType).toBe("text/html");
   });
 
   test("returns HTML content as-is when already wrapped", () => {
@@ -20,6 +21,7 @@ describe("HtmlSnippetBuilder", () => {
     expect(snippet.kind).toBe("css");
     expect(snippet.html).toContain("<style>");
     expect(snippet.html).toContain("a:focus{outline:none}");
+    expect(snippet.contentType).toBe("text/html");
   });
 
   test("builds js wrapper", () => {
@@ -27,6 +29,7 @@ describe("HtmlSnippetBuilder", () => {
     expect(snippet.kind).toBe("js");
     expect(snippet.html).toContain("<script>");
     expect(snippet.html).toContain("setTimeout");
+    expect(snippet.contentType).toBe("text/html");
   });
 
   test("renders freemarker content", () => {
@@ -35,6 +38,7 @@ describe("HtmlSnippetBuilder", () => {
     expect(snippet.sourceKind).toBe("ftl");
     expect(snippet.html).toContain("data-freemarker-macro=\"card\"");
     expect(snippet.html).toContain("freemarker");
+    expect(snippet.contentType).toBe("text/html");
   });
 
   test("preserves cshtml kind", () => {
@@ -49,11 +53,33 @@ describe("HtmlSnippetBuilder", () => {
     expect(snippet.kind).toBe("html");
     expect(snippet.sourceKind).toBe("xml");
     expect(snippet.html).toContain("<section>Unknown</section>");
+    expect(snippet.contentType).toBe("text/html");
   });
 
   test("defaults to empty html when no args provided", () => {
     const snippet = buildHtmlSnippet();
     expect(snippet.kind).toBe("html");
     expect(snippet.html).toContain("<html");
+  });
+
+  test("normalizes kind and content values", () => {
+    const snippet = buildHtmlSnippet({ content: 42, kind: "HTML" });
+    expect(snippet.kind).toBe("html");
+    expect(snippet.sourceKind).toBe("html");
+    expect(snippet.html).toContain("42");
+  });
+
+  test("maps htm kinds to html source", () => {
+    const snippet = buildHtmlSnippet({ content: "<p>Hi</p>", kind: "htm" });
+    expect(snippet.kind).toBe("htm");
+    expect(snippet.sourceKind).toBe("html");
+    expect(snippet.contentType).toBe("text/html");
+  });
+
+  test("normalizes null values for kind and content", () => {
+    const snippet = buildHtmlSnippet({ content: null, kind: null });
+    expect(snippet.kind).toBe("html");
+    expect(snippet.sourceKind).toBe("html");
+    expect(snippet.html).toContain("<body></body>");
   });
 });

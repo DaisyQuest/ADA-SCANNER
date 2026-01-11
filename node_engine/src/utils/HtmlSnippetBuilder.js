@@ -8,64 +8,87 @@ const LANGUAGE_HINTS = {
   cshtml: "text/html",
   ftl: "text/html"
 };
+const HTML_KINDS = new Set(["html", "htm", "cshtml"]);
+
+const normalizeKind = (kind) => String(kind ?? "html").toLowerCase();
+const normalizeContent = (content) => String(content ?? "");
 
 const ensureHtmlDocument = (content = "") => {
-  const normalized = String(content);
+  const normalized = normalizeContent(content);
   if (/<\s*html\b/i.test(normalized)) {
     return normalized;
   }
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"></head><body>${normalized}</body></html>`;
 };
 
-const buildHtmlSnippet = ({ content = "", kind = "html" } = {}) => {
-  const normalizedKind = String(kind).toLowerCase();
-  const normalizedContent = String(content);
+const buildHtmlSnippetResult = ({ html, kind, sourceKind, contentType }) => ({
+  html,
+  kind,
+  sourceKind,
+  contentType
+});
 
-  if (["html", "htm", "cshtml"].includes(normalizedKind)) {
-    return {
-      html: ensureHtmlDocument(normalizedContent),
-      kind: normalizedKind,
-      sourceKind: normalizedKind === "html" || normalizedKind === "htm" ? "html" : normalizedKind,
-      contentType: LANGUAGE_HINTS[normalizedKind]
-    };
-  }
+const buildHtmlWrappedSnippet = ({ normalizedKind, normalizedContent }) =>
+  buildHtmlSnippetResult({
+    html: ensureHtmlDocument(normalizedContent),
+    kind: normalizedKind,
+    sourceKind: normalizedKind === "html" || normalizedKind === "htm" ? "html" : normalizedKind,
+    contentType: LANGUAGE_HINTS[normalizedKind]
+  });
 
-  if (normalizedKind === "ftl") {
-    const rendered = renderFreemarkerTemplate(normalizedContent);
-    return {
-      html: ensureHtmlDocument(rendered),
-      kind: "html",
-      sourceKind: "ftl",
-      contentType: "text/html"
-    };
-  }
+const buildFreemarkerSnippet = ({ normalizedContent }) =>
+  buildHtmlSnippetResult({
+    html: ensureHtmlDocument(renderFreemarkerTemplate(normalizedContent)),
+    kind: "html",
+    sourceKind: "ftl",
+    contentType: "text/html"
+  });
 
-  if (normalizedKind === "css") {
-    const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><style>${normalizedContent}</style></head><body></body></html>`;
-    return {
-      html,
-      kind: "css",
-      sourceKind: "css",
-      contentType: "text/html"
-    };
-  }
+const buildCssSnippet = ({ normalizedContent }) =>
+  buildHtmlSnippetResult({
+    html: `<!doctype html><html lang="en"><head><meta charset="utf-8"><style>${normalizedContent}</style></head><body></body></html>`,
+    kind: "css",
+    sourceKind: "css",
+    contentType: "text/html"
+  });
 
-  if (normalizedKind === "js") {
-    const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"></head><body><script>${normalizedContent}</script></body></html>`;
-    return {
-      html,
-      kind: "js",
-      sourceKind: "js",
-      contentType: "text/html"
-    };
-  }
+const buildJsSnippet = ({ normalizedContent }) =>
+  buildHtmlSnippetResult({
+    html: `<!doctype html><html lang="en"><head><meta charset="utf-8"></head><body><script>${normalizedContent}</script></body></html>`,
+    kind: "js",
+    sourceKind: "js",
+    contentType: "text/html"
+  });
 
-  return {
+const buildFallbackSnippet = ({ normalizedKind, normalizedContent }) =>
+  buildHtmlSnippetResult({
     html: ensureHtmlDocument(normalizedContent),
     kind: "html",
     sourceKind: normalizedKind,
     contentType: LANGUAGE_HINTS[normalizedKind] || "text/html"
-  };
+  });
+
+const buildHtmlSnippet = ({ content = "", kind = "html" } = {}) => {
+  const normalizedKind = normalizeKind(kind);
+  const normalizedContent = normalizeContent(content);
+
+  if (HTML_KINDS.has(normalizedKind)) {
+    return buildHtmlWrappedSnippet({ normalizedKind, normalizedContent });
+  }
+
+  if (normalizedKind === "ftl") {
+    return buildFreemarkerSnippet({ normalizedContent });
+  }
+
+  if (normalizedKind === "css") {
+    return buildCssSnippet({ normalizedContent });
+  }
+
+  if (normalizedKind === "js") {
+    return buildJsSnippet({ normalizedContent });
+  }
+
+  return buildFallbackSnippet({ normalizedKind, normalizedContent });
 };
 
 module.exports = { buildHtmlSnippet };

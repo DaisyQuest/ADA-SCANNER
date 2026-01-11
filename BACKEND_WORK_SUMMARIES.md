@@ -86,3 +86,4 @@
 2026-01-11 - Added static analysis exports and inline file views (SPEC-010)
 
 2026-01-11 - Enhanced GoldMaster expectations reporting with console/html summaries and coverage-focused tests. (SPEC-013)
+2026-01-11 - Refactored html snippet and freemarker utilities for readability with added tests. (SPEC-013)
