@@ -1,6 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 const os = require("os");
+const ExcelJS = require("exceljs");
 const {
   StaticAnalyzer,
   collectFiles,
@@ -22,7 +23,9 @@ const createTempRules = () => {
       description: "desc",
       severity: "low",
       checkId: "insufficient-contrast",
-      appliesTo: "html"
+      appliesTo: "html",
+      algorithm: "Check contrast ratio.",
+      algorithm_advanced: "Compute contrast ratios for each text element."
     })
   );
   return root;
@@ -67,6 +70,8 @@ describe("StaticAnalyzer", () => {
     expect(result.documents.find((doc) => doc.url === "page.razor").kind).toBe("razor");
     expect(result.documents.find((doc) => doc.url === "dialog.xaml").kind).toBe("xaml");
     expect(result.issues).toHaveLength(1);
+    expect(result.issues[0].algorithm).toBe("Check contrast ratio.");
+    expect(result.issues[0].algorithmAdvanced).toBe("Compute contrast ratios for each text element.");
   });
 
   test("records linked stylesheets on HTML documents", () => {
@@ -487,9 +492,35 @@ describe("StaticAnalysisServer", () => {
 
     const fileReportHtml = await fetch(`${baseUrl}/report/file?path=${encodeURIComponent("index.html")}&format=html`);
     expect(fileReportHtml.headers.get("content-disposition")).toContain(".html");
+    const fileReportInline = await fetch(
+      `${baseUrl}/report/file?path=${encodeURIComponent("index.html")}&format=html&inline=1`
+    );
+    expect(fileReportInline.headers.get("content-disposition")).toBeNull();
 
     const reportHtml = await fetch(`${baseUrl}/report?format=html`);
     expect(reportHtml.headers.get("content-type")).toContain("text/html");
+    const reportHtmlInline = await fetch(`${baseUrl}/report?format=html&inline=1`);
+    expect(reportHtmlInline.headers.get("content-disposition")).toBeNull();
+
+    const reportCsv = await fetch(`${baseUrl}/report?format=csv`);
+    const reportCsvBody = await reportCsv.text();
+    expect(reportCsv.headers.get("content-type")).toContain("text/csv");
+    expect(reportCsv.headers.get("content-disposition")).toContain("report.csv");
+    expect(reportCsvBody).toContain("Algorithm");
+
+    const reportExcel = await fetch(`${baseUrl}/report?format=excel`);
+    const reportExcelBuffer = Buffer.from(await reportExcel.arrayBuffer());
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(reportExcelBuffer);
+    const worksheet = workbook.getWorksheet("Issues");
+    expect(worksheet.getRow(1).values).toContain("Algorithm");
+
+    const reportExcelThin = await fetch(`${baseUrl}/report?format=excel-thin`);
+    const reportExcelThinBuffer = Buffer.from(await reportExcelThin.arrayBuffer());
+    const thinWorkbook = new ExcelJS.Workbook();
+    await thinWorkbook.xlsx.load(reportExcelThinBuffer);
+    const thinSheet = thinWorkbook.getWorksheet("Issues");
+    expect(thinSheet.getRow(1).values).not.toContain("Algorithm");
 
     const reportHtmlShortcut = await fetch(`${baseUrl}/report/html`);
     expect(reportHtmlShortcut.status).toBe(200);

@@ -1,6 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 const os = require("os");
+const ExcelJS = require("exceljs");
 const { ListenerServer } = require("../src/listener/ListenerServer");
 const { EventEmitter } = require("events");
 
@@ -15,7 +16,9 @@ const createTempRules = () => {
       description: "desc",
       severity: "low",
       checkId: "missing-label",
-      appliesTo: "html"
+      appliesTo: "html",
+      algorithm: "Set aria-label for inputs.",
+      algorithm_advanced: "Review each input and apply aria-label or label."
     })
   );
   return root;
@@ -102,6 +105,28 @@ describe("ListenerServer", () => {
     expect(reportHtml.headers.get("content-disposition")).toContain("report.html");
     expect(reportHtmlBody).toContain("Runtime Accessibility Report");
 
+    const reportCsv = await fetch(`${baseUrl}/report?format=csv`);
+    const reportCsvBody = await reportCsv.text();
+    expect(reportCsv.headers.get("content-type")).toContain("text/csv");
+    expect(reportCsv.headers.get("content-disposition")).toContain("report.csv");
+    expect(reportCsvBody).toContain("Rule ID");
+    expect(reportCsvBody).toContain("Algorithm");
+
+    const reportExcel = await fetch(`${baseUrl}/report?format=excel`);
+    const reportExcelBuffer = Buffer.from(await reportExcel.arrayBuffer());
+    const excelWorkbook = new ExcelJS.Workbook();
+    await excelWorkbook.xlsx.load(reportExcelBuffer);
+    const excelSheet = excelWorkbook.getWorksheet("Issues");
+    expect(excelSheet).toBeTruthy();
+    expect(excelSheet.getRow(1).values).toContain("Algorithm");
+
+    const reportExcelThin = await fetch(`${baseUrl}/report?format=excel-thin`);
+    const reportExcelThinBuffer = Buffer.from(await reportExcelThin.arrayBuffer());
+    const thinWorkbook = new ExcelJS.Workbook();
+    await thinWorkbook.xlsx.load(reportExcelThinBuffer);
+    const thinSheet = thinWorkbook.getWorksheet("Issues");
+    expect(thinSheet.getRow(1).values).not.toContain("Algorithm");
+
     const reportHtmlShortcut = await fetch(`${baseUrl}/report/html`);
     const reportHtmlShortcutBody = await reportHtmlShortcut.text();
     expect(reportHtmlShortcut.status).toBe(200);
@@ -121,6 +146,11 @@ describe("ListenerServer", () => {
     expect(fileReportHtml.headers.get("content-type")).toContain("text/html");
     expect(fileReportHtml.headers.get("content-disposition")).toContain(".html");
     expect(fileReportHtmlBody).toContain("File Accessibility Report");
+
+    const fileReportInline = await fetch(
+      `${baseUrl}/report/file?path=${encodeURIComponent("http://example")}&format=html&inline=1`
+    );
+    expect(fileReportInline.headers.get("content-disposition")).toBeNull();
 
     const home = await fetch(`${baseUrl}/`);
     expect(home.status).toBe(200);
@@ -204,6 +234,111 @@ describe("ListenerServer", () => {
     expect(issuesPayload.issues).toHaveLength(1);
 
     await server.stop();
+  });
+
+  test("handles evaluate endpoints and metadata fallbacks", async () => {
+    const rulesRoot = createTempRules();
+    const server = new ListenerServer({ rulesRoot });
+    const port = await server.start();
+    const baseUrl = `http://localhost:${port}`;
+
+    const missingContent = await postJson(`${baseUrl}/evaluate`, {});
+    expect(missingContent.status).toBe(400);
+
+    const evaluated = await postJson(`${baseUrl}/evaluate`, {
+      content: "<input />",
+      kind: "html",
+      ChangeSource: "manual",
+      FrameContext: { isTopFrame: false }
+    });
+    const evaluatedPayload = await evaluated.json();
+    expect(evaluatedPayload.document.capture.changeSource).toBe("evaluator");
+    expect(evaluatedPayload.document.capture.frameContext).toBeNull();
+
+    const freemarker = await postJson(`${baseUrl}/evaluate/freemarker`, { content: "<input />" });
+    const freemarkerPayload = await freemarker.json();
+    expect(freemarker.status).toBe(200);
+    expect(freemarkerPayload.document.url).toContain("evaluator://ftl/");
+
+    const captureWithLegacyKeys = await postJson(`${baseUrl}/capture`, {
+      url: "http://example-legacy",
+      html: "<input />",
+      kind: "html",
+      ChangeSource: "legacy",
+      FrameContext: { isTopFrame: false }
+    });
+    const capturePayload = await captureWithLegacyKeys.json();
+    expect(capturePayload.document.capture.changeSource).toBe("legacy");
+    expect(capturePayload.document.capture.frameContext).toEqual({ isTopFrame: false });
+
+    await server.stop();
+  });
+
+  test("returns errors for evaluate origin and invalid JSON payloads", async () => {
+    const rulesRoot = createTempRules();
+    const server = new ListenerServer({ rulesRoot, allowedOrigins: ["http://allowed.test"] });
+    const port = await server.start();
+    const baseUrl = `http://localhost:${port}`;
+
+    const denied = await fetch(`${baseUrl}/evaluate`, {
+      method: "POST",
+      headers: {
+        Origin: "http://denied.test",
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ content: "<input />" })
+    });
+    expect(denied.status).toBe(403);
+
+    const invalid = await fetch(`${baseUrl}/evaluate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "{"
+    });
+    expect(invalid.status).toBe(500);
+
+    await server.stop();
+  });
+
+  test("covers helper branches for filenames and origins", () => {
+    const rulesRoot = createTempRules();
+    const server = new ListenerServer({ rulesRoot });
+
+    expect(server.createReportFilename("", "html")).toBe("report.html");
+    expect(server.createReportFilename("file-a", "json")).toBe("report-file-a.json");
+
+    const normalized = server.normalizeAllowedOrigins(["http://one.test"]);
+    expect(normalized.exact.has("http://one.test")).toBe(true);
+    const normalizedFromString = server.normalizeAllowedOrigins("http://two.test, http://three.test");
+    expect(normalizedFromString.exact.has("http://two.test")).toBe(true);
+    const allowAny = server.normalizeAllowedOrigins("*");
+    expect(allowAny.allowAny).toBe(true);
+
+    const secureOrigin = server.getServerOrigin({
+      headers: { host: "secure.test" },
+      connection: { encrypted: true }
+    });
+    expect(secureOrigin).toBe("https://secure.test");
+  });
+
+  test("writes html and csv responses when payloads are null", () => {
+    const rulesRoot = createTempRules();
+    const server = new ListenerServer({ rulesRoot });
+    const request = { headers: {} };
+
+    const htmlResponse = { setHeader: jest.fn(), writeHead: jest.fn(), end: jest.fn() };
+    server.writeHtml(htmlResponse, 200, null, request);
+    expect(htmlResponse.writeHead).toHaveBeenCalledWith(
+      200,
+      expect.objectContaining({ "Content-Type": "text/html; charset=utf-8" })
+    );
+
+    const csvResponse = { setHeader: jest.fn(), writeHead: jest.fn(), end: jest.fn() };
+    server.writeCsv(csvResponse, 200, null, request);
+    expect(csvResponse.writeHead).toHaveBeenCalledWith(
+      200,
+      expect.objectContaining({ "Content-Type": "text/csv; charset=utf-8" })
+    );
   });
 
   test("returns server error on invalid JSON", async () => {

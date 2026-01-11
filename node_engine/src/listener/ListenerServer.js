@@ -6,6 +6,7 @@ const { EventEmitter } = require("events");
 const { RuntimeScanner } = require("../runtime/RuntimeScanner");
 const { ReportBuilder } = require("./ReportBuilder");
 const { HtmlReportBuilder } = require("./HtmlReportBuilder");
+const { buildCsvReport, buildExcelReport } = require("./ReportExporter");
 
 const DEFAULT_ALLOWED_ORIGINS = ["*"];
 
@@ -139,10 +140,26 @@ class ListenerServer extends EventEmitter {
         issues: this.issues
       });
       const format = requestUrl?.searchParams.get("format");
+      const inline = requestUrl?.searchParams.get("inline") === "1";
       if (format === "html") {
         const html = this.htmlReportBuilder.buildReport({ report });
-        this.writeHtml(response, 200, html, request, {
-          "Content-Disposition": "attachment; filename=\"report.html\""
+        const headers = inline ? {} : { "Content-Disposition": "attachment; filename=\"report.html\"" };
+        this.writeHtml(response, 200, html, request, headers);
+        return;
+      }
+      if (format === "csv") {
+        const csv = buildCsvReport({ issues: this.issues, includeAlgorithm: true });
+        this.writeCsv(response, 200, csv, request, {
+          "Content-Disposition": "attachment; filename=\"report.csv\""
+        });
+        return;
+      }
+      if (format === "excel" || format === "excel-thin") {
+        const includeAlgorithm = format === "excel";
+        this.writeExcel(response, request, {
+          issues: this.issues,
+          includeAlgorithm,
+          filename: includeAlgorithm ? "report.xlsx" : "report-thin.xlsx"
         });
         return;
       }
@@ -175,6 +192,7 @@ class ListenerServer extends EventEmitter {
     if (method === "GET" && pathname === "/report/file") {
       const filePath = requestUrl?.searchParams.get("path");
       const format = requestUrl?.searchParams.get("format");
+      const inline = requestUrl?.searchParams.get("inline") === "1";
       if (!filePath) {
         this.writeJson(response, 400, { error: "Query parameter 'path' is required." }, request);
         return;
@@ -194,12 +212,15 @@ class ListenerServer extends EventEmitter {
       if (format === "html") {
         const html = this.htmlReportBuilder.buildFileReport({ report });
         const filename = this.createReportFilename(filePath, "html");
+        const headers = inline
+          ? {}
+          : { "Content-Disposition": `attachment; filename="${filename}"` };
         this.writeHtml(
           response,
           200,
           html,
           request,
-          { "Content-Disposition": `attachment; filename="${filename}"` }
+          headers
         );
       } else {
         const filename = this.createReportFilename(filePath, "json");
@@ -390,6 +411,34 @@ class ListenerServer extends EventEmitter {
     } catch (error) {
       this.writeJson(response, 404, { error: "Not found." });
     }
+  }
+
+  writeCsv(response, statusCode, csv, request, headers = {}) {
+    const body = String(csv ?? "");
+    this.addCors(response, request);
+    response.writeHead(statusCode, {
+      "Content-Type": "text/csv; charset=utf-8",
+      "Content-Length": Buffer.byteLength(body),
+      ...headers
+    });
+    response.end(body);
+  }
+
+  writeExcel(response, request, { issues, includeAlgorithm, filename }) {
+    buildExcelReport({ issues, includeAlgorithm })
+      .then((buffer) => {
+        const payload = Buffer.from(buffer);
+        this.addCors(response, request);
+        response.writeHead(200, {
+          "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          "Content-Length": payload.length,
+          "Content-Disposition": `attachment; filename=\"${filename}\"`
+        });
+        response.end(payload);
+      })
+      .catch(() => {
+        this.writeJson(response, 500, { error: "Failed to build Excel export." }, request);
+      });
   }
 
   handleEventStream(request, response) {

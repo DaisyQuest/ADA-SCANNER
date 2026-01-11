@@ -324,6 +324,7 @@ const renderFiles = () => {
       const teams = renderBadgeGroup(file.teams ?? [], "teamName", { variant: "team" });
       const downloadUrl = `/report/file?path=${encodeURIComponent(file.filePath)}`;
       const downloadHtmlUrl = `/report/file?path=${encodeURIComponent(file.filePath)}&format=html`;
+      const viewUrl = `/report/file?path=${encodeURIComponent(file.filePath)}&format=html&inline=1`;
       const downloadName = buildDownloadName(file.filePath);
       const downloadHtmlName = buildDownloadName(file.filePath, "html");
       return `
@@ -335,8 +336,11 @@ const renderFiles = () => {
           <td>${teams}</td>
           <td>${stylesheetIssues}</td>
           <td>
-            <a class="pill-button" href="${downloadUrl}" download="${downloadName}">Save JSON</a>
-            <a class="pill-button pill-button--secondary" href="${downloadHtmlUrl}" download="${downloadHtmlName}">Save HTML</a>
+            <div class="table-actions">
+              <a class="pill-button pill-button--secondary" href="${viewUrl}" target="_blank" rel="noopener">View</a>
+              <a class="pill-button" href="${downloadUrl}" download="${downloadName}">Download JSON</a>
+              <a class="pill-button pill-button--secondary" href="${downloadHtmlUrl}" download="${downloadHtmlName}">Download HTML</a>
+            </div>
           </td>
         </tr>
       `;
