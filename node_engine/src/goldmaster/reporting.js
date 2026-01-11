@@ -201,7 +201,7 @@ const renderGoldMasterExpectationsHtml = (expectations = {}) => {
           const unexpected = entry.unexpected ? JSON.stringify(entry.unexpected) : "";
           return `<tr class="status-${escapeHtml(entry.status)}">
             <td>${escapeHtml(entry.documentPath ?? "unknown")}</td>
-            <td>${escapeHtml(entry.status)}</td>
+            <td><span class="status-pill status-${escapeHtml(entry.status)}">${escapeHtml(entry.status)}</span></td>
             <td>${escapeHtml(entry.expectationPath ?? "")}</td>
             <td>${escapeHtml(missing)}</td>
             <td>${escapeHtml(unexpected)}</td>
@@ -209,29 +209,48 @@ const renderGoldMasterExpectationsHtml = (expectations = {}) => {
           </tr>`;
         }).join("")
         : "";
-      return `<section>
-        <h2>${escapeHtml(extension.extension)} (${extensionTotals.matched} matched, ${extensionTotals.mismatched} mismatched, ${extensionTotals.missing} missing, ${extensionTotals.invalid} invalid, ${extensionTotals.skipped} skipped)</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>Document</th>
-              <th>Status</th>
-              <th>Expectation File</th>
-              <th>Missing Rules</th>
-              <th>Unexpected Rules</th>
-              <th>Message</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${rows || `<tr><td colspan="6">No expectation results.</td></tr>`}
-          </tbody>
-        </table>
+      return `<section class="panel">
+        <div class="section-header">
+          <div>
+            <h2>${escapeHtml(extension.extension)} expectations</h2>
+            <p class="muted">${extensionTotals.matched} matched, ${extensionTotals.mismatched} mismatched, ${extensionTotals.missing} missing, ${extensionTotals.invalid} invalid, ${extensionTotals.skipped} skipped</p>
+          </div>
+        </div>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Document</th>
+                <th>Status</th>
+                <th>Expectation File</th>
+                <th>Missing Rules</th>
+                <th>Unexpected Rules</th>
+                <th>Message</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows || `<tr><td colspan="6">No expectation results.</td></tr>`}
+            </tbody>
+          </table>
+        </div>
       </section>`;
     })
     .join("");
-  const summaryBlock = `<section>
-    <h1>GoldMaster Expectations Summary</h1>
-    <p>${totals.matched} matched, ${totals.mismatched} mismatched, ${totals.missing} missing, ${totals.invalid} invalid, ${totals.skipped} skipped</p>
+  const summaryBlock = `<section class="panel summary">
+    <div class="summary-header">
+      <div>
+        <h1>GoldMaster Expectations Summary</h1>
+        <p class="muted">Consolidated outcome of GoldMaster expectation coverage.</p>
+      </div>
+      <div class="summary-badges">
+        <span class="pill">Total docs: ${totals.totalDocuments}</span>
+        <span class="pill">Matched: ${totals.matched}</span>
+        <span class="pill">Mismatched: ${totals.mismatched}</span>
+        <span class="pill">Missing: ${totals.missing}</span>
+        <span class="pill">Invalid: ${totals.invalid}</span>
+        <span class="pill">Skipped: ${totals.skipped}</span>
+      </div>
+    </div>
   </section>`;
   const content = extensionBlocks || `<p>No expectation results available.</p>`;
   return `<!doctype html>
@@ -240,19 +259,52 @@ const renderGoldMasterExpectationsHtml = (expectations = {}) => {
   <meta charset="utf-8">
   <title>GoldMaster Expectations Summary</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 24px; color: #1a1a1a; }
-    table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
-    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-    th { background: #f5f5f5; }
+    :root {
+      color-scheme: light;
+      --bg: #f6f8fb;
+      --panel: #ffffff;
+      --text: #1a1f2c;
+      --muted: #5d6b82;
+      --border: #e2e7f0;
+      --accent: #1f4fd6;
+      --shadow: 0 16px 28px rgba(23, 32, 49, 0.08);
+    }
+    * { box-sizing: border-box; }
+    body { font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif; margin: 0; color: var(--text); background: var(--bg); }
+    header { padding: 28px 32px 20px; border-bottom: 1px solid var(--border); background: linear-gradient(120deg, #ffffff 0%, #eef3ff 100%); }
+    main { padding: 24px 32px 40px; display: flex; flex-direction: column; gap: 20px; max-width: 1200px; margin: 0 auto; }
+    h1, h2 { margin: 0; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border-top: 1px solid var(--border); padding: 12px 14px; text-align: left; vertical-align: top; }
+    th { background: #f2f6ff; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); border-top: none; }
+    .panel { background: var(--panel); border-radius: 16px; border: 1px solid var(--border); box-shadow: var(--shadow); padding: 18px 20px; }
+    .summary { border-left: 4px solid var(--accent); }
+    .summary-header { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+    .summary-badges { display: flex; gap: 8px; flex-wrap: wrap; }
+    .pill { background: #eff4ff; border: 1px solid var(--border); border-radius: 999px; padding: 6px 12px; font-size: 12px; color: var(--muted); font-weight: 600; }
+    .table-wrapper { border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+    .section-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 12px; }
+    .muted { color: var(--muted); margin: 4px 0 0; }
+    .status-pill { display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; border: 1px solid transparent; }
     .status-match { background: #e9f7ef; }
     .status-mismatch { background: #fff4e5; }
     .status-missing, .status-invalid { background: #fdecea; }
     .status-skipped { background: #f4f6f8; }
+    .status-pill.status-match { color: #15803d; border-color: rgba(21, 128, 61, 0.2); }
+    .status-pill.status-mismatch { color: #b45309; border-color: rgba(180, 83, 9, 0.2); }
+    .status-pill.status-missing, .status-pill.status-invalid { color: #b91c1c; border-color: rgba(185, 28, 28, 0.2); }
+    .status-pill.status-skipped { color: #475569; border-color: rgba(71, 85, 105, 0.2); }
   </style>
 </head>
 <body>
-  ${summaryBlock}
-  ${content}
+  <header>
+    <h1>GoldMaster Expectations Summary</h1>
+    <p class="muted">Generated by ADA Scanner GoldMaster.</p>
+  </header>
+  <main>
+    ${summaryBlock}
+    ${content}
+  </main>
 </body>
 </html>`;
 };
