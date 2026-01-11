@@ -1,0 +1,9 @@
+{
+  "rules": [
+    "aria-invalid-role-html",
+    "aria-role-001",
+    "heading-structure-001",
+    "navigation-structure-001",
+    "skip-link-001"
+  ]
+}

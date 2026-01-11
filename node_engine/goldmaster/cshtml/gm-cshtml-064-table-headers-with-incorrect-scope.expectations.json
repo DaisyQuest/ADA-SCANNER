@@ -1,0 +1,9 @@
+{
+  "rules": [
+    "layout-table-001",
+    "navigation-structure-001",
+    "skip-link-001",
+    "table-header-001",
+    "text-spacing-001"
+  ]
+}

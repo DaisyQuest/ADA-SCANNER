@@ -44,7 +44,13 @@ const listFiles = (extension) => {
   return fs
     .readdirSync(extRoot)
     .filter((name) => !name.startsWith("."))
+    .filter((name) => !name.endsWith(".expectations.json"))
     .sort();
+};
+
+const buildExpectationsFileName = (fileName) => {
+  const parsed = path.parse(fileName);
+  return `${parsed.name}.expectations.json`;
 };
 
 describe("GoldMaster inventory coverage", () => {
@@ -56,6 +62,20 @@ describe("GoldMaster inventory coverage", () => {
       const diskFiles = listFiles(extension);
 
       expect(inventoryFiles).toEqual(diskFiles);
+    });
+  });
+
+  test("goldmaster files include expectations alongside documents", () => {
+    supportedExtensions.forEach((extension) => {
+      const diskFiles = listFiles(extension);
+      const extRoot = path.join(goldmasterRoot, extension);
+      diskFiles.forEach((fileName) => {
+        const expectationsFile = buildExpectationsFileName(fileName);
+        const expectationsPath = path.join(extRoot, expectationsFile);
+        expect(fs.existsSync(expectationsPath)).toBe(true);
+        const payload = JSON.parse(fs.readFileSync(expectationsPath, "utf8"));
+        expect(Array.isArray(payload.rules)).toBe(true);
+      });
     });
   });
 

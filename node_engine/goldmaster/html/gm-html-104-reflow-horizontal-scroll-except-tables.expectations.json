@@ -1,0 +1,8 @@
+{
+  "rules": [
+    "heading-structure-001",
+    "navigation-structure-001",
+    "skip-link-001",
+    "table-header-001"
+  ]
+}

@@ -1,0 +1,6 @@
+{
+  "rules": [
+    "aria-xaml-missing-name",
+    "contrast-xaml-foreground-background"
+  ]
+}
