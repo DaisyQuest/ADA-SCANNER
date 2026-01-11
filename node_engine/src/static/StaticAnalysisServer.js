@@ -2,6 +2,7 @@ const http = require("http");
 const path = require("path");
 const fs = require("fs");
 const { HtmlReportBuilder } = require("../listener/HtmlReportBuilder");
+const { buildCsvReport, buildExcelReport } = require("../listener/ReportExporter");
 const { StaticReportBuilder } = require("./StaticReportBuilder");
 
 class StaticAnalysisServer {
@@ -98,9 +99,25 @@ class StaticAnalysisServer {
         rules: this.rules
       });
       const format = requestUrl?.searchParams.get("format");
+      const inline = requestUrl?.searchParams.get("inline") === "1";
       if (format === "html") {
         const html = this.htmlReportBuilder.buildReport({ report });
-        this.writeHtml(response, 200, html, { "Content-Disposition": "attachment; filename=\"report.html\"" });
+        const headers = inline ? {} : { "Content-Disposition": "attachment; filename=\"report.html\"" };
+        this.writeHtml(response, 200, html, headers);
+        return;
+      }
+      if (format === "csv") {
+        const csv = buildCsvReport({ issues: this.issues, includeAlgorithm: true });
+        this.writeCsv(response, 200, csv, { "Content-Disposition": "attachment; filename=\"report.csv\"" });
+        return;
+      }
+      if (format === "excel" || format === "excel-thin") {
+        const includeAlgorithm = format === "excel";
+        this.writeExcel(response, {
+          issues: this.issues,
+          includeAlgorithm,
+          filename: includeAlgorithm ? "report.xlsx" : "report-thin.xlsx"
+        });
         return;
       }
       this.writeJson(response, 200, report);
@@ -132,6 +149,7 @@ class StaticAnalysisServer {
     if (method === "GET" && pathname === "/report/file") {
       const filePath = requestUrl?.searchParams.get("path");
       const format = requestUrl?.searchParams.get("format");
+      const inline = requestUrl?.searchParams.get("inline") === "1";
       if (!filePath) {
         this.writeJson(response, 400, { error: "Query parameter 'path' is required." });
         return;
@@ -151,11 +169,14 @@ class StaticAnalysisServer {
       if (format === "html") {
         const html = this.htmlReportBuilder.buildFileReport({ report });
         const filename = this.createReportFilename(filePath, "html");
+        const headers = inline
+          ? {}
+          : { "Content-Disposition": `attachment; filename="${filename}"` };
         this.writeHtml(
           response,
           200,
           html,
-          { "Content-Disposition": `attachment; filename="${filename}"` }
+          headers
         );
       } else {
         const filename = this.createReportFilename(filePath, "json");
@@ -190,6 +211,32 @@ class StaticAnalysisServer {
       ...headers
     });
     response.end(body);
+  }
+
+  writeCsv(response, statusCode, csv, headers = {}) {
+    const body = String(csv ?? "");
+    response.writeHead(statusCode, {
+      "Content-Type": "text/csv; charset=utf-8",
+      "Content-Length": Buffer.byteLength(body),
+      ...headers
+    });
+    response.end(body);
+  }
+
+  writeExcel(response, { issues, includeAlgorithm, filename }) {
+    buildExcelReport({ issues, includeAlgorithm })
+      .then((buffer) => {
+        const payload = Buffer.from(buffer);
+        response.writeHead(200, {
+          "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          "Content-Length": payload.length,
+          "Content-Disposition": `attachment; filename=\"${filename}\"`
+        });
+        response.end(payload);
+      })
+      .catch(() => {
+        this.writeJson(response, 500, { error: "Failed to build Excel export." });
+      });
   }
 
   writeStaticFile(response, relativePath, contentType) {

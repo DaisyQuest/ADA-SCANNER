@@ -113,7 +113,10 @@ describe("Static analysis UI app", () => {
     expect(app.elements.coveragePercent.textContent).toBe("33%");
     expect(app.elements.missingRuleCount.textContent).toBe("2");
     expect(app.elements.fileTable.innerHTML).toContain("file-a.html");
-    expect(app.elements.fileTable.innerHTML).toContain("Save JSON");
+    expect(app.elements.fileTable.innerHTML).toContain("View");
+    expect(app.elements.fileTable.innerHTML).toContain("Download JSON");
+    expect(app.elements.fileTable.innerHTML).toContain("Download HTML");
+    expect(app.elements.fileTable.innerHTML).toContain("inline=1");
     expect(app.elements.fileTable.innerHTML).toContain("styles.css (2)");
     expect(app.elements.fileTable.innerHTML).toContain("high (1)");
     expect(app.elements.issueFeed.innerHTML).toContain("Problem");

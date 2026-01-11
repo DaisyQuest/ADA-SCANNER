@@ -143,10 +143,12 @@ describe("Runtime listener UI app", () => {
     expect(app.elements.ruleTable.innerHTML).toContain("badge--team");
     expect(app.elements.ruleTable.innerHTML).toContain("badge--severity-high");
     expect(app.elements.ruleResultCount.textContent).toBe("2 of 2");
-    expect(app.elements.fileTable.innerHTML).toContain("Save JSON");
-    expect(app.elements.fileTable.innerHTML).toContain("Save HTML");
+    expect(app.elements.fileTable.innerHTML).toContain("View");
+    expect(app.elements.fileTable.innerHTML).toContain("Download JSON");
+    expect(app.elements.fileTable.innerHTML).toContain("Download HTML");
     expect(app.elements.fileTable.innerHTML).toContain("report-file-b.json");
     expect(app.elements.fileTable.innerHTML).toContain("report-file-b.html");
+    expect(app.elements.fileTable.innerHTML).toContain("inline=1");
     expect(app.elements.fileTable.innerHTML).toContain("styles.css");
     expect(app.elements.fileTable.innerHTML).toContain("badge--file");
     expect(app.elements.fileTable.innerHTML).toContain("badge--team");

@@ -15,6 +15,7 @@
     "static_analysis": "src/static/cli.js"
   },
   "dependencies": {
+    "exceljs": "^4.4.0",
     "jsdom": "^24.0.0"
   },
   "devDependencies": {

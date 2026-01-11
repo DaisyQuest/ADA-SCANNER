@@ -290,6 +290,13 @@ body {
 .status-actions {
   display: flex;
   gap: 8px;
+  flex-wrap: wrap;
+}
+
+.table-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
 .filter-panel {

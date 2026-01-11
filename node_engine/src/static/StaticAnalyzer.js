@@ -194,7 +194,9 @@ class StaticAnalyzer {
               severity: rule.severity ?? "",
               recommendation: rule.recommendation ?? null,
               wcagCriteria: rule.wcagCriteria ?? null,
-              problemTags: rule.problemTags ?? null
+              problemTags: rule.problemTags ?? null,
+              algorithm: rule.algorithm ?? null,
+              algorithmAdvanced: rule.algorithmAdvanced ?? null
             };
             const key = [issue.ruleId, issue.checkId, issue.filePath, issue.line, issue.message].join("::");
             if (!seenIssues.has(key)) {

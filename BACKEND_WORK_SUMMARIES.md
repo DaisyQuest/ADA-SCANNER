@@ -82,3 +82,5 @@
 
 2026-01-11 - Add algorithm_advanced metadata to scanner-backend rules. (SPEC-008)
 2026-01-11 - Add GoldMaster expectations validation and generated expectation fixtures (SPEC-013)
+2026-01-11 - Added runtime report exports with view/download actions and Excel/CSV formats (SPEC-010)
+2026-01-11 - Added static analysis exports and inline file views (SPEC-010)
